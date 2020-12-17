@@ -8,7 +8,7 @@ pragma solidity ^0.7.0;
  * Uniswap: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/libraries/Math.sol
  */
 
-library Math {
+library Sqrt {
 	// babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method)
 	function sqrt(uint256 y) internal pure returns (uint256 z) {
 		if (y > 3) {

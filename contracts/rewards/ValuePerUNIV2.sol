@@ -4,7 +4,7 @@ pragma solidity ^0.7.0;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./interfaces/IValuePerToken.sol";
-import "../libraries/Math.sol";
+import "../libraries/Sqrt.sol";
 
 interface IUniswapV2Factory {
 	function feeTo() external view returns (address);
@@ -72,8 +72,8 @@ contract ValuePerUNIV2 is IValuePerToken {
 		if (feeOn()) {
 			uint256 kLast = tokenHandle.kLast();
 			if (kLast > 0) {
-				uint256 rootK = Math.sqrt(uint256(reserve0).mul(reserve1));
-				uint256 rootKLast = Math.sqrt(kLast);
+				uint256 rootK = Sqrt.sqrt(uint256(reserve0).mul(reserve1));
+				uint256 rootKLast = Sqrt.sqrt(kLast);
 				if (rootK > rootKLast) {
 					uint256 n = totalSupply.mul(rootK - rootKLast);
 					uint256 d = rootK.mul(5).add(rootKLast);
