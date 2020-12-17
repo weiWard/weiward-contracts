@@ -1,0 +1,88 @@
+{
+  "name": "@weiward/contracts",
+  "version": "0.1.0",
+  "description": "Smart contracts for the weiWard platform.",
+  "author": "Ben Kostreva",
+  "license": "(Apache-2.0 OR MIT)",
+  "private": true,
+  "scripts": {
+    "compile": "run-s compile:noTypes gen-types",
+    "compile:noTypes": "hardhat compile",
+    "deploy": "hardhat deploy",
+    "export": "hardhat export --export build/abi.json",
+    "export:all": "hardhat export --export-all build/abi.json",
+    "gen-types": "run-p gen-types:*",
+    "gen-types:ethers": "typechain --target=ethers-v5 --outDir=build/types/ethers-v5 \"build/artifacts/contracts/**/+([a-zA-Z0-9]).json\"",
+    "gen-types:web3": "typechain --target=web3-v1 --outDir=build/types/web3-v1 \"build/artifacts/contracts/**/+([a-zA-Z0-9]).json\"",
+    "lint": "run-p lint:*",
+    "lint:tsc": "tsc --noEmit",
+    "lint:eslint": "eslint \"*/**/*.{js,jsx,ts,tsx}\"",
+    "lint:sol": "solhint contracts/**/*.sol",
+    "preinstall": "npx only-allow pnpm",
+    "test": "hardhat test",
+    "verify": "hardhat etherscan-verify --solc-input",
+    "clean": "shx rm -rf build",
+    "clean:dev": "rm -rf build node_modules"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsc --noEmit && lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint"
+    ],
+    "*.sol": [
+      "solhint"
+    ]
+  },
+  "devDependencies": {
+    "@ethersproject/abi": "^5.0.9",
+    "@ethersproject/bignumber": "^5.0.12",
+    "@ethersproject/bytes": "^5.0.8",
+    "@ethersproject/constants": "^5.0.7",
+    "@ethersproject/contracts": "^5.0.8",
+    "@ethersproject/providers": "^5.0.17",
+    "@ethersproject/units": "^5.0.8",
+    "@ethersproject/wallet": "^5.0.9",
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^2.1.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/contracts": "3.3.0-solc-0.7",
+    "@sushiswap/core": "^1.4.1",
+    "@typechain/ethers-v5": "^5.0.0",
+    "@typechain/web3-v1": "^2.0.0",
+    "@types/chai": "^4.2.14",
+    "@types/mocha": "^8.2.0",
+    "@types/node": "^14.14.14",
+    "@typescript-eslint/eslint-plugin": "^4.10.0",
+    "@typescript-eslint/parser": "^4.10.0",
+    "@uniswap/v2-core": "^1.0.1",
+    "chai": "^4.2.0",
+    "dotenv": "^8.2.0",
+    "eslint": "^7.15.0",
+    "eslint-config-prettier": "^7.0.0",
+    "eslint-plugin-mocha": "^8.0.0",
+    "eslint-plugin-prettier": "^3.3.0",
+    "ethereum-waffle": "^3.2.1",
+    "ethers": "^5.0.24",
+    "hardhat": "^2.0.5",
+    "hardhat-abi-exporter": "^2.0.7",
+    "hardhat-deploy": "^0.7.0-beta.38",
+    "husky": "^4.3.6",
+    "lint-staged": "^10.5.3",
+    "mocha": "^8.2.1",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.2",
+    "shx": "^0.3.3",
+    "solhint": "^3.3.2",
+    "solhint-plugin-prettier": "^0.0.5",
+    "truffle-flattener": "^1.5.0",
+    "ts-generator": "^0.1.1",
+    "ts-node": "^9.1.1",
+    "typechain": "^4.0.1",
+    "typescript": "^4.1.3"
+  }
+}
