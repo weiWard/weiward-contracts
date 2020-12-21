@@ -158,7 +158,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		returns (uint256)
 	{
 		require(_tokens.contains(token), "LPRewards: token not supported");
-		return _shares(token, _users[account].staked.get(token));
+		return _shares(token, stakedBalanceOfFor(account, token));
 	}
 
 	function currentSharesPerTokenFor(address token)
@@ -400,7 +400,11 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
-		return _users[account].staked.get(token);
+		EnumerableMap.AddressToUintMap storage staked = _users[account].staked;
+		if (staked.contains(token)) {
+			return staked.get(token);
+		}
+		return 0;
 	}
 
 	function totalRewardsAccrued() public view override returns (uint256) {
@@ -746,7 +750,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 
 		uint256 totalStaked = amount;
 		if (user.staked.contains(token)) {
-			totalStaked.add(user.staked.get(token));
+			totalStaked.add(stakedBalanceOfFor(account, token));
 		}
 		user.staked.set(token, totalStaked);
 
