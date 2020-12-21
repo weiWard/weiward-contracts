@@ -86,7 +86,15 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	{
 		// Get current pending rewards.
 		uint256 totalPending = totalRewardsAccrued() - _lastTotalRewardsAccrued;
+		if (totalPending == 0) {
+			return this.rewardsBalanceOf(account);
+		}
+
+		// Expensive operation, so duplicate return
 		uint256 totalShares = _totalShares();
+		if (totalShares == 0) {
+			return this.rewardsBalanceOf(account);
+		}
 
 		UserData storage user = _users[account];
 		uint256 total = user.totalRewards;
@@ -171,9 +179,15 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	{
 		// Get current pending rewards.
 		uint256 totalPending = totalRewardsAccrued() - _lastTotalRewardsAccrued;
+		if (totalPending == 0) {
+			return totalRewardsAccruedFor(token);
+		}
 
 		// Divide pending by share
 		uint256 totalShares = _totalShares();
+		if (totalShares == 0) {
+			return totalRewardsAccruedFor(token);
+		}
 		uint256 shares = _totalSharesFor(token);
 		uint256 pending = totalPending.mul(shares).div(totalShares);
 
@@ -490,6 +504,9 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	{
 		IValuePerToken vptHandle = IValuePerToken(valuePerTokenImplFor(token));
 		(uint256 numerator, uint256 denominator) = vptHandle.valuePerToken();
+		if (denominator == 0) {
+			return 0;
+		}
 		// TODO handle fractional (i.e. improve rounding)
 		// Return a 1:1 ratio for value to shares
 		return amountStaked.mul(numerator).div(denominator);
@@ -855,6 +872,10 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 			uint256 share = _totalSharesFor(_tokens.at(i));
 			pendingSharesFor[i] = pending.mul(share);
 			totalShares = totalShares.add(share);
+		}
+
+		if (totalShares == 0) {
+			return;
 		}
 
 		// Iterate twice to give rewards.
