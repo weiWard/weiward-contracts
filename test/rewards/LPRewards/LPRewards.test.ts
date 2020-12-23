@@ -11,7 +11,7 @@ describe.only('LPRewards', function () {
 	};
 
 	addTest('constructor', modules.constructor);
-	addTestOnly('accruedRewardsPerTokenFor', modules.accruedRewardsPerTokenFor);
+	addTest('accruedRewardsPerTokenFor', modules.accruedRewardsPerTokenFor);
 	addTest(
 		'accruedRewardsPerTokenPaidFor',
 		modules.accruedRewardsPerTokenPaidFor,
