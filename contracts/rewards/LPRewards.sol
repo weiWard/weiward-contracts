@@ -182,22 +182,24 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
+		uint256 lastRewardsAccrued = totalRewardsAccruedFor(token);
+
 		// Get current pending rewards.
 		uint256 totalPending = totalRewardsAccrued() - _lastTotalRewardsAccrued;
 		if (totalPending == 0) {
-			return totalRewardsAccruedFor(token);
+			return lastRewardsAccrued;
 		}
 
 		// Divide pending by share
 		uint256 totalShares = _totalShares();
 		if (totalShares == 0) {
-			return totalRewardsAccruedFor(token);
+			return lastRewardsAccrued;
 		}
 		uint256 shares = _totalSharesFor(token);
 		uint256 pending = totalPending.mul(shares).div(totalShares);
 
 		// Overflow is OK
-		return pending + _tokenData[token].rewardsRedeemed;
+		return pending + lastRewardsAccrued;
 	}
 
 	function currentTotalShares() external view override returns (uint256) {
