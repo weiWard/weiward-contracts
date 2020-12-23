@@ -9,7 +9,9 @@ import {
 	Mooniswap,
 	MockERC20__factory,
 	MockLPRewards__factory,
+	ValuePerUNIV2,
 	ValuePerUNIV2__factory,
+	ValuePerMoonV1,
 	ValuePerMoonV1__factory,
 } from '../../../build/types/ethers-v5';
 import {
@@ -62,10 +64,15 @@ export interface Fixture {
 	rewardsToken: MockERC20;
 	mooniswapPool: Mooniswap;
 	testerMooniswapPool: Mooniswap;
+	valuePerMoonV1: ValuePerMoonV1;
 	sushiswapPool: Contract;
 	testerSushiswapPool: Contract;
+	valuePerSushi: ValuePerUNIV2;
 	uniswapPool: Contract;
 	testerUniswapPool: Contract;
+	valuePerUNIV2: ValuePerUNIV2;
+	testPool: Contract;
+	valuePerTest: ValuePerUNIV2;
 }
 
 export const loadFixture = deployments.createFixture<Fixture, unknown>(
@@ -122,6 +129,15 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployerSigner,
 		).deploy(uniswapPool.address, tokenA.address);
 
+		const { pair: testPool } = await uniswapPairFixture(
+			deployer,
+			tokenA,
+			tokenB,
+		);
+		const valuePerTest = await new ValuePerUNIV2__factory(
+			deployerSigner,
+		).deploy(testPool.address, tokenA.address);
+
 		// Deploy contract
 		const contract = await new MockLPRewards__factory(deployerSigner).deploy(
 			rewardsToken.address,
@@ -143,10 +159,15 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			rewardsToken,
 			mooniswapPool,
 			testerMooniswapPool,
+			valuePerMoonV1,
 			sushiswapPool,
 			testerSushiswapPool,
+			valuePerSushi,
 			uniswapPool,
 			testerUniswapPool,
+			valuePerUNIV2,
+			testPool,
+			valuePerTest,
 		};
 	},
 );
