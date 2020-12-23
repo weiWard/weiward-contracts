@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { BigNumber } from '@ethersproject/bignumber';
+import { MaxUint256 } from '@ethersproject/constants';
 
 import {
 	Fixture,
@@ -293,11 +294,127 @@ export default function run(): void {
 		});
 
 		describe('should be correct when', function () {
-			it('accruedRewardsPerToken state overflows');
+			it('accruedRewardsPerToken state overflows', async function () {
+				const { contract, uniswapPool } = fixture;
+				await contract.setAccruedRewardsPerTokenFor(
+					uniswapPool.address,
+					MaxUint256,
+				);
+				const staked = await uniStake(fixture);
+				await addRewards(fixture);
+				await contract.updateTokenRewards();
 
-			it('totalRewardsAccruedFor overflows');
+				const expected = accruedRewardsPerToken(staked).sub(1);
+				expect(
+					await contract.accruedRewardsPerTokenFor(uniswapPool.address),
+				).to.eq(expected);
+			});
 
-			it('lastTotalRewardsAccrued overflows');
+			it('totalRewardsAccrued overflows', async function () {
+				const { contract, uniswapPool } = fixture;
+				const address = uniswapPool.address;
+
+				await contract.setTotalRewardsRedeemed(MaxUint256);
+				await contract.setLastTotalRewardsAccrued(MaxUint256);
+
+				// Verify we're near overflow
+				expect(
+					await contract.totalRewardsAccrued(),
+					'totalRewardsAccruedFor mismatch before overflow',
+				).to.eq(MaxUint256);
+
+				const staked = await uniStake(fixture);
+				await addRewards(fixture);
+				await contract.updateTokenRewards();
+
+				// Verify overflow
+				expect(
+					await contract.totalRewardsAccrued(),
+					'totalRewardsAccruedFor mismatch after overflow',
+				).to.eq(defaultAmounts.rewards.sub(1));
+
+				expect(
+					await contract.accruedRewardsPerTokenFor(address),
+					'accruedRewardsPerTokenFor mismatch',
+				).to.eq(accruedRewardsPerToken(staked));
+			});
+
+			it('totalRewardsAccruedFor overflows', async function () {
+				const { contract, uniswapPool } = fixture;
+				const address = uniswapPool.address;
+
+				await contract.setRewardsRedeemedFor(address, MaxUint256);
+				await contract.setLastRewardsAccruedFor(address, MaxUint256);
+
+				// Verify we're near overflow
+				expect(
+					await contract.totalRewardsAccruedFor(address),
+					'totalRewardsAccruedFor mismatch before overflow',
+				).to.eq(MaxUint256);
+
+				const staked = await uniStake(fixture);
+				await addRewards(fixture);
+				await contract.updateTokenRewards();
+
+				// Verify overflow
+				expect(
+					await contract.totalRewardsAccruedFor(address),
+					'totalRewardsAccruedFor mismatch after overflow',
+				).to.eq(defaultAmounts.rewards.sub(1));
+
+				expect(
+					await contract.accruedRewardsPerTokenFor(address),
+					'accruedRewardsPerTokenFor mismatch',
+				).to.eq(accruedRewardsPerToken(staked));
+			});
+
+			it('lastRewardsAccrued overflows', async function () {
+				const { contract, uniswapPool } = fixture;
+				const address = uniswapPool.address;
+
+				await contract.setLastRewardsAccruedFor(address, MaxUint256);
+				const staked = await uniStake(fixture);
+				await addRewards(fixture);
+
+				// Update to overflow
+				await contract.updateTokenRewards();
+
+				// Verify current
+				expect(
+					await contract.totalRewardsAccruedFor(address),
+					'totalRewardsAccruedFor mismatch',
+				).to.eq(defaultAmounts.rewards);
+
+				const expected = accruedRewardsPerToken(staked);
+				expect(
+					await contract.accruedRewardsPerTokenFor(address),
+					'accruedRewardsPerTokenFor mismatch after overflow',
+				).to.eq(expected);
+			});
+
+			it('_lastTotalRewardsAccrued overflows', async function () {
+				const { contract, uniswapPool } = fixture;
+				const address = uniswapPool.address;
+
+				await contract.setLastTotalRewardsAccrued(MaxUint256);
+				const staked = await uniStake(fixture);
+				await addRewards(fixture);
+
+				// Update to overflow
+				await contract.updateTokenRewards();
+
+				// Verify current
+				expect(
+					await contract.totalRewardsAccrued(),
+					'totalRewardsAccruedFor mismatch',
+				).to.eq(defaultAmounts.rewards);
+
+				const expected = accruedRewardsPerToken(staked);
+				expect(
+					await contract.accruedRewardsPerTokenFor(address),
+					'accruedRewardsPerTokenFor mismatch after overflow',
+				).to.eq(expected);
+			});
 		});
 	});
 }
