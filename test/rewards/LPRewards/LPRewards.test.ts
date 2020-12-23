@@ -5,8 +5,13 @@ describe.only('LPRewards', function () {
 		describe(name, fn.bind(this));
 	};
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const addTestOnly = (name: string, fn: () => void): void => {
+		describe.only(name, fn.bind(this));
+	};
+
 	addTest('constructor', modules.constructor);
-	addTest('accruedRewardsPerTokenFor', modules.accruedRewardsPerTokenFor);
+	addTestOnly('accruedRewardsPerTokenFor', modules.accruedRewardsPerTokenFor);
 	addTest(
 		'accruedRewardsPerTokenPaidFor',
 		modules.accruedRewardsPerTokenPaidFor,
