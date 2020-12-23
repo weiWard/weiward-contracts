@@ -49,6 +49,10 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	/* Immutable Public State */
 	address public immutable override rewardsToken;
 
+	/* Immutable Internal State */
+
+	uint256 internal constant _MULTIPLIER = 1e36;
+
 	/* Mutable Internal State */
 
 	uint256 internal _lastTotalRewardsAccrued;
@@ -133,6 +137,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
+		require(_tokens.contains(token), "LPRewards: token not supported");
 		return _totalSharesFor(token);
 	}
 
@@ -475,7 +480,8 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 			return td.accruedRewardsPerToken;
 		}
 
-		uint256 rewardsPerToken = delta.div(td.totalStaked);
+		// Usemultiplier for better rounding
+		uint256 rewardsPerToken = delta.mul(_MULTIPLIER).div(td.totalStaked);
 
 		// Overflow is OK
 		return td.accruedRewardsPerToken + rewardsPerToken;
@@ -490,7 +496,9 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		// Overflow is OK: delta is correct anyway
 		uint256 accruedDelta = accruedRewardsPerToken - arptPaid;
 
-		return stakedBalanceOfFor(account, token).mul(accruedDelta);
+		// Divide by _MULTIPLIER to convert back to rewards decimals
+		return
+			stakedBalanceOfFor(account, token).mul(accruedDelta).div(_MULTIPLIER);
 	}
 
 	/**
