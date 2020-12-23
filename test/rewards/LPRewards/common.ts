@@ -5,10 +5,10 @@ import { Contract } from '@ethersproject/contracts';
 
 import {
 	MockERC20,
-	LPRewards,
+	MockLPRewards,
 	Mooniswap,
 	MockERC20__factory,
-	LPRewards__factory,
+	MockLPRewards__factory,
 	ValuePerUNIV2__factory,
 	ValuePerMoonV1__factory,
 } from '../../../build/types/ethers-v5';
@@ -55,8 +55,8 @@ export const uniswapMinLiquidity = BigNumber.from(1000);
 export interface Fixture {
 	deployer: string;
 	tester: string;
-	contract: LPRewards;
-	testerContract: LPRewards;
+	contract: MockLPRewards;
+	testerContract: MockLPRewards;
 	tokenA: MockERC20;
 	tokenB: MockERC20;
 	rewardsToken: MockERC20;
@@ -123,7 +123,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		).deploy(uniswapPool.address, tokenA.address);
 
 		// Deploy contract
-		const contract = await new LPRewards__factory(deployerSigner).deploy(
+		const contract = await new MockLPRewards__factory(deployerSigner).deploy(
 			rewardsToken.address,
 		);
 		const testerContract = contract.connect(testerSigner);
@@ -166,7 +166,7 @@ async function stakeImpl(
 ): Promise<BigNumber> {
 	const { deployer, tester, contract, testerContract } = fixture;
 
-	let contractHandle: LPRewards;
+	let contractHandle: MockLPRewards;
 	let poolHandle: Contract;
 
 	switch (from) {
