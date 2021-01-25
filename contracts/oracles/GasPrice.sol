@@ -6,16 +6,16 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract GasPrice is Ownable {
 	event GasPriceUpdate(
 		address indexed author,
-		uint256 oldValue,
-		uint256 newValue
+		uint256 oldGasPrice,
+		uint256 newGasPrice
 	);
 	uint256 internal _gasPrice;
 
-	function getValue() public view returns (uint256) {
+	function getGasPrice() public view returns (uint256) {
 		return _gasPrice;
 	}
 
-	function setValue(uint256 gasPrice) public onlyOwner {
+	function setGasPrice(uint256 gasPrice) public onlyOwner {
 		emit GasPriceUpdate(msg.sender, _gasPrice, gasPrice);
 		_gasPrice = gasPrice;
 	}
