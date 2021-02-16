@@ -41,7 +41,12 @@ contract GasPrice is AccessControl, IGasPrice {
 	}
 
 	function hasPriceExpired() external view override returns (bool) {
-		return block.timestamp.sub(updatedAt) > updateThreshold;
+		uint256 timePassed =
+			block.timestamp.sub(
+				updatedAt,
+				"GasPrice: block is older than last update"
+			);
+		return timePassed > updateThreshold;
 	}
 
 	function _setGasPrice(uint256 _gasPrice) internal {
