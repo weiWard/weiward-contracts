@@ -12,11 +12,12 @@ contract GasPrice is AccessControl {
 	bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 	uint256 public gasPrice;
 	uint256 public updateThreshold;
-	uint256 public lastUpdateTimestamp;
+	uint256 public updatedAt;
 
-	constructor(uint256 _updateThreshold) {
+	constructor(uint256 _updateThreshold, uint256 _gasPrice) {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 		updateThreshold = _updateThreshold;
+		gasPrice = _gasPrice;
 	}
 
 	function setGasPrice(uint256 _gasPrice) public {
@@ -27,7 +28,7 @@ contract GasPrice is AccessControl {
 		require(hasPriceExpired(), "The current gas price has not expired.");
 
 		// update public values
-		lastUpdateTimestamp = block.timestamp;
+		updatedAt = block.timestamp;
 		gasPrice = _gasPrice;
 		emit GasPriceUpdate(msg.sender, gasPrice, _gasPrice);
 	}
@@ -41,6 +42,6 @@ contract GasPrice is AccessControl {
 	}
 
 	function hasPriceExpired() public returns (bool) {
-		return (lastUpdateTimestamp - block.timestamp) > updateThreshold;
+		return (updatedAt - block.timestamp) > updateThreshold;
 	}
 }
