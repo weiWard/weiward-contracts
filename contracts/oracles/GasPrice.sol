@@ -4,20 +4,19 @@ pragma solidity ^0.7.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "./interfaces/IGasPrice.sol";
+
 // Accuracy in block.timestamp is not needed.
 // https://consensys.github.io/smart-contract-best-practices/recommendations/#the-15-second-rule
 /* solhint-disable not-rely-on-time */
 
-contract GasPrice is AccessControl {
+contract GasPrice is AccessControl, IGasPrice {
 	using SafeMath for uint256;
 
-	event GasPriceUpdate(address indexed author, uint256 newValue);
-	event UpdateThresholdSet(address indexed author, uint256 value);
-
 	bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
-	uint256 public gasPrice;
-	uint256 public updateThreshold;
-	uint256 public updatedAt;
+	uint256 public override gasPrice;
+	uint256 public override updateThreshold;
+	uint256 public override updatedAt;
 
 	constructor(uint256 _updateThreshold, uint256 _gasPrice) {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -25,7 +24,7 @@ contract GasPrice is AccessControl {
 		_setGasPrice(_gasPrice);
 	}
 
-	function setGasPrice(uint256 _gasPrice) external {
+	function setGasPrice(uint256 _gasPrice) external override {
 		require(
 			hasRole(ORACLE_ROLE, msg.sender),
 			"Caller is not a trusted oracle source."
@@ -33,7 +32,7 @@ contract GasPrice is AccessControl {
 		_setGasPrice(_gasPrice);
 	}
 
-	function setUpdateThreshold(uint256 _updateThreshold) external {
+	function setUpdateThreshold(uint256 _updateThreshold) external override {
 		require(
 			hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
 			"Caller is not the contract admin."
@@ -41,7 +40,7 @@ contract GasPrice is AccessControl {
 		_setUpdateThreshold(_updateThreshold);
 	}
 
-	function hasPriceExpired() external view returns (bool) {
+	function hasPriceExpired() external view override returns (bool) {
 		return block.timestamp.sub(updatedAt) > updateThreshold;
 	}
 
