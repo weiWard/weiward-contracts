@@ -12,6 +12,7 @@ contract GasPrice is AccessControl {
 	using SafeMath for uint256;
 
 	event GasPriceUpdate(address indexed author, uint256 newValue);
+	event UpdateThresholdSet(address indexed author, uint256 value);
 
 	bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 	uint256 public gasPrice;
@@ -20,7 +21,7 @@ contract GasPrice is AccessControl {
 
 	constructor(uint256 _updateThreshold, uint256 _gasPrice) {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-		updateThreshold = _updateThreshold;
+		_setUpdateThreshold(_updateThreshold);
 		_setGasPrice(_gasPrice);
 	}
 
@@ -37,7 +38,7 @@ contract GasPrice is AccessControl {
 			hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
 			"Caller is not the contract admin."
 		);
-		updateThreshold = _updateThreshold;
+		_setUpdateThreshold(_updateThreshold);
 	}
 
 	function hasPriceExpired() public view returns (bool) {
@@ -49,5 +50,10 @@ contract GasPrice is AccessControl {
 		updatedAt = block.timestamp;
 		gasPrice = _gasPrice;
 		emit GasPriceUpdate(msg.sender, _gasPrice);
+	}
+
+	function _setUpdateThreshold(uint256 _updateThreshold) internal {
+		updateThreshold = _updateThreshold;
+		emit UpdateThresholdSet(msg.sender, _updateThreshold);
 	}
 }
