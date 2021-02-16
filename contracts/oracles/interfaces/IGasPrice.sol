@@ -18,6 +18,8 @@ interface IGasPrice {
 
 	function setUpdateThreshold(uint256 _updateThreshold) external;
 
+	/* Events */
+
 	event GasPriceUpdate(address indexed author, uint256 newValue);
 	event UpdateThresholdSet(address indexed author, uint256 value);
 }
