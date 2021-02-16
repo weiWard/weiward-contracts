@@ -24,7 +24,7 @@ contract GasPrice is AccessControl {
 			hasRole(ORACLE_ROLE, msg.sender),
 			"Caller is not a trusted oracle source."
 		);
-		require(lastUpdateTimestamp - block.timestamp > updateThreshold);
+		require(hasPriceExpired(), "The current gas price has not expired.");
 
 		// update public values
 		lastUpdateTimestamp = block.timestamp;
@@ -35,8 +35,12 @@ contract GasPrice is AccessControl {
 	function setUpdateThreshold(uint256 _updateThreshold) public {
 		require(
 			hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-			"Caller is not a trusted oracle source."
+			"Caller is not the contract admin."
 		);
 		updateThreshold = _updateThreshold;
+	}
+
+	function hasPriceExpired() public returns (bool) {
+		return (lastUpdateTimestamp - block.timestamp) > updateThreshold;
 	}
 }
