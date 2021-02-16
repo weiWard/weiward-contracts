@@ -2,8 +2,15 @@
 pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
+// Accuracy in block.timestamp is not needed.
+// https://consensys.github.io/smart-contract-best-practices/recommendations/#the-15-second-rule
+/* solhint-disable not-rely-on-time */
 
 contract GasPrice is AccessControl {
+	using SafeMath for uint256;
+
 	event GasPriceUpdate(
 		address indexed author,
 		uint256 oldValue,
@@ -18,6 +25,7 @@ contract GasPrice is AccessControl {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 		updateThreshold = _updateThreshold;
 		gasPrice = _gasPrice;
+		updatedAt = block.timestamp;
 	}
 
 	function setGasPrice(uint256 _gasPrice) public {
@@ -41,7 +49,7 @@ contract GasPrice is AccessControl {
 		updateThreshold = _updateThreshold;
 	}
 
-	function hasPriceExpired() public returns (bool) {
-		return (updatedAt - block.timestamp) > updateThreshold;
+	function hasPriceExpired() public view returns (bool) {
+		return block.timestamp.sub(updatedAt) > updateThreshold;
 	}
 }
