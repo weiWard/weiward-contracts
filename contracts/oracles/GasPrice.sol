@@ -11,11 +11,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract GasPrice is AccessControl {
 	using SafeMath for uint256;
 
-	event GasPriceUpdate(
-		address indexed author,
-		uint256 oldValue,
-		uint256 newValue
-	);
+	event GasPriceUpdate(address indexed author, uint256 newValue);
+
 	bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 	uint256 public gasPrice;
 	uint256 public updateThreshold;
@@ -24,8 +21,7 @@ contract GasPrice is AccessControl {
 	constructor(uint256 _updateThreshold, uint256 _gasPrice) {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 		updateThreshold = _updateThreshold;
-		gasPrice = _gasPrice;
-		updatedAt = block.timestamp;
+		_setGasPrice(_gasPrice);
 	}
 
 	function setGasPrice(uint256 _gasPrice) public {
@@ -33,11 +29,7 @@ contract GasPrice is AccessControl {
 			hasRole(ORACLE_ROLE, msg.sender),
 			"Caller is not a trusted oracle source."
 		);
-
-		// update public values
-		updatedAt = block.timestamp;
-		gasPrice = _gasPrice;
-		emit GasPriceUpdate(msg.sender, gasPrice, _gasPrice);
+		_setGasPrice(_gasPrice);
 	}
 
 	function setUpdateThreshold(uint256 _updateThreshold) public {
@@ -50,5 +42,12 @@ contract GasPrice is AccessControl {
 
 	function hasPriceExpired() public view returns (bool) {
 		return block.timestamp.sub(updatedAt) > updateThreshold;
+	}
+
+	function _setGasPrice(uint256 _gasPrice) internal {
+		// update public values
+		updatedAt = block.timestamp;
+		gasPrice = _gasPrice;
+		emit GasPriceUpdate(msg.sender, _gasPrice);
 	}
 }
