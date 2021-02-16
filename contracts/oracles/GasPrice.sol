@@ -25,7 +25,7 @@ contract GasPrice is AccessControl {
 		_setGasPrice(_gasPrice);
 	}
 
-	function setGasPrice(uint256 _gasPrice) public {
+	function setGasPrice(uint256 _gasPrice) external {
 		require(
 			hasRole(ORACLE_ROLE, msg.sender),
 			"Caller is not a trusted oracle source."
@@ -33,7 +33,7 @@ contract GasPrice is AccessControl {
 		_setGasPrice(_gasPrice);
 	}
 
-	function setUpdateThreshold(uint256 _updateThreshold) public {
+	function setUpdateThreshold(uint256 _updateThreshold) external {
 		require(
 			hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
 			"Caller is not the contract admin."
@@ -41,7 +41,7 @@ contract GasPrice is AccessControl {
 		_setUpdateThreshold(_updateThreshold);
 	}
 
-	function hasPriceExpired() public view returns (bool) {
+	function hasPriceExpired() external view returns (bool) {
 		return block.timestamp.sub(updatedAt) > updateThreshold;
 	}
 
