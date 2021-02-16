@@ -11,17 +11,32 @@ contract GasPrice is AccessControl {
 	);
 	bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 	uint256 public gasPrice;
+	uint256 public updateThreshold;
+	uint256 public lastUpdateTimestamp;
 
-	constructor() {
+	constructor(uint256 _updateThreshold) {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+		updateThreshold = _updateThreshold;
 	}
 
-	function setValue(uint256 _gasPrice) public {
+	function setGasPrice(uint256 _gasPrice) public {
 		require(
 			hasRole(ORACLE_ROLE, msg.sender),
 			"Caller is not a trusted oracle source."
 		);
-		emit GasPriceUpdate(msg.sender, gasPrice, _gasPrice);
+		require(lastUpdateTimestamp - block.timestamp > updateThreshold);
+
+		// update public values
+		lastUpdateTimestamp = block.timestamp;
 		gasPrice = _gasPrice;
+		emit GasPriceUpdate(msg.sender, gasPrice, _gasPrice);
+	}
+
+	function setUpdateThreshold(uint256 _updateThreshold) public {
+		require(
+			hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+			"Caller is not a trusted oracle source."
+		);
+		updateThreshold = _updateThreshold;
 	}
 }
