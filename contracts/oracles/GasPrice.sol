@@ -33,7 +33,6 @@ contract GasPrice is AccessControl {
 			hasRole(ORACLE_ROLE, msg.sender),
 			"Caller is not a trusted oracle source."
 		);
-		require(hasPriceExpired(), "The current gas price has not expired.");
 
 		// update public values
 		updatedAt = block.timestamp;
