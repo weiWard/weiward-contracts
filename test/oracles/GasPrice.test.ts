@@ -41,7 +41,7 @@ const loadFixture = deployments.createFixture(
 	},
 );
 
-describe.only('GasPrice', function () {
+describe('GasPrice', function () {
 	let deployer: string;
 	let contract: MockGasPrice;
 	let provider: MockProvider;
