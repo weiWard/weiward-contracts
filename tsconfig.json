@@ -12,7 +12,8 @@
 		"paths": {
 			"@abis/*": ["../build/artifacts/*"],
 			"@contracts/*": ["../build/types/*"],
-			"@utils/*": ["utils/*"]
+			"@utils/*": ["utils/*"],
+			"@sinonjs/fake-timers": ["../node_modules/@types/sinonjs__fake-timers"]
 		}
 	},
 	"include": [
