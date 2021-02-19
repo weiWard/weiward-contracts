@@ -20,7 +20,6 @@ contract GasPrice is AccessControl, IGasPrice {
 
 	constructor(uint256 _updateThreshold, uint256 _gasPrice) {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-		_setupRole(ORACLE_ROLE, msg.sender);
 		_setUpdateThreshold(_updateThreshold);
 		_setGasPrice(_gasPrice);
 	}

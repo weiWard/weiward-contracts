@@ -49,6 +49,7 @@ describe.only('GasPrice', function () {
 
 	beforeEach(async function () {
 		({ contract, deployer, provider, testerContract } = await loadFixture());
+		contract.grantRole(ORACLE_ROLE, deployer);
 	});
 
 	it('initial state is correct', async function () {
