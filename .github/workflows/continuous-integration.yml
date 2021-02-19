@@ -4,11 +4,11 @@ on:
     branches:
       - main
 
-name: Deploy to Amazon ECS
+name: Continuous Integration
 
 jobs:
   build-test:
-    name: Compile Contracts
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
