@@ -1,5 +1,5 @@
 on:
-	push:
+  push:
   pull_request:
     branches:
       - main
@@ -13,11 +13,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-			- name: Setup node.js
-				uses: actions/setup-node@v2
-				with:
-    			node-version: '14'
-			- name: Cache
+      - name: Setup node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Cache
         uses: actions/cache@v2
         env:
           cache-name: cache-pnpm-modules
@@ -27,12 +27,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.node-version }}-
       - name: Install
-				uses: pnpm/action-setup@v1.2.1
+        uses: pnpm/action-setup@v1.2.1
         with:
           version: 5.17.2
           run_install: true
-			- name: Compile
-				run: npm run compile
-			- name: Test
-				run: npm test
-
+      - name: Compile
+        run: npm run compile
+      - name: Test
+        run: npm test
