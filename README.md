@@ -13,6 +13,8 @@ Smart contracts for the weiWard platform.
 
 - [Install](#install)
 - [Usage](#usage)
+- [Editor Setup](#editor-setup)
+	- [VS Code](#vs-code)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -67,6 +69,17 @@ npm run export:all
 # Flatten a file
 npx truffle-flattener <file> > flattened/<file>
 ```
+
+## Editor Setup
+
+### VS Code
+
+1. Install the [solidity](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity) extension.
+2. Add the following to your settings file to fix imports ([issue](https://github.com/juanfranblanco/vscode-solidity/issues/178)):
+	```json
+	"solidity.packageDefaultDependenciesContractsDirectory": "",
+	"solidity.packageDefaultDependenciesDirectory": "",
+	```
 
 ## Contributing
 
