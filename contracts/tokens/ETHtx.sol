@@ -2,7 +2,6 @@
 pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -15,11 +14,6 @@ import "./interfaces/IWETH.sol";
 // TODO replace after writing oracle
 interface IGasPriceOracle {
 	function gasPrice() external view returns (uint256);
-}
-
-// TODO replace after writing minting contract
-interface IMinter {
-	function lockedETHtx() external view returns (uint256);
 }
 
 contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
@@ -76,6 +70,16 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 	}
 
 	/* External Mutators */
+
+	function burn(address account, uint256 amount)
+		external
+		virtual
+		override
+		onlyMinter
+		whenNotPaused
+	{
+		_burn(account, amount);
+	}
 
 	function buy(uint256 deadline)
 		external
@@ -266,8 +270,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 	}
 
 	function ethtxOutstanding() public view virtual override returns (uint256) {
-		uint256 locked = IMinter(_minter).lockedETHtx();
-		return totalSupply().sub(ethtxAvailable()).sub(locked);
+		return totalSupply().sub(ethtxAvailable());
 	}
 
 	function gasPrice() public view virtual override returns (uint256) {

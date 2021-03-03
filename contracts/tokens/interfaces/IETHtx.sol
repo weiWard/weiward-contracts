@@ -46,6 +46,8 @@ interface IETHtx {
 
 	/* Mutators */
 
+	function burn(address account, uint256 amount) external;
+
 	function buy(uint256 deadline) external payable;
 
 	function buyWithWETH(uint256 amountIn, uint256 deadline) external;
