@@ -80,6 +80,7 @@ interface IETHmxRewards {
 		uint256 amount
 	);
 	event RewardPaid(address indexed to, uint256 amount);
+	event Snapshot(uint256 id);
 	event Staked(address indexed account, uint256 amount);
 	event Unstaked(address indexed account, uint256 amount);
 }

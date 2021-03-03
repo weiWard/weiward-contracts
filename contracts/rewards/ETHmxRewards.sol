@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
+import "@openzeppelin/contracts/utils/Arrays.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
@@ -11,8 +13,17 @@ import "../tokens/interfaces/IETHmx.sol";
 import "./interfaces/IETHmxRewards.sol";
 
 contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
+	using Arrays for uint256[];
+	using Counters for Counters.Counter;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
+
+	/* Structs */
+
+	struct Snapshots {
+		uint256[] ids;
+		uint256[] values;
+	}
 
 	/* Immutable Public State */
 
@@ -21,8 +32,10 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	/* Mutable Internal State */
 
-	uint256 internal _accruedRewardsPerToken;
-	mapping(address => uint256) internal _accruedRewardsPerTokenLast;
+	Snapshots internal _arptSnapshots;
+	Counters.Counter internal _currentSnapshotId;
+	mapping(address => uint256) internal _arptLastId;
+
 	uint256 internal _lastTotalRewardsAccrued;
 	mapping(address => uint256) internal _rewardsFor;
 	mapping(address => uint256) internal _stakedFor;
@@ -38,12 +51,14 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	constructor(address ethmxAddr_, address wethAddr_) Ownable() {
 		ethmxAddr = ethmxAddr_;
 		wethAddr = wethAddr_;
+		_snapshot();
+		_updateArptSnapshot(0);
 	}
 
 	/* Public Views */
 
 	function accruedRewardsPerToken() public view override returns (uint256) {
-		return _accruedRewardsPerToken;
+		return _lastSnapshotId(_arptSnapshots.values);
 	}
 
 	function accruedRewardsPerTokenLast(address account)
@@ -52,7 +67,12 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		override
 		returns (uint256)
 	{
-		return _accruedRewardsPerTokenLast[account];
+		uint256 id = _arptLastId[account];
+		if (id == 0) {
+			return 0;
+		}
+		(, uint256 value) = _valueAt(id, _arptSnapshots);
+		return value;
 	}
 
 	function lastTotalRewardsAccrued() public view override returns (uint256) {
@@ -221,7 +241,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 		if (newRewards < _totalStaked) {
 			// Add breathing room for better rounding, overflow is OK
-			_accruedRewardsPerToken += newRewards.mul(_MULTIPLIER) / _totalStaked;
+			_addToAndSnapshotArpt(newRewards.mul(_MULTIPLIER) / _totalStaked);
 			_burnETHmx(newRewards);
 		} else {
 			uint256 leftover = newRewards - _totalStaked;
@@ -229,8 +249,8 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 			_rewardsFor[address(0)] = _rewardsFor[address(0)].add(leftover);
 
 			if (_totalStaked != 0) {
-				// newRewards for tokens == totalStaked
-				_accruedRewardsPerToken += _MULTIPLIER;
+				// newRewards when tokens == totalStaked
+				_addToAndSnapshotArpt(_MULTIPLIER);
 				_burnETHmx(_totalStaked);
 			}
 		}
@@ -248,7 +268,27 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		return IERC20(wethAddr).balanceOf(address(this));
 	}
 
+	function _lastSnapshotId(uint256[] storage ids)
+		internal
+		view
+		returns (uint256)
+	{
+		uint256 length = ids.length;
+		if (length == 0) {
+			return 0;
+		} else {
+			return ids[length - 1];
+		}
+	}
+
 	/* Internal Mutators */
+
+	function _addToAndSnapshotArpt(uint256 amount) internal returns (uint256) {
+		uint256 arpt = accruedRewardsPerToken() + amount;
+		_snapshot();
+		_updateArptSnapshot(arpt);
+		return arpt;
+	}
 
 	function _burnETHmx(uint256 amount) internal {
 		_totalStaked = _totalStaked.sub(amount);
@@ -266,6 +306,14 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit RewardPaid(account, amount);
 	}
 
+	function _snapshot() internal returns (uint256) {
+		_currentSnapshotId.increment();
+
+		uint256 currentId = _currentSnapshotId.current();
+		emit Snapshot(currentId);
+		return currentId;
+	}
+
 	function _unstake(address account, uint256 amount) internal {
 		if (amount == 0) {
 			return;
@@ -279,12 +327,17 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit Unstaked(account, amount);
 	}
 
-	function _updateRewardFor(address account) internal {
-		uint256 arpt = _accruedRewardsPerToken;
-		uint256 arptDelta = arpt - _accruedRewardsPerTokenLast[account];
-		uint256 staked = _stakedFor[account];
+	function _updateArptSnapshot(uint256 value) internal {
+		_updateSnapshot(_arptSnapshots, value);
+	}
 
-		_accruedRewardsPerTokenLast[account] = arpt;
+	function _updateRewardFor(address account) internal {
+		uint256 arpt = accruedRewardsPerToken();
+		uint256 arptDelta = arpt - accruedRewardsPerTokenLast(account);
+		uint256 staked = _stakedFor[account];
+		uint256 lastId = _arptLastId[account];
+
+		_arptLastId[account] = _lastSnapshotId(_arptSnapshots.ids);
 
 		if (staked == 0 || arptDelta == 0) {
 			return;
@@ -298,15 +351,47 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 			staked = 0;
 		} else {
 			// The arm above should handle any plausible overflow
-			newRewards = staked.mul(arptDelta) / _MULTIPLIER;
-			uint256 lowStake = staked - newRewards;
-			uint256 lowRewards = (lowStake * arptDelta) / _MULTIPLIER;
-			newRewards = lowRewards + ((newRewards - lowRewards) / 2);
-			staked -= newRewards;
+			uint256 index = _arptSnapshots.ids.findUpperBound(lastId);
+			uint256[] memory values = _arptSnapshots.values;
+			for (uint256 i = index + 1; i < values.length; i++) {
+				arptDelta = values[i] - values[i - 1];
+				newRewards += staked.mul(arptDelta) / _MULTIPLIER;
+				staked -= newRewards;
+			}
 		}
 
 		// Update state
 		_stakedFor[account] = staked;
 		_rewardsFor[account] = _rewardsFor[account].add(newRewards);
+	}
+
+	function _updateSnapshot(Snapshots storage snapshots, uint256 currentValue)
+		internal
+	{
+		uint256 currentId = _currentSnapshotId.current();
+		if (_lastSnapshotId(snapshots.ids) < currentId) {
+			snapshots.ids.push(currentId);
+			snapshots.values.push(currentValue);
+		}
+	}
+
+	function _valueAt(uint256 snapshotId, Snapshots storage snapshots)
+		internal
+		view
+		returns (bool, uint256)
+	{
+		require(snapshotId > 0, "ETHmxRewards: id is 0");
+		require(
+			snapshotId <= _currentSnapshotId.current(),
+			"ETHmxRewards: nonexistent id"
+		);
+
+		uint256 index = snapshots.ids.findUpperBound(snapshotId);
+
+		if (index == snapshots.ids.length) {
+			return (false, 0);
+		} else {
+			return (true, snapshots.values[index]);
+		}
 	}
 }
