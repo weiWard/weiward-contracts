@@ -1,6 +1,6 @@
 import * as modules from './modules';
 
-describe.only('ETHmxRewards', function () {
+describe('ETHmxRewards', function () {
 	const addTest = (name: string, fn: () => void): void => {
 		describe(name, fn.bind(this));
 	};

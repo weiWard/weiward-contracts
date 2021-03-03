@@ -239,19 +239,22 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 			return;
 		}
 
-		if (newRewards < _totalStaked) {
+		// Gas savings
+		uint256 tstaked = _totalStaked;
+
+		if (newRewards < tstaked) {
 			// Add breathing room for better rounding, overflow is OK
-			_addToAndSnapshotArpt(newRewards.mul(_MULTIPLIER) / _totalStaked);
+			_addToAndSnapshotArpt(newRewards.mul(_MULTIPLIER) / tstaked);
 			_burnETHmx(newRewards);
 		} else {
-			uint256 leftover = newRewards - _totalStaked;
+			uint256 leftover = newRewards - tstaked;
 			// Assign excess to zero address
 			_rewardsFor[address(0)] = _rewardsFor[address(0)].add(leftover);
 
-			if (_totalStaked != 0) {
+			if (tstaked != 0) {
 				// newRewards when tokens == totalStaked
 				_addToAndSnapshotArpt(_MULTIPLIER);
-				_burnETHmx(_totalStaked);
+				_burnETHmx(tstaked);
 			}
 		}
 
@@ -344,20 +347,21 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		}
 
 		// Calculate reward and new stake
+		uint256 currentRewards = 0;
 		uint256 newRewards = 0;
-		if (arptDelta >= _MULTIPLIER) {
-			// TODO add excess to some pendingRewards variable to enable redemption again. I don't think I need that, since totalStaked always reduces with rewards.
-			newRewards = staked;
-			staked = 0;
-		} else {
-			// The arm above should handle any plausible overflow
-			uint256 index = _arptSnapshots.ids.findUpperBound(lastId);
-			uint256[] memory values = _arptSnapshots.values;
-			for (uint256 i = index + 1; i < values.length; i++) {
-				arptDelta = values[i] - values[i - 1];
-				newRewards += staked.mul(arptDelta) / _MULTIPLIER;
-				staked -= newRewards;
+		uint256 index = _arptSnapshots.ids.findUpperBound(lastId);
+		uint256[] memory values = _arptSnapshots.values;
+		for (uint256 i = index + 1; i < values.length; i++) {
+			arptDelta = values[i] - values[i - 1];
+			if (arptDelta >= _MULTIPLIER) {
+				// This should handle any plausible overflow
+				newRewards = staked;
+				staked = 0;
+				break;
 			}
+			currentRewards = staked.mul(arptDelta) / _MULTIPLIER;
+			newRewards += currentRewards;
+			staked -= currentRewards;
 		}
 
 		// Update state

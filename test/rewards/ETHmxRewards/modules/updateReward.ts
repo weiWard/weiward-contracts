@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { parseEther, formatEther } from 'ethers/lib/utils';
+import { parseEther } from 'ethers/lib/utils';
 import { MaxUint256, Zero } from '@ethersproject/constants';
-import { BigNumberish } from '@ethersproject/bignumber';
+import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 
 import {
 	Fixture,
@@ -10,8 +10,6 @@ import {
 	stake,
 	roundingFactor,
 } from '../common';
-
-// TODO stagger staking and ensure rewards aren't accumulated too quickly
 
 export default function run(): void {
 	let fixture: Fixture;
@@ -114,167 +112,215 @@ export default function run(): void {
 		});
 	});
 
-	describe('should be correct when multiple parties stake', async function () {
-		describe('when new rewards < stake', function () {
-			const staked = parseEther('50');
-			const rewards = parseEther('7');
+	it('should be correct with multiple parties', async function () {
+		const staked = parseEther('50');
+		const rewards = parseEther('7');
 
-			interface BalanceData {
-				fixture: Fixture;
-				checkpoint: number;
-				totalStake: BigNumberish;
-				stakeA: BigNumberish;
-				stakeB: BigNumberish;
-				totalRewards: BigNumberish;
-				rewardsA: BigNumberish;
-				rewardsB: BigNumberish;
-			}
+		interface BalanceData {
+			fixture: Fixture;
+			checkpoint: number;
+			totalStake: BigNumberish;
+			stakeA: BigNumber;
+			stakeB: BigNumber;
+			totalRewards: BigNumberish;
+			rewardsA: BigNumber;
+			rewardsB: BigNumber;
+			error: BigNumberish;
+		}
 
-			async function checkBalances({
-				fixture,
-				checkpoint,
-				totalStake,
-				// stakeA,
-				// stakeB,
-				totalRewards,
-				rewardsA,
-				rewardsB,
-			}: BalanceData): Promise<void> {
-				const { contract, deployer, tester } = fixture;
+		async function checkBalances({
+			fixture,
+			checkpoint,
+			totalStake,
+			stakeA,
+			stakeB,
+			totalRewards,
+			rewardsA,
+			rewardsB,
+			error,
+		}: BalanceData): Promise<void> {
+			const { contract, deployer, tester } = fixture;
 
-				expect(
-					await contract.totalStaked(),
-					`checkpoint ${checkpoint}: totalStake mismatch`,
-				).to.eq(totalStake);
+			expect(
+				await contract.totalStaked(),
+				`checkpoint ${checkpoint}: totalStake mismatch`,
+			).to.eq(totalStake);
 
-				expect(
-					await contract.totalRewardsAccrued(),
-					`checkpoint ${checkpoint}: totalRewardsAccrued mismatch`,
-				).to.eq(totalRewards);
+			expect(
+				await contract.totalRewardsAccrued(),
+				`checkpoint ${checkpoint}: totalRewardsAccrued mismatch`,
+			).to.eq(totalRewards);
 
-				expect(
-					await contract.rewardsBalanceOf(deployer),
-					`checkpoint ${checkpoint}: deployer rewardsBalanceOf mismatch`,
-				).to.be.lte(rewardsA);
+			expect(
+				await contract.rewardsBalanceOf(deployer),
+				`checkpoint ${checkpoint}: deployer rewardsBalanceOf mismatch`,
+			)
+				.to.be.gte(rewardsA.sub(error))
+				.and.lte(rewardsA);
 
-				expect(
-					await contract.rewardsBalanceOf(tester),
-					`checkpoint ${checkpoint}: tester rewardsBalanceOf mismatch`,
-				).to.be.lte(rewardsB);
+			expect(
+				await contract.rewardsBalanceOf(tester),
+				`checkpoint ${checkpoint}: tester rewardsBalanceOf mismatch`,
+			)
+				.to.be.gte(rewardsB.sub(error))
+				.and.lte(rewardsB);
 
-				// expect(
-				// 	await contract.stakedBalanceOf(deployer),
-				// 	`checkpoint ${checkpoint}: deployer stakedBalanceOf mismatch`,
-				// ).to.be.gte(stakeA);
+			expect(
+				await contract.stakedBalanceOf(deployer),
+				`checkpoint ${checkpoint}: deployer stakedBalanceOf mismatch`,
+			)
+				.to.be.gte(stakeA.sub(error))
+				.and.lte(stakeA);
 
-				// expect(
-				// 	await contract.stakedBalanceOf(tester),
-				// 	`checkpoint ${checkpoint}: tester stakedBalanceOf mismatch`,
-				// ).to.be.gte(stakeB);
-			}
+			expect(
+				await contract.stakedBalanceOf(tester),
+				`checkpoint ${checkpoint}: tester stakedBalanceOf mismatch`,
+			)
+				.to.be.gte(stakeB.sub(error))
+				.and.lte(stakeB);
+		}
 
-			it.only('with staggered entry', async function () {
-				const { contract, testerContract, testerSigner } = fixture;
+		const { contract, testerContract, testerSigner } = fixture;
 
-				const data: BalanceData = {
-					fixture,
-					checkpoint: 1,
-					totalStake: Zero,
-					stakeA: Zero,
-					stakeB: Zero,
-					totalRewards: Zero,
-					rewardsA: Zero,
-					rewardsB: Zero,
-				};
+		const data: BalanceData = {
+			fixture,
+			checkpoint: 1,
+			totalStake: Zero,
+			stakeA: Zero,
+			stakeB: Zero,
+			totalRewards: Zero,
+			rewardsA: Zero,
+			rewardsB: Zero,
+			error: 3,
+		};
 
-				await stake(fixture, staked);
-				data.stakeA = staked;
-				await addRewards(fixture, rewards);
-				data.totalRewards = rewards;
-				await contract.updateAccrual();
-				data.totalStake = staked.sub(rewards);
+		await stake(fixture, staked);
+		data.stakeA = staked;
+		data.totalStake = staked;
 
-				data.checkpoint = 1;
-				await checkBalances(data);
+		await addRewards(fixture, rewards);
+		data.totalRewards = rewards;
 
-				await stake(fixture, staked, testerSigner);
-				data.stakeB = staked;
-				data.totalStake = data.totalStake.add(staked);
+		await contract.updateAccrual();
+		data.totalStake = data.totalStake.sub(rewards);
 
-				await addRewards(fixture, rewards);
-				data.totalRewards = data.totalRewards.add(rewards);
+		data.checkpoint = 1;
+		await checkBalances(data);
 
-				await contract.updateAccrual();
-				data.totalStake = data.totalStake.sub(rewards);
-				await contract.updateReward();
-				let newRewardsA = rewards.mul(data.stakeA).div(data.totalStake);
-				data.rewardsA = rewards.add(newRewardsA);
-				data.stakeA = data.stakeA.sub(data.rewardsA);
+		await stake(fixture, staked, testerSigner);
+		data.stakeB = staked;
+		data.totalStake = data.totalStake.add(staked);
+		const totalStake1 = data.totalStake;
 
-				data.checkpoint = 2;
-				await checkBalances(data);
+		await addRewards(fixture, rewards);
+		data.totalRewards = data.totalRewards.add(rewards);
 
-				await addRewards(fixture, rewards);
-				data.totalRewards = data.totalRewards.add(rewards);
+		await contract.updateAccrual();
+		data.totalStake = data.totalStake.sub(rewards);
+		const totalStake2 = data.totalStake;
 
-				await contract.updateAccrual();
-				data.totalStake = data.totalStake.sub(rewards);
-				await testerContract.updateReward();
-				data.rewardsB = rewards.mul(2).mul(data.stakeB).div(data.totalStake);
-				data.stakeB = data.stakeB.sub(data.rewardsB);
+		await contract.updateReward();
+		// From first rewards
+		data.stakeA = data.stakeA.sub(rewards);
+		data.rewardsA = rewards;
+		// From second rewards
+		let newRewardsA = rewards.mul(data.stakeA).div(totalStake1);
+		data.rewardsA = data.rewardsA.add(newRewardsA);
+		data.stakeA = data.stakeA.sub(newRewardsA);
 
-				data.checkpoint = 3;
-				await checkBalances(data);
+		data.checkpoint = 2;
+		await checkBalances(data);
 
-				await contract.updateReward();
-				newRewardsA = rewards.mul(data.stakeA).div(data.totalStake);
-				data.rewardsA = data.rewardsA.add(newRewardsA);
-				data.stakeA = data.stakeA.sub(newRewardsA);
+		await addRewards(fixture, rewards);
+		data.totalRewards = data.totalRewards.add(rewards);
 
-				data.checkpoint = 4;
-				await checkBalances(data);
+		await contract.updateAccrual();
+		data.totalStake = data.totalStake.sub(rewards);
 
-				const { deployer, tester } = fixture;
-				const actualRewardsA = await contract.rewardsBalanceOf(deployer);
-				const actualRewardsB = await contract.rewardsBalanceOf(tester);
-				const actualStakeA = await contract.stakedBalanceOf(deployer);
-				const actualStakeB = await contract.stakedBalanceOf(tester);
+		await testerContract.updateReward();
+		// From second rewards
+		data.rewardsB = rewards.mul(data.stakeB).div(totalStake1);
+		// From third rewards
+		data.stakeB = data.stakeB.sub(data.rewardsB);
+		const newRewardsB = rewards.mul(data.stakeB).div(totalStake2);
+		data.rewardsB = data.rewardsB.add(newRewardsB);
+		data.stakeB = data.stakeB.sub(newRewardsB);
 
-				/* eslint-disable no-console */
-				console.log(`totalStake: ${formatEther(data.totalStake)}`);
-				console.log(`totalRewards: ${formatEther(data.totalRewards)}`);
-				console.log(
-					`rewardsA: ${formatEther(
-						data.rewardsA,
-					)}; actualRewardsA: ${formatEther(actualRewardsA)}`,
-				);
-				console.log(
-					`rewardsB: ${formatEther(
-						data.rewardsB,
-					)}; actualRewardsB: ${formatEther(actualRewardsB)}`,
-				);
-				console.log(
-					`stakeA: ${formatEther(data.stakeA)}; actualStakeA: ${formatEther(
-						actualStakeA,
-					)}`,
-				);
-				console.log(
-					`stakeB: ${formatEther(data.stakeB)}; actualStakeB: ${formatEther(
-						actualStakeB,
-					)}`,
-				);
+		data.checkpoint = 3;
+		await checkBalances(data);
 
-				expect(data.totalRewards, 'rewards mismatch').to.eq(
-					actualRewardsA.add(actualRewardsB),
-				);
-				expect(data.totalStake, 'stake mismatch').to.eq(
-					actualStakeA.add(actualStakeB),
-				);
-			});
-		});
+		await contract.updateReward();
+		// From third rewards
+		newRewardsA = rewards.mul(data.stakeA).div(totalStake2);
+		data.rewardsA = data.rewardsA.add(newRewardsA);
+		data.stakeA = data.stakeA.sub(newRewardsA);
 
-		describe('when new rewards > stake', function () {
-			it('with staggered entry');
-		});
+		data.checkpoint = 4;
+		await checkBalances(data);
+
+		const { deployer, tester } = fixture;
+		const actualRewardsA = await contract.rewardsBalanceOf(deployer);
+		const actualRewardsB = await contract.rewardsBalanceOf(tester);
+		const actualStakeA = await contract.stakedBalanceOf(deployer);
+		const actualStakeB = await contract.stakedBalanceOf(tester);
+
+		const allocatedRewards = actualRewardsA.add(actualRewardsB);
+		expect(allocatedRewards, 'intermediate allocated rewards mismatch')
+			.to.be.gte(data.totalRewards.sub(data.error))
+			.and.lte(data.totalRewards);
+
+		const allocatedStake = actualStakeA.add(actualStakeB);
+		const expectedError = data.totalRewards.sub(allocatedRewards);
+		expect(allocatedStake, 'intermediate allocated stake mismatch').to.eq(
+			data.totalStake.add(expectedError),
+		);
+
+		const excessRewards = data.totalStake.add(rewards);
+		await addRewards(fixture, excessRewards);
+		data.totalRewards = data.totalRewards.add(excessRewards);
+
+		await contract.updateAccrual();
+		data.totalStake = 0;
+
+		expect(
+			await contract.unredeemableRewards(),
+			'unredeemable mismatch',
+		).to.eq(rewards);
+
+		await contract.updateReward();
+		// From fourth rewards
+		data.rewardsA = data.rewardsA.add(data.stakeA);
+		data.stakeA = Zero;
+
+		data.checkpoint = 5;
+		await checkBalances(data);
+
+		await testerContract.updateReward();
+		// From fourth rewards
+		data.rewardsB = data.rewardsB.add(data.stakeB);
+		data.stakeB = Zero;
+
+		data.checkpoint = 6;
+		await checkBalances(data);
+
+		expect(data.rewardsA, 'final rewardsA mismatch').to.eq(staked);
+		expect(data.rewardsB, 'final rewardsB mismatch').to.eq(staked);
+
+		const { ethmx, weth } = fixture;
+
+		expect(
+			await ethmx.balanceOf(contract.address),
+			'final ETHmx balance mismatch',
+		).to.eq(0);
+
+		const rewardsBalance = await weth.balanceOf(contract.address);
+		expect(rewardsBalance, 'final rewards balance mismatch').to.eq(
+			data.totalRewards,
+		);
+
+		expect(
+			rewardsBalance.sub(data.rewardsA).sub(data.rewardsB),
+			'final unredeemable rewards balance mismatch',
+		).to.eq(rewards);
 	});
 }
