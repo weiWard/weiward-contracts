@@ -18,13 +18,6 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Structs */
-
-	struct Snapshots {
-		uint256[] ids;
-		uint256[] values;
-	}
-
 	/* Immutable Public State */
 
 	address public immutable override ethmxAddr;
@@ -32,9 +25,8 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	/* Mutable Internal State */
 
-	Snapshots internal _arptSnapshots;
-	Counters.Counter internal _currentSnapshotId;
-	mapping(address => uint256) internal _arptLastId;
+	uint256[] internal _arptSnapshots;
+	mapping(address => uint256) internal _arptLastIdx;
 
 	uint256 internal _lastTotalRewardsAccrued;
 	mapping(address => uint256) internal _rewardsFor;
@@ -51,14 +43,13 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	constructor(address ethmxAddr_, address wethAddr_) Ownable() {
 		ethmxAddr = ethmxAddr_;
 		wethAddr = wethAddr_;
-		_snapshot();
-		_updateArptSnapshot(0);
+		_arptSnapshots.push(0);
 	}
 
 	/* Public Views */
 
 	function accruedRewardsPerToken() public view override returns (uint256) {
-		return _lastSnapshotId(_arptSnapshots.values);
+		return _arptSnapshots[_arptSnapshots.length - 1];
 	}
 
 	function accruedRewardsPerTokenLast(address account)
@@ -67,12 +58,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		override
 		returns (uint256)
 	{
-		uint256 id = _arptLastId[account];
-		if (id == 0) {
-			return 0;
-		}
-		(, uint256 value) = _valueAt(id, _arptSnapshots);
-		return value;
+		return _arptSnapshots[_arptLastIdx[account]];
 	}
 
 	function lastTotalRewardsAccrued() public view override returns (uint256) {
@@ -244,7 +230,9 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 		if (newRewards < tstaked) {
 			// Add breathing room for better rounding, overflow is OK
-			_addToAndSnapshotArpt(newRewards.mul(_MULTIPLIER) / tstaked);
+			uint256 arpt = accruedRewardsPerToken();
+			arpt += newRewards.mul(_MULTIPLIER) / tstaked;
+			_arptSnapshots.push(arpt);
 			_burnETHmx(newRewards);
 		} else {
 			uint256 leftover = newRewards - tstaked;
@@ -252,8 +240,10 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 			_rewardsFor[address(0)] = _rewardsFor[address(0)].add(leftover);
 
 			if (tstaked != 0) {
+				uint256 arpt = accruedRewardsPerToken();
 				// newRewards when tokens == totalStaked
-				_addToAndSnapshotArpt(_MULTIPLIER);
+				arpt += _MULTIPLIER;
+				_arptSnapshots.push(arpt);
 				_burnETHmx(tstaked);
 			}
 		}
@@ -271,27 +261,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		return IERC20(wethAddr).balanceOf(address(this));
 	}
 
-	function _lastSnapshotId(uint256[] storage ids)
-		internal
-		view
-		returns (uint256)
-	{
-		uint256 length = ids.length;
-		if (length == 0) {
-			return 0;
-		} else {
-			return ids[length - 1];
-		}
-	}
-
 	/* Internal Mutators */
-
-	function _addToAndSnapshotArpt(uint256 amount) internal returns (uint256) {
-		uint256 arpt = accruedRewardsPerToken() + amount;
-		_snapshot();
-		_updateArptSnapshot(arpt);
-		return arpt;
-	}
 
 	function _burnETHmx(uint256 amount) internal {
 		_totalStaked = _totalStaked.sub(amount);
@@ -309,14 +279,6 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit RewardPaid(account, amount);
 	}
 
-	function _snapshot() internal returns (uint256) {
-		_currentSnapshotId.increment();
-
-		uint256 currentId = _currentSnapshotId.current();
-		emit Snapshot(currentId);
-		return currentId;
-	}
-
 	function _unstake(address account, uint256 amount) internal {
 		if (amount == 0) {
 			return;
@@ -330,17 +292,16 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit Unstaked(account, amount);
 	}
 
-	function _updateArptSnapshot(uint256 value) internal {
-		_updateSnapshot(_arptSnapshots, value);
-	}
-
 	function _updateRewardFor(address account) internal {
-		uint256 arpt = accruedRewardsPerToken();
-		uint256 arptDelta = arpt - accruedRewardsPerTokenLast(account);
+		// Gas savings
+		uint256[] memory arptValues = _arptSnapshots;
+		uint256 length = arptValues.length;
+		uint256 arpt = arptValues[length - 1];
+		uint256 lastIdx = _arptLastIdx[account];
+		uint256 arptDelta = arpt - arptValues[lastIdx];
 		uint256 staked = _stakedFor[account];
-		uint256 lastId = _arptLastId[account];
 
-		_arptLastId[account] = _lastSnapshotId(_arptSnapshots.ids);
+		_arptLastIdx[account] = length - 1;
 
 		if (staked == 0 || arptDelta == 0) {
 			return;
@@ -349,10 +310,8 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		// Calculate reward and new stake
 		uint256 currentRewards = 0;
 		uint256 newRewards = 0;
-		uint256 index = _arptSnapshots.ids.findUpperBound(lastId);
-		uint256[] memory values = _arptSnapshots.values;
-		for (uint256 i = index + 1; i < values.length; i++) {
-			arptDelta = values[i] - values[i - 1];
+		for (uint256 i = lastIdx + 1; i < length; i++) {
+			arptDelta = arptValues[i] - arptValues[i - 1];
 			if (arptDelta >= _MULTIPLIER) {
 				// This should handle any plausible overflow
 				newRewards = staked;
@@ -367,35 +326,5 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		// Update state
 		_stakedFor[account] = staked;
 		_rewardsFor[account] = _rewardsFor[account].add(newRewards);
-	}
-
-	function _updateSnapshot(Snapshots storage snapshots, uint256 currentValue)
-		internal
-	{
-		uint256 currentId = _currentSnapshotId.current();
-		if (_lastSnapshotId(snapshots.ids) < currentId) {
-			snapshots.ids.push(currentId);
-			snapshots.values.push(currentValue);
-		}
-	}
-
-	function _valueAt(uint256 snapshotId, Snapshots storage snapshots)
-		internal
-		view
-		returns (bool, uint256)
-	{
-		require(snapshotId > 0, "ETHmxRewards: id is 0");
-		require(
-			snapshotId <= _currentSnapshotId.current(),
-			"ETHmxRewards: nonexistent id"
-		);
-
-		uint256 index = snapshots.ids.findUpperBound(snapshotId);
-
-		if (index == snapshots.ids.length) {
-			return (false, 0);
-		} else {
-			return (true, snapshots.values[index]);
-		}
 	}
 }

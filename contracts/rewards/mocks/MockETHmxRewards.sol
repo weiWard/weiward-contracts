@@ -11,8 +11,7 @@ contract MockETHmxRewards is ETHmxRewards {
 	}
 
 	function setAccruedRewardsPerToken(uint256 value) external {
-		_snapshot();
-		_updateArptSnapshot(value);
+		_arptSnapshots.push(value);
 	}
 
 	function setLastTotalRewardsAccrued(uint256 value) external {
