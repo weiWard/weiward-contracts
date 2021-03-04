@@ -1,12 +1,12 @@
 import { expect } from 'chai';
 import { parseEther } from 'ethers/lib/utils';
 
+import { parseETHmx } from '../../../helpers/conversions';
 import {
 	Fixture,
 	loadFixture,
 	addRewards,
 	stake,
-	parseETHmx,
 	ethmxToEth,
 } from '../common';
 

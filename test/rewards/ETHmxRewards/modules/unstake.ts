@@ -1,13 +1,8 @@
 import { expect } from 'chai';
 import { parseEther } from 'ethers/lib/utils';
 
-import {
-	Fixture,
-	loadFixture,
-	addRewards,
-	stake,
-	parseETHmx,
-} from '../common';
+import { parseETHmx } from '../../../helpers/conversions';
+import { Fixture, loadFixture, addRewards, stake } from '../common';
 
 export default function run(): void {
 	let fixture: Fixture;

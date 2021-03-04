@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { deployments } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { BigNumber } from '@ethersproject/bignumber';
+import { JsonRpcSigner } from '@ethersproject/providers';
 
 import { zeroAddress, zeroPadAddress } from '../helpers/address';
 import {
@@ -15,7 +16,6 @@ import {
 	WETH9,
 	FeeLogic,
 } from '../../build/types/ethers-v5';
-import { JsonRpcSigner } from '@ethersproject/providers';
 
 const contractName = 'ETHmx';
 

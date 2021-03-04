@@ -1,8 +1,9 @@
 import { deployments } from 'hardhat';
-import { parseUnits } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
+import { JsonRpcSigner } from '@ethersproject/providers';
 
 import { zeroAddress, zeroPadAddress } from '../../helpers/address';
+import { parseGwei } from '../../helpers/conversions';
 import {
 	MockETHmxRewards,
 	MockETHmxRewards__factory,
@@ -16,17 +17,6 @@ import {
 	WETH9,
 	FeeLogic,
 } from '../../../build/types/ethers-v5';
-import { JsonRpcSigner } from '@ethersproject/providers';
-
-export function parseETHmx(value: string): BigNumber {
-	return parseUnits(value, 18);
-}
-export function parseETHtx(value: string): BigNumber {
-	return parseUnits(value, 18);
-}
-export function parseGwei(value: string): BigNumber {
-	return parseUnits(value, 9);
-}
 
 export const mintGasPrice = parseGwei('1800');
 export const roiNumerator = 5;

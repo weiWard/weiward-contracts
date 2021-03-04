@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 
-import { Fixture, loadFixture, parseETHtx } from '../common';
+import { parseETHtx } from '../../../helpers/conversions';
+import { Fixture, loadFixture } from '../common';
 
 export default function run(): void {
 	let fixture: Fixture;
