@@ -335,6 +335,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 		_lastTotalRewardsAccrued = rewardsAccrued;
 		_lastAccrualUpdate = block.timestamp;
+		emit AccrualUpdated(_msgSender(), rewardsAccrued);
 	}
 
 	function _updateRewardFor(address account) internal {

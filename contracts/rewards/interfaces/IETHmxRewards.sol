@@ -69,6 +69,7 @@ interface IETHmxRewards {
 
 	/* Events */
 
+	event AccrualUpdated(address indexed author, uint256 accruedRewards);
 	event AccrualUpdateIntervalSet(address indexed author, uint256 interval);
 	event RecoveredUnredeemableRewards(
 		address indexed author,

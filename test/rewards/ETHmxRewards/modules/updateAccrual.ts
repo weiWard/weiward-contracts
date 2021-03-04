@@ -210,4 +210,19 @@ export default function run(): void {
 
 		clock.uninstall();
 	});
+
+	it.only('should emit AccrualUpdated event', async function () {
+		const { contract, deployer, tester, testerContract } = fixture;
+		const rewards = parseEther('10');
+
+		await addRewards(fixture, rewards);
+		await expect(contract.updateAccrual())
+			.to.emit(contract, 'AccrualUpdated')
+			.withArgs(deployer, rewards);
+
+		await addRewards(fixture, rewards);
+		await expect(testerContract.mockUpdateAccrual())
+			.to.emit(contract, 'AccrualUpdated')
+			.withArgs(tester, rewards.mul(2));
+	});
 }
