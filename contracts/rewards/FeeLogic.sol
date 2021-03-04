@@ -2,11 +2,12 @@
 pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./interfaces/IFeeLogic.sol";
 
-contract FeeLogic is IFeeLogic {
+contract FeeLogic is Ownable, IFeeLogic {
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeMath for uint128;
 	using SafeMath for uint256;
@@ -24,7 +25,7 @@ contract FeeLogic is IFeeLogic {
 		address recipient_,
 		uint128 feeRateNumerator,
 		uint128 feeRateDenominator
-	) {
+	) Ownable() {
 		setRecipient(recipient_);
 		setFeeRate(feeRateNumerator, feeRateDenominator);
 	}
@@ -104,6 +105,7 @@ contract FeeLogic is IFeeLogic {
 		external
 		virtual
 		override
+		onlyOwner
 	{
 		if (isExempt_ && _exempts.add(account)) {
 			emit ExemptAdded(account);
@@ -118,6 +120,7 @@ contract FeeLogic is IFeeLogic {
 		public
 		virtual
 		override
+		onlyOwner
 	{
 		// Also guarantees that the denominator cannot be zero.
 		require(denominator > numerator, "FeeLogic: feeRate is gte to 1");
@@ -126,7 +129,7 @@ contract FeeLogic is IFeeLogic {
 		emit FeeRateSet(numerator, denominator);
 	}
 
-	function setRecipient(address account) public virtual override {
+	function setRecipient(address account) public virtual override onlyOnwer {
 		require(account != address(0), "FeeLogic: recipient is zero address");
 		_recipient = account;
 		emit RecipientSet(account);
