@@ -211,7 +211,7 @@ export default function run(): void {
 		clock.uninstall();
 	});
 
-	it.only('should emit AccrualUpdated event', async function () {
+	it('should emit AccrualUpdated event', async function () {
 		const { contract, deployer, tester, testerContract } = fixture;
 		const rewards = parseEther('10');
 
