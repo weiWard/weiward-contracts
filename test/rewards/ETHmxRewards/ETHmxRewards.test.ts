@@ -19,6 +19,7 @@ describe.only('ETHmxRewards', function () {
 	addTest('recoverUnsupportedERC20', modules.recoverUnsupportedERC20);
 	addTest('redeemAllRewards', modules.redeemAllRewards);
 	addTest('redeemReward', modules.redeemReward);
+	addTest('setAccrualUpdateInterval', modules.setAccrualUpdateInterval);
 	addTest('stake', modules.stake);
 	addTest('totalRewardsAccrued', modules.totalRewardsAccrued);
 	addTest('unpause', modules.unpause);

@@ -4,6 +4,8 @@ pragma solidity ^0.7.0;
 interface IETHmxRewards {
 	/* Views */
 
+	function accrualUpdateInterval() external view returns (uint256);
+
 	function accruedRewardsPerToken() external view returns (uint256);
 
 	function accruedRewardsPerTokenLast(address account)
@@ -14,6 +16,8 @@ interface IETHmxRewards {
 	function ethmxAddr() external view returns (address);
 
 	function lastTotalRewardsAccrued() external view returns (uint256);
+
+	function lastAccrualUpdate() external view returns (uint256);
 
 	function rewardsBalanceOf(address account) external view returns (uint256);
 
@@ -49,6 +53,8 @@ interface IETHmxRewards {
 
 	function redeemReward(uint256 amount) external;
 
+	function setAccrualUpdateInterval(uint256 interval) external;
+
 	function stake(uint256 amount) external;
 
 	function unpause() external;
@@ -63,6 +69,7 @@ interface IETHmxRewards {
 
 	/* Events */
 
+	event AccrualUpdateIntervalSet(address indexed author, uint256 interval);
 	event RecoveredUnredeemableRewards(
 		address indexed author,
 		address indexed to,
@@ -80,7 +87,6 @@ interface IETHmxRewards {
 		uint256 amount
 	);
 	event RewardPaid(address indexed to, uint256 amount);
-	event Snapshot(uint256 id);
 	event Staked(address indexed account, uint256 amount);
 	event Unstaked(address indexed account, uint256 amount);
 }

@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { parseEther } from 'ethers/lib/utils';
 import { MaxUint256 } from '@ethersproject/constants';
+import FakeTimers from '@sinonjs/fake-timers';
 
 import { zeroAddress } from '../../../helpers/address';
 import {
@@ -9,6 +10,7 @@ import {
 	addRewards,
 	stake,
 	roundingFactor,
+	accrualUpdateInterval,
 } from '../common';
 
 export default function run(): void {
@@ -155,5 +157,57 @@ export default function run(): void {
 
 		const expected = rewards.mul(roundingFactor).div(staked);
 		expect(await contract.accruedRewardsPerToken()).to.eq(expected);
+	});
+
+	it('should update lastAccrualUpdate', async function () {
+		const { contract } = fixture;
+		await addRewards(fixture, parseEther('10'));
+		const tx = await contract.updateAccrual();
+		const block = await contract.provider.getBlock(tx.blockNumber || '');
+		expect(await contract.lastAccrualUpdate()).to.eq(block.timestamp);
+	});
+
+	it('should not update lastAccrualUpdate without rewards', async function () {
+		const { contract } = fixture;
+		await contract.updateAccrual();
+		expect(await contract.lastAccrualUpdate()).to.eq(0);
+	});
+
+	it('should revert before next accrualUpdateInterval', async function () {
+		const { contract } = fixture;
+		await addRewards(fixture, parseEther('10'));
+		await contract.updateAccrual();
+		await expect(contract.updateAccrual()).to.be.revertedWith(
+			'too soon to update accrual',
+		);
+	});
+
+	it('should revert when accrualUpdateInterval > block.timestamp', async function () {
+		const { contract } = fixture;
+		const unixTime = Math.floor(Date.now() / 1000);
+		await contract.setLastAccrualUpdate(unixTime + 10);
+		await expect(contract.updateAccrual()).to.be.revertedWith(
+			'block is older than last accrual update',
+		);
+	});
+
+	it('should succeed after next accrualUpdateInterval', async function () {
+		const { contract } = fixture;
+		const now = Date.now();
+		const clock = FakeTimers.install({ now, shouldAdvanceTime: true });
+
+		await addRewards(fixture, parseEther('10'));
+		const tx = await contract.updateAccrual();
+		const block = await contract.provider.getBlock(tx.blockNumber || '');
+
+		await addRewards(fixture, parseEther('10'));
+
+		const minTimestamp = block.timestamp + accrualUpdateInterval;
+		clock.setSystemTime((minTimestamp + 15) * 1000);
+
+		await expect(contract.updateAccrual()).to.not.be.reverted;
+		expect(await contract.lastAccrualUpdate()).to.be.gte(minTimestamp);
+
+		clock.uninstall();
 	});
 }

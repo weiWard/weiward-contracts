@@ -33,6 +33,7 @@ export const roiNumerator = 5;
 export const roiDenominator = 1;
 export const feeRecipient = zeroPadAddress('0x1');
 export const roundingFactor = BigNumber.from(10).pow(36);
+export const accrualUpdateInterval = 3600; // 1 hour
 
 export function ethToEthmx(amountETH: BigNumber): BigNumber {
 	return amountETH.mul(roiNumerator).div(roiDenominator);
@@ -93,7 +94,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const contract = await new MockETHmxRewards__factory(
 			deployerSigner,
-		).deploy(ethmx.address, weth.address);
+		).deploy(ethmx.address, weth.address, accrualUpdateInterval);
 		const testerContract = contract.connect(testerSigner);
 
 		return {

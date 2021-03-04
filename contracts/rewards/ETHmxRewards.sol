@@ -12,6 +12,10 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../tokens/interfaces/IETHmx.sol";
 import "./interfaces/IETHmxRewards.sol";
 
+// High accuracy in block.timestamp is not needed.
+// https://consensys.github.io/smart-contract-best-practices/recommendations/#the-15-second-rule
+/* solhint-disable not-rely-on-time */
+
 contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	using Arrays for uint256[];
 	using Counters for Counters.Counter;
@@ -28,10 +32,14 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	uint256[] internal _arptSnapshots;
 	mapping(address => uint256) internal _arptLastIdx;
 
-	uint256 internal _lastTotalRewardsAccrued;
+	uint256 internal _lastAccrualUpdate;
+	uint256 internal _accrualUpdateInterval;
+
 	mapping(address => uint256) internal _rewardsFor;
-	mapping(address => uint256) internal _stakedFor;
+	uint256 internal _lastTotalRewardsAccrued;
 	uint256 internal _totalRewardsRedeemed;
+
+	mapping(address => uint256) internal _stakedFor;
 	uint256 internal _totalStaked;
 
 	/* Immutable Internal State */
@@ -40,13 +48,22 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	/* Constructor */
 
-	constructor(address ethmxAddr_, address wethAddr_) Ownable() {
+	constructor(
+		address ethmxAddr_,
+		address wethAddr_,
+		uint256 accrualUpdateInterval_
+	) Ownable() {
 		ethmxAddr = ethmxAddr_;
 		wethAddr = wethAddr_;
 		_arptSnapshots.push(0);
+		setAccrualUpdateInterval(accrualUpdateInterval_);
 	}
 
 	/* Public Views */
+
+	function accrualUpdateInterval() external view override returns (uint256) {
+		return _accrualUpdateInterval;
+	}
 
 	function accruedRewardsPerToken() public view override returns (uint256) {
 		return _arptSnapshots[_arptSnapshots.length - 1];
@@ -59,6 +76,10 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		returns (uint256)
 	{
 		return _arptSnapshots[_arptLastIdx[account]];
+	}
+
+	function lastAccrualUpdate() external view override returns (uint256) {
+		return _lastAccrualUpdate;
 	}
 
 	function lastTotalRewardsAccrued() public view override returns (uint256) {
@@ -171,6 +192,15 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		_redeemReward(account, amount);
 	}
 
+	function setAccrualUpdateInterval(uint256 interval)
+		public
+		override
+		onlyOwner
+	{
+		_accrualUpdateInterval = interval;
+		emit AccrualUpdateIntervalSet(_msgSender(), interval);
+	}
+
 	function stake(uint256 amount) public override whenNotPaused {
 		require(amount != 0, "ETHmxRewards: cannot stake zero");
 
@@ -217,38 +247,17 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	}
 
 	function updateAccrual() public override {
-		uint256 rewardsAccrued = totalRewardsAccrued();
-		// Overflow is OK
-		uint256 newRewards = rewardsAccrued - _lastTotalRewardsAccrued;
+		uint256 timePassed =
+			block.timestamp.sub(
+				_lastAccrualUpdate,
+				"ETHmxRewards: block is older than last accrual update"
+			);
+		require(
+			timePassed >= _accrualUpdateInterval,
+			"ETHmxRewards: too soon to update accrual"
+		);
 
-		if (newRewards == 0) {
-			return;
-		}
-
-		// Gas savings
-		uint256 tstaked = _totalStaked;
-
-		if (newRewards < tstaked) {
-			// Add breathing room for better rounding, overflow is OK
-			uint256 arpt = accruedRewardsPerToken();
-			arpt += newRewards.mul(_MULTIPLIER) / tstaked;
-			_arptSnapshots.push(arpt);
-			_burnETHmx(newRewards);
-		} else {
-			uint256 leftover = newRewards - tstaked;
-			// Assign excess to zero address
-			_rewardsFor[address(0)] = _rewardsFor[address(0)].add(leftover);
-
-			if (tstaked != 0) {
-				uint256 arpt = accruedRewardsPerToken();
-				// newRewards when tokens == totalStaked
-				arpt += _MULTIPLIER;
-				_arptSnapshots.push(arpt);
-				_burnETHmx(tstaked);
-			}
-		}
-
-		_lastTotalRewardsAccrued = rewardsAccrued;
+		_updateAccrual();
 	}
 
 	function updateReward() public override {
@@ -290,6 +299,42 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 		IERC20(ethmxAddr).safeTransfer(account, amount);
 		emit Unstaked(account, amount);
+	}
+
+	function _updateAccrual() internal {
+		uint256 rewardsAccrued = totalRewardsAccrued();
+		// Overflow is OK
+		uint256 newRewards = rewardsAccrued - _lastTotalRewardsAccrued;
+
+		if (newRewards == 0) {
+			return;
+		}
+
+		// Gas savings
+		uint256 tstaked = _totalStaked;
+
+		if (newRewards < tstaked) {
+			// Add breathing room for better rounding, overflow is OK
+			uint256 arpt = accruedRewardsPerToken();
+			arpt += newRewards.mul(_MULTIPLIER) / tstaked;
+			_arptSnapshots.push(arpt);
+			_burnETHmx(newRewards);
+		} else {
+			uint256 leftover = newRewards - tstaked;
+			// Assign excess to zero address
+			_rewardsFor[address(0)] = _rewardsFor[address(0)].add(leftover);
+
+			if (tstaked != 0) {
+				uint256 arpt = accruedRewardsPerToken();
+				// newRewards when tokens == totalStaked
+				arpt += _MULTIPLIER;
+				_arptSnapshots.push(arpt);
+				_burnETHmx(tstaked);
+			}
+		}
+
+		_lastTotalRewardsAccrued = rewardsAccrued;
+		_lastAccrualUpdate = block.timestamp;
 	}
 
 	function _updateRewardFor(address account) internal {

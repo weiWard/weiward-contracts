@@ -1,3 +1,6 @@
+dependencies:
+  '@sinonjs/fake-timers': 7.0.2
+  '@types/sinonjs__fake-timers': 6.0.2
 devDependencies:
   '@ethersproject/abi': 5.0.9
   '@ethersproject/bignumber': 5.0.12
@@ -743,6 +746,18 @@ packages:
       node: '>=6'
     resolution:
       integrity: sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
+  /@sinonjs/commons/1.8.2:
+    dependencies:
+      type-detect: 4.0.8
+    dev: false
+    resolution:
+      integrity: sha512-sruwd86RJHdsVf/AtBoijDmUqJp3B6hF/DGC23C+JaegnDHaZyewCjoVGTdg3J0uz3Zs7NnIT05OBOmML72lQw==
+  /@sinonjs/fake-timers/7.0.2:
+    dependencies:
+      '@sinonjs/commons': 1.8.2
+    dev: false
+    resolution:
+      integrity: sha512-dF84L5YC90gIOegPDCYymPIsDmwMWWSh7BwfDXQYePi8lVIEp7IZ1UVGkME8FjXOsDPxan12x4aaK+Lo6wVh9A==
   /@solidity-parser/parser/0.10.1:
     dev: true
     resolution:
@@ -929,7 +944,6 @@ packages:
     resolution:
       integrity: sha512-z/y8maYOQyYLyqaOB+dYQ6i0pxKLOsfwCmHmn4T7jS/SDHicIslr37oE3Dg8SCqKrKeBy6Lemu7do2yy+unLrw==
   /@types/sinonjs__fake-timers/6.0.2:
-    dev: true
     resolution:
       integrity: sha512-dIPoZ3g5gcx9zZEszaxLSVTvMReD3xxyyDnQUjA6IYDG9Ba2AV0otMPs+77sG9ojB4Qr2N2Vk5RnKeuA0X/0bg==
   /@types/underscore/1.10.24:
@@ -2717,7 +2731,7 @@ packages:
     resolution:
       integrity: sha512-Se+LaxqXlVXGvmexKGPvnUIYC1jwXu1H6Pkyb3uBM5d8/NELMYCHs/4/roD7721NxrTLyv7e5nXd5/QLBO+10g==
   /core-js/2.6.12:
-    deprecated: 'core-js@<3 is no longer maintained and not recommended for usage due to the number of issues. Please, upgrade your dependencies to the actual version of core-js@3.'
+    deprecated: core-js@<3 is no longer maintained and not recommended for usage due to the number of issues. Please, upgrade your dependencies to the actual version of core-js@3.
     dev: true
     requiresBuild: true
     resolution:
@@ -2869,7 +2883,7 @@ packages:
   /debug/3.2.6:
     dependencies:
       ms: 2.1.1
-    deprecated: 'Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)'
+    deprecated: Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)
     dev: true
     resolution:
       integrity: sha512-mel+jf7nrtEl5Pn1Qx46zARXKDpBbvzezse7p7LqINmdoIk8PYP5SySaxEmYv6TZ0JyEKA1hsCId6DIhgITtWQ==
@@ -2882,7 +2896,7 @@ packages:
   /debug/4.1.1:
     dependencies:
       ms: 2.1.2
-    deprecated: 'Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)'
+    deprecated: Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)
     dev: true
     resolution:
       integrity: sha512-pYAIzeRo8J6KPEaJ0VWOh5Pzkbw/RetuzehGM7QRRX5he4fPHx2rdKMB256ehJCkX+XRQm16eZLqLNS8RSZXZw==
@@ -2890,7 +2904,7 @@ packages:
     dependencies:
       ms: 2.1.2
       supports-color: 7.2.0
-    deprecated: 'Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)'
+    deprecated: Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)
     dev: true
     engines:
       node: '>=6.0'
@@ -3833,7 +3847,7 @@ packages:
       ethereumjs-util: 6.2.1
       rlp: 2.2.6
       safe-buffer: 5.2.1
-    deprecated: 'Please use Util.Account class found on package ethereumjs-util@^7.0.6 https://github.com/ethereumjs/ethereumjs-util/releases/tag/v7.0.6'
+    deprecated: Please use Util.Account class found on package ethereumjs-util@^7.0.6 https://github.com/ethereumjs/ethereumjs-util/releases/tag/v7.0.6
     dev: true
     resolution:
       integrity: sha512-WP6BdscjiiPkQfF9PVfMcwx/rDvfZTjFKY0Uwc09zSQr9JfIVH87dYIJu0gNhBhpmovV4yq295fdllS925fnBA==
@@ -6572,7 +6586,7 @@ packages:
   /mkdirp-promise/5.0.1:
     dependencies:
       mkdirp: 1.0.4
-    deprecated: 'This package is broken and no longer maintained. ''mkdirp'' itself supports promises now, please switch to that.'
+    deprecated: This package is broken and no longer maintained. 'mkdirp' itself supports promises now, please switch to that.
     dev: true
     engines:
       node: '>=4'
@@ -7954,7 +7968,7 @@ packages:
       tough-cookie: 2.5.0
       tunnel-agent: 0.6.0
       uuid: 3.4.0
-    deprecated: 'request has been deprecated, see https://github.com/request/request/issues/3142'
+    deprecated: request has been deprecated, see https://github.com/request/request/issues/3142
     dev: true
     engines:
       node: '>= 6'
@@ -7999,7 +8013,7 @@ packages:
     resolution:
       integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==
   /resolve-url/0.2.1:
-    deprecated: 'https://github.com/lydell/resolve-url#deprecated'
+    deprecated: https://github.com/lydell/resolve-url#deprecated
     dev: true
     resolution:
       integrity: sha1-LGN/53yJOv0qZj/iGqkIAGjiBSo=
@@ -9035,7 +9049,7 @@ packages:
     resolution:
       integrity: sha1-Edpv9nDzRxpztiXKTz/c97t0gpE=
   /testrpc/0.0.1:
-    deprecated: 'testrpc has been renamed to ganache-cli, please use this package from now on.'
+    deprecated: testrpc has been renamed to ganache-cli, please use this package from now on.
     dev: true
     resolution:
       integrity: sha512-afH1hO+SQ/VPlmaLUFj2636QMeDvPCeQMc/9RBMW0IfjNe9gFD9Ra3ShqYkB7py0do1ZcCna/9acHyzTJ+GcNA==
@@ -9276,7 +9290,6 @@ packages:
     resolution:
       integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==
   /type-detect/4.0.8:
-    dev: true
     engines:
       node: '>=4'
     resolution:
@@ -9442,7 +9455,7 @@ packages:
     resolution:
       integrity: sha512-B0yRTzYdUCCn9n+F4+Gh4yIDtMQcaJsmYBDsTSG8g/OejKBodLQ2IHfN3bM7jUsRXndopT7OIXWdYqc1fjmV6g==
   /urix/0.1.0:
-    deprecated: 'Please see https://github.com/lydell/urix#deprecated'
+    deprecated: Please see https://github.com/lydell/urix#deprecated
     dev: true
     resolution:
       integrity: sha1-2pN/emLiH+wf0Y1Js1wpNQZ6bHI=
@@ -11045,7 +11058,7 @@ packages:
     dev: true
     name: ethereumjs-abi
     resolution:
-      tarball: 'https://codeload.github.com/ethereumjs/ethereumjs-abi/tar.gz/1ce6a1d64235fabe2aaf827fd606def55693508f'
+      tarball: https://codeload.github.com/ethereumjs/ethereumjs-abi/tar.gz/1ce6a1d64235fabe2aaf827fd606def55693508f
     version: 0.6.8
   github.com/web3-js/WebSocket-Node/ef5ea2f41daf4a2113b80c9223df884b4d56c400:
     dependencies:
@@ -11060,7 +11073,7 @@ packages:
     name: websocket
     requiresBuild: true
     resolution:
-      tarball: 'https://codeload.github.com/web3-js/WebSocket-Node/tar.gz/ef5ea2f41daf4a2113b80c9223df884b4d56c400'
+      tarball: https://codeload.github.com/web3-js/WebSocket-Node/tar.gz/ef5ea2f41daf4a2113b80c9223df884b4d56c400
     version: 1.0.29
 specifiers:
   '@ethersproject/abi': ^5.0.9
@@ -11075,12 +11088,14 @@ specifiers:
   '@nomiclabs/hardhat-etherscan': ^2.1.0
   '@nomiclabs/hardhat-waffle': ^2.0.1
   '@openzeppelin/contracts': 3.3.0-solc-0.7
+  '@sinonjs/fake-timers': ^7.0.2
   '@sushiswap/core': ^1.4.1
   '@typechain/ethers-v5': ^5.0.0
   '@typechain/web3-v1': ^2.0.0
   '@types/chai': ^4.2.14
   '@types/mocha': ^8.2.0
   '@types/node': ^14.14.14
+  '@types/sinonjs__fake-timers': ^6.0.2
   '@typescript-eslint/eslint-plugin': ^4.11.0
   '@typescript-eslint/parser': ^4.11.0
   '@uniswap/v2-core': ^1.0.1

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 
-import { Fixture, loadFixture } from '../common';
+import { Fixture, loadFixture, accrualUpdateInterval } from '../common';
 
 export default function run(): void {
 	let fixture: Fixture;
@@ -20,6 +20,10 @@ export default function run(): void {
 		expect(await contract.wethAddr(), 'WETH address mismatch').to.eq(
 			weth.address,
 		);
+		expect(
+			await contract.accrualUpdateInterval(),
+			'accrualUpdateInterval mismatch',
+		).to.eq(accrualUpdateInterval);
 
 		expect(
 			await contract.accruedRewardsPerToken(),
@@ -28,6 +32,11 @@ export default function run(): void {
 		expect(
 			await contract.accruedRewardsPerTokenLast(deployer),
 			'accruedRewardsPerTokenLast mismatch',
+		).to.eq(0);
+
+		expect(
+			await contract.lastAccrualUpdate(),
+			'lastAccrualUpdate mismatch',
 		).to.eq(0);
 
 		expect(

@@ -201,7 +201,7 @@ export default function run(): void {
 		await addRewards(fixture, rewards);
 		data.totalRewards = rewards;
 
-		await contract.updateAccrual();
+		await contract.mockUpdateAccrual();
 		data.totalStake = data.totalStake.sub(rewards);
 
 		data.checkpoint = 1;
@@ -215,7 +215,7 @@ export default function run(): void {
 		await addRewards(fixture, rewards);
 		data.totalRewards = data.totalRewards.add(rewards);
 
-		await contract.updateAccrual();
+		await contract.mockUpdateAccrual();
 		data.totalStake = data.totalStake.sub(rewards);
 		const totalStake2 = data.totalStake;
 
@@ -234,7 +234,7 @@ export default function run(): void {
 		await addRewards(fixture, rewards);
 		data.totalRewards = data.totalRewards.add(rewards);
 
-		await contract.updateAccrual();
+		await contract.mockUpdateAccrual();
 		data.totalStake = data.totalStake.sub(rewards);
 
 		await testerContract.updateReward();
@@ -279,7 +279,7 @@ export default function run(): void {
 		await addRewards(fixture, excessRewards);
 		data.totalRewards = data.totalRewards.add(excessRewards);
 
-		await contract.updateAccrual();
+		await contract.mockUpdateAccrual();
 		data.totalStake = 0;
 
 		expect(
