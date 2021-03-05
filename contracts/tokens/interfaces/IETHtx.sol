@@ -41,6 +41,8 @@ interface IETHtx {
 
 	function maxGasPrice() external view returns (uint256);
 
+	function minter() external view returns (address);
+
 	function targetCRatio()
 		external
 		view

@@ -75,6 +75,10 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		return _gasOracle;
 	}
 
+	function minter() external view override returns (address) {
+		return _minter;
+	}
+
 	/* External Mutators */
 
 	function burn(address account, uint256 amount)
