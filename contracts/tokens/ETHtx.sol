@@ -342,7 +342,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 			return false;
 		}
 
-		uint256 current = cRatioNum.mul(1e18).div(cRatioDen);
+		uint256 current = cRatioNum.mul(1e18) / cRatioDen;
 
 		(uint256 targetNum, uint256 targetDen) = targetCRatio();
 		uint256 target = targetNum.mul(1e18).div(targetDen);
@@ -355,18 +355,18 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 	function setFeeLogic(address account) public virtual override onlyOwner {
 		require(account != address(0), "ETHtx: feeLogic zero address");
 		_feeLogic = account;
-		emit FeeLogicSet(account);
+		emit FeeLogicSet(_msgSender(), account);
 	}
 
 	function setGasOracle(address account) public virtual override onlyOwner {
 		require(account != address(0), "ETHtx: gasOracle zero address");
 		_gasOracle = account;
-		emit GasOracleSet(account);
+		emit GasOracleSet(_msgSender(), account);
 	}
 
 	function setMinter(address account) public virtual override onlyOwner {
 		_minter = account;
-		emit MinterSet(account);
+		emit MinterSet(_msgSender(), account);
 	}
 
 	function setTargetCRatio(uint128 numerator, uint128 denominator)
@@ -379,7 +379,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		require(denominator != 0, "ETHtx: targetCRatio denominator is zero");
 		_targetCRatioNum = numerator;
 		_targetCRatioDen = denominator;
-		emit TargetCRatioSet(numerator, denominator);
+		emit TargetCRatioSet(_msgSender(), numerator, denominator);
 	}
 
 	/* Internal Pure */

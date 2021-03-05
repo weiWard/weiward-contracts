@@ -110,8 +110,12 @@ interface IETHtx {
 
 	/* Events */
 
-	event FeeLogicSet(address indexed account);
-	event GasOracleSet(address indexed account);
-	event MinterSet(address indexed account);
-	event TargetCRatioSet(uint128 numerator, uint128 denominator);
+	event FeeLogicSet(address indexed author, address indexed account);
+	event GasOracleSet(address indexed author, address indexed account);
+	event MinterSet(address indexed author, address indexed account);
+	event TargetCRatioSet(
+		address indexed author,
+		uint128 numerator,
+		uint128 denominator
+	);
 }
