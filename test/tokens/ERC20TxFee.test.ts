@@ -41,8 +41,8 @@ const loadFixture = deployments.createFixture(
 
 		const feeLogic = await new MockFeeLogic__factory(deployerSigner).deploy(
 			feeRecipient,
-			75,
-			1000,
+			feeNumerator,
+			feeDenominator,
 		);
 
 		const contract = await new MockERC20TxFee__factory(deployerSigner).deploy(

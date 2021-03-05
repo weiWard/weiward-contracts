@@ -155,7 +155,10 @@ describe(contractName, function () {
 
 			const roiNum = 7;
 			const roiDen = 5;
-			expect(roiNum / roiDen).to.not.eq(roiNumerator / roiDenominator);
+			expect(roiNum, 'roi numerator will not change').to.not.eq(roiNumerator);
+			expect(roiDen, 'roi denominator will not change').to.not.eq(
+				roiDenominator,
+			);
 
 			const amount = parseEther('10');
 			const expected = amount.mul(roiNum).div(roiDen);
@@ -474,7 +477,10 @@ describe(contractName, function () {
 		const roiDen = 5;
 
 		before(function () {
-			expect(roiNum / roiDen).to.not.eq(roiNumerator / roiDenominator);
+			expect(roiNum, 'roi numerator will not change').to.not.eq(roiNumerator);
+			expect(roiDen, 'roi denominator will not change').to.not.eq(
+				roiDenominator,
+			);
 		});
 
 		it('should set roi', async function () {
