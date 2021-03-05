@@ -20,6 +20,8 @@ import {
 	uniswapPairFixture,
 } from '../../helpers/fixtures';
 import { sqrt } from '../../helpers/math';
+import { mineBlock as mineBlockWithProvider } from '../../helpers/timeTravel';
+import { JsonRpcProvider } from '@ethersproject/providers';
 
 export const tokenADecimals = 18;
 export function parseTokenA(value: string): BigNumber {
@@ -298,7 +300,7 @@ export async function uniStake(
 	amountB: BigNumberish = defaultAmountB,
 ): Promise<BigNumber> {
 	const { uniswapPool } = fixture;
-	return await stakeImpl(
+	return stakeImpl(
 		fixture,
 		uniswapPool,
 		uniAddLiquidity,
@@ -356,9 +358,36 @@ export async function moonAddLiquidity(
 	amountA: BigNumberish = defaultAmountA,
 	amountB: BigNumberish = defaultAmountB,
 ): Promise<BigNumber> {
-	const { deployer, tokenA, tokenB, mooniswapPool } = fixture;
+	const {
+		deployer,
+		tester,
+		tokenA,
+		tokenB,
+		mooniswapPool,
+		testerMooniswapPool,
+	} = fixture;
 	if (from.length === 0) {
 		from = deployer;
+	}
+
+	let poolHandle: Mooniswap;
+	let tokenAHandle: MockERC20;
+	let tokenBHandle: MockERC20;
+	switch (from) {
+		case tester:
+			const signer = testerMooniswapPool.signer;
+			poolHandle = testerMooniswapPool;
+			tokenAHandle = tokenA.connect(signer);
+			tokenBHandle = tokenB.connect(signer);
+			break;
+		case undefined:
+		case deployer:
+			poolHandle = mooniswapPool;
+			tokenAHandle = tokenA;
+			tokenBHandle = tokenB;
+			break;
+		default:
+			throw Error('moonAddLiquidity: unsupported from parameter');
 	}
 
 	const initBalance = await mooniswapPool.balanceOf(from);
@@ -366,8 +395,8 @@ export async function moonAddLiquidity(
 	await tokenA.mint(from, amountA);
 	await tokenB.mint(from, amountB);
 
-	await tokenA.increaseAllowance(mooniswapPool.address, amountA);
-	await tokenB.increaseAllowance(mooniswapPool.address, amountB);
+	await tokenAHandle.increaseAllowance(mooniswapPool.address, amountA);
+	await tokenBHandle.increaseAllowance(mooniswapPool.address, amountB);
 
 	const tokens = await mooniswapPool.getTokens();
 	if (tokens.length === 0) {
@@ -384,7 +413,7 @@ export async function moonAddLiquidity(
 		amount1 = amountA;
 	}
 
-	await mooniswapPool.deposit([amount0, amount1], [0, 0]);
+	await poolHandle.deposit([amount0, amount1], [0, 0]);
 
 	const newBalance = await mooniswapPool.balanceOf(from);
 
@@ -453,7 +482,7 @@ export async function addRewards(
 	amount: BigNumberish = defaultRewards,
 ): Promise<BigNumber> {
 	const { contract, rewardsToken } = fixture;
-	rewardsToken.mint(contract.address, amount);
+	await rewardsToken.mint(contract.address, amount);
 	return BigNumber.from(amount);
 }
 
@@ -480,4 +509,9 @@ export async function getCurrentShares(fixture: Fixture): Promise<Shares> {
 	const total = moon.add(sushi).add(uni);
 
 	return { moon, sushi, uni, total };
+}
+
+export async function mineBlock(fixture: Fixture): Promise<void> {
+	const { contract } = fixture;
+	await mineBlockWithProvider(contract.provider as JsonRpcProvider);
 }

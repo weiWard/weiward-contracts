@@ -760,7 +760,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 
 		uint256 totalStaked = amount;
 		if (user.staked.contains(token)) {
-			totalStaked.add(stakedBalanceOfFor(account, token));
+			totalStaked = totalStaked.add(stakedBalanceOfFor(account, token));
 		}
 		user.staked.set(token, totalStaked);
 
