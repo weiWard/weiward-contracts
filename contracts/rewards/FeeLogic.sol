@@ -108,9 +108,9 @@ contract FeeLogic is Ownable, IFeeLogic {
 		onlyOwner
 	{
 		if (isExempt_ && _exempts.add(account)) {
-			emit ExemptAdded(account);
+			emit ExemptAdded(_msgSender(), account);
 		} else if (_exempts.remove(account)) {
-			emit ExemptRemoved(account);
+			emit ExemptRemoved(_msgSender(), account);
 		}
 	}
 
@@ -126,12 +126,12 @@ contract FeeLogic is Ownable, IFeeLogic {
 		require(denominator > numerator, "FeeLogic: feeRate is gte to 1");
 		_feeRateNum = numerator;
 		_feeRateDen = denominator;
-		emit FeeRateSet(numerator, denominator);
+		emit FeeRateSet(_msgSender(), numerator, denominator);
 	}
 
-	function setRecipient(address account) public virtual override onlyOnwer {
+	function setRecipient(address account) public virtual override onlyOwner {
 		require(account != address(0), "FeeLogic: recipient is zero address");
 		_recipient = account;
-		emit RecipientSet(account);
+		emit RecipientSet(_msgSender(), account);
 	}
 }

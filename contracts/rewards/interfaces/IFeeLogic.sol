@@ -41,8 +41,12 @@ interface IFeeLogic {
 
 	/* Events */
 
-	event ExemptAdded(address indexed account);
-	event ExemptRemoved(address indexed account);
-	event FeeRateSet(uint128 numerator, uint128 denominator);
-	event RecipientSet(address indexed account);
+	event ExemptAdded(address indexed author, address indexed account);
+	event ExemptRemoved(address indexed author, address indexed account);
+	event FeeRateSet(
+		address indexed author,
+		uint128 numerator,
+		uint128 denominator
+	);
+	event RecipientSet(address indexed author, address indexed account);
 }
