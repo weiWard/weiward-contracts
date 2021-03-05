@@ -31,6 +31,8 @@ interface IETHtx {
 
 	function ethtxOutstanding() external view returns (uint256);
 
+	function gasOracle() external view returns (address);
+
 	function gasPerETHtx() external pure returns (uint256);
 
 	function gasPrice() external view returns (uint256);

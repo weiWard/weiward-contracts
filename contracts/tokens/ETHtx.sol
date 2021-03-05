@@ -69,6 +69,12 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		IWETH(wethAddr).deposit{ value: msg.value }();
 	}
 
+	/* External Views */
+
+	function gasOracle() external view override returns (address) {
+		return _gasOracle;
+	}
+
 	/* External Mutators */
 
 	function burn(address account, uint256 amount)
