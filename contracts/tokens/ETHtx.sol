@@ -177,35 +177,34 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		_pause();
 	}
 
-	function redeem(
-		uint256 amountIn,
-		bool asWETH,
-		uint256 deadline
-	) external virtual override ensure(deadline) {
+	function redeem(uint256 amountIn, uint256 deadline)
+		external
+		virtual
+		override
+		ensure(deadline)
+	{
 		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
-		_redeem(_msgSender(), amountIn, amountOut, asWETH);
+		_redeem(_msgSender(), amountIn, amountOut);
 	}
 
 	function redeemExact(
 		uint256 amountInMax,
 		uint256 amountOut,
-		bool asWETH,
 		uint256 deadline
 	) external virtual override ensure(deadline) {
 		uint256 amountIn = ethtxForEthAtRedemption(amountOut);
 		require(amountIn <= amountInMax, "ETHtx: amountIn exceeds max");
-		_redeem(_msgSender(), amountIn, amountOut, asWETH);
+		_redeem(_msgSender(), amountIn, amountOut);
 	}
 
 	function redeemWithExact(
 		uint256 amountIn,
 		uint256 amountOutMin,
-		bool asWETH,
 		uint256 deadline
 	) external virtual override ensure(deadline) {
 		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
 		require(amountOut >= amountOutMin, "ETHtx: amountOut below min");
-		_redeem(_msgSender(), amountIn, amountOut, asWETH);
+		_redeem(_msgSender(), amountIn, amountOut);
 	}
 
 	function unpause() external virtual override onlyOwner whenPaused {
@@ -431,19 +430,13 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 	}
 
 	function _redeem(
-		address payable account,
+		address account,
 		uint256 amountIn,
-		uint256 amountOut,
-		bool asWETH
+		uint256 amountOut
 	) internal virtual {
 		// Apply fee
 		_transfer(account, address(this), amountIn);
 
-		if (asWETH) {
-			IERC20(wethAddr).safeTransfer(account, amountOut);
-		} else {
-			IWETH(wethAddr).withdraw(amountOut);
-			account.sendValue(amountOut);
-		}
+		IERC20(wethAddr).safeTransfer(account, amountOut);
 	}
 }

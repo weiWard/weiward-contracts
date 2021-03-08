@@ -78,23 +78,17 @@ interface IETHtx {
 
 	function pause() external;
 
-	function redeem(
-		uint256 amountIn,
-		bool asWETH,
-		uint256 deadline
-	) external;
+	function redeem(uint256 amountIn, uint256 deadline) external;
 
 	function redeemExact(
 		uint256 amountInMax,
 		uint256 amountOut,
-		bool asWETH,
 		uint256 deadline
 	) external;
 
 	function redeemWithExact(
 		uint256 amountIn,
 		uint256 amountOutMin,
-		bool asWETH,
 		uint256 deadline
 	) external;
 
