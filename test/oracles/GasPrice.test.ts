@@ -49,7 +49,7 @@ describe('GasPrice', function () {
 
 	beforeEach(async function () {
 		({ contract, deployer, provider, testerContract } = await loadFixture());
-		contract.grantRole(ORACLE_ROLE, deployer);
+		await contract.grantRole(ORACLE_ROLE, deployer);
 	});
 
 	it('initial state is correct', async function () {
@@ -108,27 +108,17 @@ describe('GasPrice', function () {
 	});
 
 	describe('hasPriceExpired', function () {
-		let unixTime: number;
-		let clock: FakeTimers.InstalledClock;
-
-		beforeEach(function () {
-			const now = Date.now();
-			unixTime = Math.floor(now / 1000);
-			clock = FakeTimers.install({ now, shouldAdvanceTime: true });
-		});
-
-		afterEach(function () {
-			clock.reset();
-		});
-
-		after(function () {
-			clock.uninstall();
-		});
-
 		it('returns true after updateThreshold', async function () {
+			const now = Date.now();
+			const unixTime = Math.floor(now / 1000);
+			const clock = FakeTimers.install({ now, shouldAdvanceTime: true });
+
 			clock.setSystemTime((unixTime + initialUpdateThreshold + 2) * 1000);
 			await mineBlock(contract.provider as JsonRpcProvider);
+
 			expect(await contract.hasPriceExpired()).to.be.true;
+
+			clock.uninstall();
 		});
 
 		it('returns false before updateThreshold', async function () {
@@ -136,6 +126,7 @@ describe('GasPrice', function () {
 		});
 
 		it('reverts when updatedAt > block.timestamp', async function () {
+			const unixTime = Math.floor(Date.now() / 1000);
 			await contract.setUpdatedAt(unixTime + initialUpdateThreshold);
 			await expect(contract.hasPriceExpired()).to.be.revertedWith(
 				'block is older than last update',
