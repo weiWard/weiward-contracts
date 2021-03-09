@@ -12,6 +12,7 @@ import {
 	ethtxToEth,
 	sendWETH,
 	GAS_PER_ETHTX,
+	ethUsedOnGas,
 } from '../helpers/conversions';
 import {
 	ETHmx,
@@ -53,6 +54,16 @@ function undoFee(amount: BigNumber): BigNumber {
 
 function targetETH(amount: BigNumber): BigNumber {
 	return amount.mul(targetCRatioNumerator).div(targetCRatioDenominator);
+}
+
+function targetETHtx(
+	amountETH: BigNumber,
+	gasPrice: BigNumber = defaultGasPrice,
+): BigNumber {
+	const target = amountETH
+		.mul(targetCRatioDenominator)
+		.div(targetCRatioNumerator);
+	return ethToEthtx(gasPrice, target);
 }
 
 function maxGasPrice(
@@ -130,7 +141,7 @@ const loadFixture = deployments.createFixture(
 	},
 );
 
-describe.only(contractName, function () {
+describe(contractName, function () {
 	let fixture: Fixture;
 
 	beforeEach(async function () {
@@ -532,61 +543,378 @@ describe.only(contractName, function () {
 	});
 
 	describe('buy', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			await expect(
+				contract.buy(deadline, { value: parseEther('1') }),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should receive ETH and wrap to WETH');
+		it('should revert without enough ethtxAvailable', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amount = parseEther('1');
+			await expect(
+				contract.buy(deadline, { value: amount }),
+			).to.be.revertedWith('not enough ETHtx to buy');
+		});
 
-		it('should revert without enough ethtxAvailable');
+		it('should swap ETH -> WETH -> ETHtx', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH);
 
-		it('should transfer correct ETHtx amount');
+			await contract.mockMint(contract.address, amountETHtx);
+			await expect(contract.buy(deadline, { value: amountETH }))
+				.to.emit(contract, 'Transfer')
+				.withArgs(contract.address, deployer, amountETHtx);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(amountETH);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(0);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(amountETHtx);
+		});
 	});
 
 	describe('buyWithWETH', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			await expect(
+				contract.buyWithWETH(parseEther('1'), deadline),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should transfer WETH to contract');
+		it('should revert without enough ethtxAvailable', async function () {
+			const { contract, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+			const amount = parseEther('1');
+			await weth.deposit({ value: amount });
+			await weth.approve(contract.address, amount);
+
+			await expect(contract.buyWithWETH(amount, deadline)).to.be.revertedWith(
+				'not enough ETHtx to buy',
+			);
+		});
+
+		it('should swap WETH -> ETHtx', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH);
+
+			await weth.deposit({ value: amountETH });
+			await weth.approve(contract.address, amountETH);
+
+			await contract.mockMint(contract.address, amountETHtx);
+
+			await expect(contract.buyWithWETH(amountETH, deadline))
+				.to.emit(contract, 'Transfer')
+				.withArgs(contract.address, deployer, amountETHtx);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(amountETH);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(0);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(amountETHtx);
+		});
 	});
 
 	describe('buyExact', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyExact(amountETHtx, deadline, { value: amountETH }),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should revert if ETH needed exceeds ETH value');
+		it('should revert without enough ethtxAvailable', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyExact(amountETHtx, deadline, { value: amountETH }),
+			).to.be.revertedWith('not enough ETHtx to buy');
+		});
 
-		it('should receive ETH and wrap to WETH');
+		it('should revert if ETH needed exceeds ETH value', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETHtx = parseETHtx('100');
+			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx.sub(1));
+			await expect(
+				contract.buyExact(amountETHtx, deadline, { value: amountETH }),
+			).to.be.revertedWith('amountIn exceeds max');
+		});
 
-		it('should transfer correct ETHtx amount');
+		it('should swap ETH -> WETH -> ETHtx', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETHtx = parseETHtx('100');
+			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx);
 
-		it('should refund leftover ETH');
+			await contract.mockMint(contract.address, amountETHtx.add(1));
+			await expect(
+				contract.buyExact(amountETHtx, deadline, { value: amountETH }),
+			)
+				.to.emit(contract, 'Transfer')
+				.withArgs(contract.address, deployer, amountETHtx);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(amountETH);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(1);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(amountETHtx);
+		});
+
+		it('should refund leftover ETH', async function () {
+			const { contract, deployerSigner } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('10');
+
+			const ethSpent = ethtxToEth(defaultGasPrice, amountETHtx);
+			expect(ethSpent, 'ETH required >= ETH sent').to.be.lt(amountETH);
+
+			const initBalance = await deployerSigner.getBalance();
+
+			let tx = await contract.mockMint(contract.address, amountETHtx);
+			let ethUsed = await ethUsedOnGas(tx);
+
+			tx = await contract.buyExact(amountETHtx, deadline, {
+				value: amountETH,
+			});
+			ethUsed = ethUsed.add(await ethUsedOnGas(tx));
+
+			const ethLost = ethSpent.add(ethUsed);
+			expect(await deployerSigner.getBalance()).to.eq(
+				initBalance.sub(ethLost),
+			);
+		});
 	});
 
 	describe('buyExactWithWETH', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyExactWithWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should revert if WETH needed exceeds amountInMax');
+		it('should revert without enough ethtxAvailable', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyExactWithWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('not enough ETHtx to buy');
+		});
 
-		it('should transfer WETH to contract');
+		it('should revert if WETH needed exceeds amountInMax', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETHtx = parseETHtx('100');
+			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx.sub(1));
+			await expect(
+				contract.buyExactWithWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('amountIn exceeds max');
+		});
 
-		it('should transfer correct ETHtx amount');
+		it('should swap WETH -> ETHtx', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETHtx = parseETHtx('100');
+			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx);
+
+			await contract.mockMint(contract.address, amountETHtx.add(1));
+
+			await weth.deposit({ value: amountETH });
+			await weth.approve(contract.address, amountETH);
+
+			await expect(contract.buyExactWithWETH(amountETH, amountETHtx, deadline))
+				.to.emit(contract, 'Transfer')
+				.withArgs(contract.address, deployer, amountETHtx);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(amountETH);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(1);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(amountETHtx);
+		});
 	});
 
 	describe('buyWithExactETH', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyWithExactETH(amountETHtx, deadline, { value: amountETH }),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should revert if ETHtx amountOut < amountOutMin');
+		it('should revert without enough ethtxAvailable', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyWithExactETH(amountETHtx, deadline, { value: amountETH }),
+			).to.be.revertedWith('not enough ETHtx to buy');
+		});
 
-		it('should receive ETH and wrap to WETH');
+		it('should revert if ETHtx amountOut < amountOutMin', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH).add(1);
+			await expect(
+				contract.buyWithExactETH(amountETHtx, deadline, {
+					value: amountETH,
+				}),
+			).to.be.revertedWith('amountOut below min');
+		});
 
-		it('should transfer correct ETHtx amount');
+		it('should swap ETH -> WETH -> ETHtx', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH);
+
+			await contract.mockMint(contract.address, amountETHtx.add(1));
+			await expect(
+				contract.buyWithExactETH(amountETHtx, deadline, { value: amountETH }),
+			)
+				.to.emit(contract, 'Transfer')
+				.withArgs(contract.address, deployer, amountETHtx);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(amountETH);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(1);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(amountETHtx);
+		});
 	});
 
 	describe('buyWithExactWETH', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyWithExactWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should revert if ETHtx amountOut < amountOutMin');
+		it('should revert without enough ethtxAvailable', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+			await expect(
+				contract.buyWithExactWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('not enough ETHtx to buy');
+		});
 
-		it('should transfer WETH to contract');
+		it('should revert if ETHtx amountOut < amountOutMin', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH).add(1);
+			await expect(
+				contract.buyWithExactWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('amountOut below min');
+		});
 
-		it('should transfer correct ETHtx amount');
+		it('should swap WETH -> ETHtx', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETH = parseEther('1');
+			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH);
+
+			await contract.mockMint(contract.address, amountETHtx.add(1));
+
+			await weth.deposit({ value: amountETH });
+			await weth.approve(contract.address, amountETH);
+
+			await expect(contract.buyWithExactWETH(amountETH, amountETHtx, deadline))
+				.to.emit(contract, 'Transfer')
+				.withArgs(contract.address, deployer, amountETHtx);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(amountETH);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(1);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(amountETHtx);
+		});
 	});
 
 	describe('mint', function () {
@@ -638,77 +966,520 @@ describe.only(contractName, function () {
 	});
 
 	describe('redeem', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const amountETHtx = parseETHtx('100');
+			await expect(contract.redeem(amountETHtx, deadline)).to.be.revertedWith(
+				'expired',
+			);
+		});
 
-		it('should transfer correct ETHtx amount to contract');
+		it('should transfer correct ETHtx amount to contract', async function () {
+			const { contract, deployer } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETHtx = parseETHtx('100');
+			const fee = calcFee(amountETHtx);
+			const contractETHtx = amountETHtx.sub(fee);
+			const amountETH = ethtxToEth(defaultGasPrice, contractETHtx);
 
-		it('should transfer correct WETH when asWETH is true');
+			await contract.mockMint(deployer, amountETHtx.add(1));
+			await addWETH(fixture, amountETH);
 
-		it('should unwrap and transfer correct ETH when asWETH is false');
+			await expect(contract.redeem(amountETHtx, deadline))
+				.to.emit(contract, 'Transfer')
+				.withArgs(deployer, contract.address, contractETHtx);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(contractETHtx);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(1);
+		});
+
+		it('should transfer correct ETHtx amount to fee recipient', async function () {
+			const { contract, deployer } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETHtx = parseETHtx('100');
+			const fee = calcFee(amountETHtx);
+			const contractETHtx = amountETHtx.sub(fee);
+			const amountETH = ethtxToEth(defaultGasPrice, contractETHtx);
+
+			await contract.mockMint(deployer, amountETHtx);
+			await addWETH(fixture, amountETH);
+
+			await expect(contract.redeem(amountETHtx, deadline))
+				.to.emit(contract, 'Transfer')
+				.withArgs(deployer, feeRecipient, fee);
+
+			expect(
+				await contract.balanceOf(feeRecipient),
+				'fee recipient ETHtx balance mismatch',
+			).to.eq(fee);
+		});
+
+		it('should transfer correct WETH', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+			const amountETHtx = parseETHtx('100');
+			const fee = calcFee(amountETHtx);
+
+			const ethRequired = targetETH(ethtxToEth(defaultGasPrice, amountETHtx));
+			const ethReturned = ethtxToEth(defaultGasPrice, amountETHtx.sub(fee));
+
+			await contract.mockMint(deployer, amountETHtx);
+			await addWETH(fixture, ethRequired);
+
+			await expect(contract.redeem(amountETHtx, deadline))
+				.to.emit(weth, 'Transfer')
+				.withArgs(contract.address, deployer, ethReturned);
+
+			expect(
+				await weth.balanceOf(deployer),
+				'deployer WETH balance mismatch',
+			).to.eq(ethReturned);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(ethRequired.sub(ethReturned));
+		});
+
+		it('should transfer correct WETH when maxGasPrice < gasPrice', async function () {
+			const { contract, deployer, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+			const amountETHtx = parseETHtx('100');
+			const fee = calcFee(amountETHtx);
+
+			const ethRequired = targetETH(
+				ethtxToEth(defaultGasPrice, amountETHtx),
+			).div(2);
+			const ethReturned = ethtxToEth(
+				defaultGasPrice,
+				amountETHtx.sub(fee),
+			).div(2);
+
+			await contract.mockMint(deployer, amountETHtx);
+			await addWETH(fixture, ethRequired);
+
+			expect(await contract.maxGasPrice(), 'maxGasPrice mismatch').to.eq(
+				defaultGasPrice.div(2),
+			);
+
+			await expect(contract.redeem(amountETHtx, deadline))
+				.to.emit(weth, 'Transfer')
+				.withArgs(contract.address, deployer, ethReturned);
+
+			expect(
+				await weth.balanceOf(deployer),
+				'deployer WETH balance mismatch',
+			).to.eq(ethReturned);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(ethRequired.sub(ethReturned));
+		});
 	});
 
 	describe('redeemExact', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const amountETHtx = parseETHtx('100');
+			const amountETH = parseEther('1');
+			await expect(
+				contract.redeemExact(amountETHtx, amountETH, deadline),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should revert when ETHtx amountIn > amountInMax');
+		it('should revert when ETHtx amountIn > amountInMax', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const amountETHtx = parseETHtx('100');
+			const amountETH = parseEther('1');
+			await expect(
+				contract.redeemExact(amountETHtx, amountETH, deadline),
+			).to.be.revertedWith('amountIn exceeds max');
+		});
 
-		it('should transfer correct ETHtx amount to contract');
+		describe('should transfer', function () {
+			let deadline: number;
+			const ethOut = parseEther('1');
+			const ethtxIn = undoFee(ethToEthtx(defaultGasPrice, ethOut));
+			const fee = calcFee(ethtxIn);
+			const contractETHtx = ethtxIn.sub(fee);
+			const ethSupply = targetETH(undoFee(ethOut)).add(1);
+			const ethtxLeft = 1;
 
-		it('should transfer correct WETH when asWETH is true');
+			before(function () {
+				expect(
+					maxGasPrice(ethSupply, ethtxIn.add(ethtxLeft)),
+					'maxGasPrice mismatch',
+				).to.eq(defaultGasPrice);
+			});
 
-		it('should unwrap and transfer correct ETH when asWETH is false');
+			beforeEach(async function () {
+				const { contract, deployer } = fixture;
+				deadline = Math.floor(Date.now() / 1000) + 3600;
+
+				await contract.mockMint(deployer, ethtxIn.add(ethtxLeft));
+				await addWETH(fixture, ethSupply);
+			});
+
+			it('correct ETHtx amount to contract', async function () {
+				const { contract, deployer } = fixture;
+
+				await expect(contract.redeemExact(ethtxIn, ethOut, deadline))
+					.to.emit(contract, 'Transfer')
+					.withArgs(deployer, contract.address, contractETHtx);
+
+				expect(
+					await contract.balanceOf(contract.address),
+					'contract ETHtx balance mismatch',
+				).to.eq(contractETHtx);
+
+				expect(
+					await contract.balanceOf(deployer),
+					'deployer ETHtx balance mismatch',
+				).to.eq(ethtxLeft);
+			});
+
+			it('correct ETHtx amount to fee recipient', async function () {
+				const { contract, deployer } = fixture;
+
+				await expect(contract.redeemExact(ethtxIn, ethOut, deadline))
+					.to.emit(contract, 'Transfer')
+					.withArgs(deployer, feeRecipient, fee);
+
+				expect(
+					await contract.balanceOf(feeRecipient),
+					'fee recipient ETHtx balance mismatch',
+				).to.eq(fee);
+			});
+
+			it('correct WETH amount', async function () {
+				const { contract, deployer, weth } = fixture;
+
+				await expect(contract.redeemExact(ethtxIn, ethOut, deadline))
+					.to.emit(weth, 'Transfer')
+					.withArgs(contract.address, deployer, ethOut);
+
+				expect(
+					await weth.balanceOf(deployer),
+					'deployer WETH balance mismatch',
+				).to.eq(ethOut);
+
+				expect(
+					await weth.balanceOf(contract.address),
+					'contract WETH balance mismatch',
+				).to.eq(ethSupply.sub(ethOut));
+			});
+		});
+
+		it('should transfer correct ETHtx when maxGasPrice < gasPrice', async function () {
+			const { contract, deployer } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const ethSupply = parseEther('10');
+			const ethtxOutstanding = targetETHtx(ethSupply).mul(2);
+			const maxPrice = maxGasPrice(ethSupply, ethtxOutstanding);
+
+			expect(maxPrice, 'maxGasPrice too large').to.be.lt(defaultGasPrice);
+
+			const ethOut = parseEther('1');
+			const ethtxIn = undoFee(ethToEthtx(maxPrice, ethOut));
+			const fee = calcFee(ethtxIn);
+			const contractETHtx = ethtxIn.sub(fee);
+			const ethtxLeft = ethtxOutstanding.sub(ethtxIn);
+
+			await contract.mockMint(deployer, ethtxOutstanding);
+			await addWETH(fixture, ethSupply);
+
+			await expect(contract.redeemExact(ethtxIn, ethOut, deadline))
+				.to.emit(contract, 'Transfer')
+				.withArgs(deployer, contract.address, contractETHtx);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(contractETHtx);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(ethtxLeft);
+		});
 	});
 
 	describe('redeemWithExact', function () {
-		it('should revert after deadline');
+		it('should revert after deadline', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const amountETHtx = parseETHtx('100');
+			const amountETH = parseEther('1');
+			await expect(
+				contract.redeemWithExact(amountETHtx, amountETH, deadline),
+			).to.be.revertedWith('expired');
+		});
 
-		it('should revert when ETH amountOut < amountOutMin');
+		it('should revert when ETH amountOut < amountOutMin', async function () {
+			const { contract } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const ethtxIn = parseETHtx('1');
+			const ethOut = parseEther('1');
+			await expect(
+				contract.redeemWithExact(ethtxIn, ethOut, deadline),
+			).to.be.revertedWith('amountOut below min');
+		});
 
-		it('should transfer correct ETHtx amount to contract');
+		describe('should transfer', function () {
+			let deadline: number;
+			const ethtxIn = parseETHtx('100');
+			const fee = calcFee(ethtxIn);
+			const contractETHtx = ethtxIn.sub(fee);
+			const ethOut = ethtxToEth(defaultGasPrice, contractETHtx);
+			const ethSupply = targetETH(ethtxToEth(defaultGasPrice, ethtxIn)).add(1);
+			const ethtxLeft = 1;
 
-		it('should transfer correct WETH when asWETH is true');
+			before(function () {
+				expect(
+					maxGasPrice(ethSupply, ethtxIn.add(ethtxLeft)),
+					'maxGasPrice mismatch',
+				).to.eq(defaultGasPrice);
+			});
 
-		it('should unwrap and transfer correct ETH when asWETH is false');
+			beforeEach(async function () {
+				const { contract, deployer } = fixture;
+				deadline = Math.floor(Date.now() / 1000) + 3600;
+
+				await contract.mockMint(deployer, ethtxIn.add(ethtxLeft));
+				await addWETH(fixture, ethSupply);
+			});
+
+			it('correct ETHtx amount to contract', async function () {
+				const { contract, deployer } = fixture;
+
+				await expect(contract.redeemWithExact(ethtxIn, ethOut, deadline))
+					.to.emit(contract, 'Transfer')
+					.withArgs(deployer, contract.address, contractETHtx);
+
+				expect(
+					await contract.balanceOf(contract.address),
+					'contract ETHtx balance mismatch',
+				).to.eq(contractETHtx);
+
+				expect(
+					await contract.balanceOf(deployer),
+					'deployer ETHtx balance mismatch',
+				).to.eq(ethtxLeft);
+			});
+
+			it('correct ETHtx amount to fee recipient', async function () {
+				const { contract, deployer } = fixture;
+
+				await expect(contract.redeemWithExact(ethtxIn, ethOut, deadline))
+					.to.emit(contract, 'Transfer')
+					.withArgs(deployer, feeRecipient, fee);
+
+				expect(
+					await contract.balanceOf(feeRecipient),
+					'fee recipient ETHtx balance mismatch',
+				).to.eq(fee);
+			});
+
+			it('correct WETH', async function () {
+				const { contract, deployer, weth } = fixture;
+
+				await expect(contract.redeemWithExact(ethtxIn, ethOut, deadline))
+					.to.emit(weth, 'Transfer')
+					.withArgs(contract.address, deployer, ethOut);
+
+				expect(
+					await weth.balanceOf(deployer),
+					'deployer WETH balance mismatch',
+				).to.eq(ethOut);
+
+				expect(
+					await weth.balanceOf(contract.address),
+					'contract WETH balance mismatch',
+				).to.eq(ethSupply.sub(ethOut));
+			});
+		});
+
+		it('should transfer correct WETH when maxGasPrice < gasPrice', async function () {
+			const { contract, deployer } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+			const ethSupply = parseEther('10');
+			const ethtxOutstanding = targetETHtx(ethSupply).mul(2);
+			const maxPrice = maxGasPrice(ethSupply, ethtxOutstanding);
+
+			expect(maxPrice, 'maxGasPrice too large').to.be.lt(defaultGasPrice);
+
+			const ethtxIn = parseETHtx('100');
+			const fee = calcFee(ethtxIn);
+			const contractETHtx = ethtxIn.sub(fee);
+			const ethOut = ethtxToEth(maxPrice, contractETHtx);
+			const ethtxLeft = ethtxOutstanding.sub(ethtxIn);
+
+			await contract.mockMint(deployer, ethtxOutstanding);
+			await addWETH(fixture, ethSupply);
+
+			await expect(contract.redeemWithExact(ethtxIn, ethOut, deadline))
+				.to.emit(contract, 'Transfer')
+				.withArgs(deployer, contract.address, contractETHtx);
+
+			expect(
+				await contract.balanceOf(contract.address),
+				'contract ETHtx balance mismatch',
+			).to.eq(contractETHtx);
+
+			expect(
+				await contract.balanceOf(deployer),
+				'deployer ETHtx balance mismatch',
+			).to.eq(ethtxLeft);
+		});
 	});
 
 	describe('setFeeLogic', function () {
-		it('can only be called by owner');
+		const newFeeLogic = zeroPadAddress('0x3');
 
-		it('should revert when set to zero address');
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			await expect(testerContract.setFeeLogic(newFeeLogic)).to.be.revertedWith(
+				'caller is not the owner',
+			);
+		});
 
-		it('should set feeLogic address');
+		it('should revert when set to zero address', async function () {
+			const { contract } = fixture;
+			await expect(contract.setFeeLogic(zeroAddress)).to.be.revertedWith(
+				'feeLogic zero address',
+			);
+		});
 
-		it('should emit FeeLogicSet event');
+		it('should set feeLogic address', async function () {
+			const { contract } = fixture;
+			await contract.setFeeLogic(newFeeLogic);
+			expect(await contract.feeLogic()).to.eq(newFeeLogic);
+		});
+
+		it('should emit FeeLogicSet event', async function () {
+			const { contract, deployer } = fixture;
+			await expect(contract.setFeeLogic(newFeeLogic))
+				.to.emit(contract, 'FeeLogicSet')
+				.withArgs(deployer, newFeeLogic);
+		});
 	});
 
 	describe('setGasOracle', function () {
-		it('can only be called by owner');
+		const newOracle = zeroPadAddress('0x3');
 
-		it('should revert when set to zero address');
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			await expect(testerContract.setGasOracle(newOracle)).to.be.revertedWith(
+				'caller is not the owner',
+			);
+		});
 
-		it('should set gasOracle address');
+		it('should revert when set to zero address', async function () {
+			const { contract } = fixture;
+			await expect(contract.setGasOracle(zeroAddress)).to.be.revertedWith(
+				'gasOracle zero address',
+			);
+		});
 
-		it('should emit GasOracleSet event');
+		it('should set gasOracle address', async function () {
+			const { contract } = fixture;
+			await contract.setGasOracle(newOracle);
+			expect(await contract.gasOracle()).to.eq(newOracle);
+		});
+
+		it('should emit GasOracleSet event', async function () {
+			const { contract, deployer } = fixture;
+			await expect(contract.setGasOracle(newOracle))
+				.to.emit(contract, 'GasOracleSet')
+				.withArgs(deployer, newOracle);
+		});
 	});
 
 	describe('setMinter', function () {
-		it('can only be called by owner');
+		const newMinter = zeroAddress;
 
-		it('should set minter address');
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			await expect(testerContract.setMinter(newMinter)).to.be.revertedWith(
+				'caller is not the owner',
+			);
+		});
 
-		it('should emit MinterSet event');
+		it('should set gasOracle address', async function () {
+			const { contract } = fixture;
+			await contract.setMinter(newMinter);
+			expect(await contract.minter()).to.eq(newMinter);
+		});
+
+		it('should emit MinterSet event', async function () {
+			const { contract, deployer } = fixture;
+			await expect(contract.setMinter(newMinter))
+				.to.emit(contract, 'MinterSet')
+				.withArgs(deployer, newMinter);
+		});
 	});
 
 	describe('setTargetCRatio', function () {
-		it('can only be called by owner');
+		const newNum = 12;
+		const newDen = 7;
 
-		it('should revert if numerator is 0');
+		before(function () {
+			expect(newNum, 'numerator will not change').to.not.eq(
+				targetCRatioNumerator,
+			);
+			expect(newDen, 'denominator will not change').to.not.eq(
+				targetCRatioDenominator,
+			);
+		});
 
-		it('should revert if denominator is 0');
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			await expect(
+				testerContract.setTargetCRatio(newNum, newDen),
+			).to.be.revertedWith('caller is not the owner');
+		});
 
-		it('should set targetCRatio');
+		it('should revert if numerator is zero', async function () {
+			const { contract } = fixture;
+			await expect(contract.setTargetCRatio(0, newDen)).to.be.revertedWith(
+				'targetCRatio numerator is zero',
+			);
+		});
 
-		it('should emit TargetCRatioSet event');
+		it('should revert if denominator is zero', async function () {
+			const { contract } = fixture;
+			await expect(contract.setTargetCRatio(newNum, 0)).to.be.revertedWith(
+				'targetCRatio denominator is zero',
+			);
+		});
+
+		it('should set targetCRatio', async function () {
+			const { contract } = fixture;
+			await contract.setTargetCRatio(newNum, newDen);
+			const [num, den] = await contract.targetCRatio();
+			expect(num, 'numerator mismatch').to.eq(newNum);
+			expect(den, 'denominator mismatch').to.eq(newDen);
+		});
+
+		it('should emit TargetCRatioSet event', async function () {
+			const { contract, deployer } = fixture;
+			await expect(contract.setTargetCRatio(newNum, newDen))
+				.to.emit(contract, 'TargetCRatioSet')
+				.withArgs(deployer, newNum, newDen);
+		});
 	});
 
 	describe('unpause', function () {

@@ -1,6 +1,7 @@
 import { parseUnits } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { WETH9 } from '@contracts/ethers-v5';
+import { ContractTransaction } from 'ethers';
 
 export const GAS_PER_ETHTX = 21000;
 
@@ -39,4 +40,10 @@ export function ethtxToEth(
 	amountETHtx: BigNumber,
 ): BigNumber {
 	return gasPrice.mul(amountETHtx).mul(GAS_PER_ETHTX).div(parseETHtx('1'));
+}
+
+export async function ethUsedOnGas(
+	tx: ContractTransaction,
+): Promise<BigNumber> {
+	return (await tx.wait()).gasUsed.mul(tx.gasPrice);
 }
