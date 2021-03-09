@@ -549,7 +549,7 @@ describe(contractName, function () {
 	describe('buy', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			await expect(
 				contract.buy(deadline, { value: parseEther('1') }),
 			).to.be.revertedWith('expired');
@@ -607,7 +607,7 @@ describe(contractName, function () {
 	describe('buyWithWETH', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			await expect(
 				contract.buyWithWETH(parseEther('1'), deadline),
 			).to.be.revertedWith('expired');
@@ -673,7 +673,7 @@ describe(contractName, function () {
 	describe('buyExact', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETH = parseEther('1');
 			const amountETHtx = parseETHtx('1');
 			await expect(
@@ -774,7 +774,7 @@ describe(contractName, function () {
 	describe('buyExactWithWETH', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETH = parseEther('1');
 			const amountETHtx = parseETHtx('1');
 			await expect(
@@ -852,7 +852,7 @@ describe(contractName, function () {
 	describe('buyWithExactETH', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETH = parseEther('1');
 			const amountETHtx = parseETHtx('1');
 			await expect(
@@ -930,7 +930,7 @@ describe(contractName, function () {
 	describe('buyWithExactWETH', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETH = parseEther('1');
 			const amountETHtx = parseETHtx('1');
 			await expect(
@@ -1056,7 +1056,7 @@ describe(contractName, function () {
 	describe('redeem', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETHtx = parseETHtx('100');
 			await expect(contract.redeem(amountETHtx, deadline)).to.be.revertedWith(
 				'expired',
@@ -1193,7 +1193,7 @@ describe(contractName, function () {
 	describe('redeemExact', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETHtx = parseETHtx('100');
 			const amountETH = parseEther('1');
 			await expect(
@@ -1337,7 +1337,7 @@ describe(contractName, function () {
 	describe('redeemWithExact', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
-			const deadline = Math.floor(Date.now() / 1000) - 30;
+			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETHtx = parseETHtx('100');
 			const amountETH = parseEther('1');
 			await expect(

@@ -203,7 +203,7 @@ export default function run(): void {
 		await addRewards(fixture, parseEther('10'));
 
 		const minTimestamp = block.timestamp + accrualUpdateInterval;
-		clock.setSystemTime((minTimestamp + 15) * 1000);
+		clock.setSystemTime((minTimestamp + 3600) * 1000);
 
 		await expect(contract.updateAccrual()).to.not.be.reverted;
 		expect(await contract.lastAccrualUpdate()).to.be.gte(minTimestamp);
