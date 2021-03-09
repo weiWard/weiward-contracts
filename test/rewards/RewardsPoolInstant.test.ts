@@ -965,7 +965,7 @@ describe(contractName, function () {
 					contract.setAccruedRewardsPerToken(MaxUint256);
 					await stake();
 					// Cause overflow and wrap-around subtraction
-					addRewards();
+					await addRewards();
 
 					// Verify accruedRewardsPerTokenPaid is near overflow
 					expect(
@@ -990,7 +990,7 @@ describe(contractName, function () {
 					// Stake to also set accruedRewardsPerTokenPaid to near overflow
 					await stake();
 					// Cause overflow and wrap-around subtraction
-					addRewards();
+					await addRewards();
 
 					// Verify accruedRewardsPerTokenPaid is near overflow
 					expect(
@@ -1020,7 +1020,7 @@ describe(contractName, function () {
 					).to.eq(expectedAccruedRewardsPerToken().sub(1));
 
 					// Add rewards to check
-					addRewards();
+					await addRewards();
 
 					// Check value
 					expect(
