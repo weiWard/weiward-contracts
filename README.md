@@ -60,6 +60,8 @@ npm run compile
 npm run test
 # Deploy to hardhat network
 npm run deploy
+# Deploy specific contracts using tags
+npm run deploy -- --tags GasPrice
 # Verify deployed contracts on Etherscan
 npm run verify -- --network mainnet
 # Export ABI and addresses for deployed contracts to build/abi.json.

@@ -1,6 +1,3 @@
-dependencies:
-  '@sinonjs/fake-timers': 7.0.2
-  '@types/sinonjs__fake-timers': 6.0.2
 devDependencies:
   '@ethersproject/abi': 5.0.9
   '@ethersproject/bignumber': 5.0.12
@@ -14,12 +11,14 @@ devDependencies:
   '@nomiclabs/hardhat-etherscan': 2.1.0_hardhat@2.0.6
   '@nomiclabs/hardhat-waffle': 2.0.1_8e946739d070a74e3783bcd45a2280ae
   '@openzeppelin/contracts': 3.3.0-solc-0.7
+  '@sinonjs/fake-timers': 7.0.2
   '@sushiswap/core': 1.4.1
   '@typechain/ethers-v5': 5.0.0_8b01cba2ba70af4cbaaca29326bee71b
   '@typechain/web3-v1': 2.0.0_typechain@4.0.1
   '@types/chai': 4.2.14
   '@types/mocha': 8.2.0
   '@types/node': 14.14.14
+  '@types/sinonjs__fake-timers': 6.0.2
   '@typescript-eslint/eslint-plugin': 4.11.0_1b9a0c47bb6bc72fe9ec08ec801e03a4
   '@typescript-eslint/parser': 4.11.0_eslint@7.16.0+typescript@4.1.3
   '@uniswap/v2-core': 1.0.1
@@ -749,13 +748,13 @@ packages:
   /@sinonjs/commons/1.8.2:
     dependencies:
       type-detect: 4.0.8
-    dev: false
+    dev: true
     resolution:
       integrity: sha512-sruwd86RJHdsVf/AtBoijDmUqJp3B6hF/DGC23C+JaegnDHaZyewCjoVGTdg3J0uz3Zs7NnIT05OBOmML72lQw==
   /@sinonjs/fake-timers/7.0.2:
     dependencies:
       '@sinonjs/commons': 1.8.2
-    dev: false
+    dev: true
     resolution:
       integrity: sha512-dF84L5YC90gIOegPDCYymPIsDmwMWWSh7BwfDXQYePi8lVIEp7IZ1UVGkME8FjXOsDPxan12x4aaK+Lo6wVh9A==
   /@solidity-parser/parser/0.10.1:
@@ -944,6 +943,7 @@ packages:
     resolution:
       integrity: sha512-z/y8maYOQyYLyqaOB+dYQ6i0pxKLOsfwCmHmn4T7jS/SDHicIslr37oE3Dg8SCqKrKeBy6Lemu7do2yy+unLrw==
   /@types/sinonjs__fake-timers/6.0.2:
+    dev: true
     resolution:
       integrity: sha512-dIPoZ3g5gcx9zZEszaxLSVTvMReD3xxyyDnQUjA6IYDG9Ba2AV0otMPs+77sG9ojB4Qr2N2Vk5RnKeuA0X/0bg==
   /@types/underscore/1.10.24:
@@ -3722,7 +3722,7 @@ packages:
       integrity: sha1-1nQdkAAQa1FRDHLbktY2VFam2l4=
   /eth-sig-util/1.4.2:
     dependencies:
-      ethereumjs-abi: github.com/ethereumjs/ethereumjs-abi/1ce6a1d64235fabe2aaf827fd606def55693508f
+      ethereumjs-abi: github.com/ethereumjs/ethereumjs-abi/1a27c59c15ab1e95ee8e5c4ed6ad814c49cc439e
       ethereumjs-util: 5.2.1
     dev: true
     resolution:
@@ -9290,6 +9290,7 @@ packages:
     resolution:
       integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==
   /type-detect/4.0.8:
+    dev: true
     engines:
       node: '>=4'
     resolution:
@@ -11051,14 +11052,14 @@ packages:
       node: '>=10'
     resolution:
       integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
-  github.com/ethereumjs/ethereumjs-abi/1ce6a1d64235fabe2aaf827fd606def55693508f:
+  github.com/ethereumjs/ethereumjs-abi/1a27c59c15ab1e95ee8e5c4ed6ad814c49cc439e:
     dependencies:
       bn.js: 4.11.9
       ethereumjs-util: 6.2.1
     dev: true
     name: ethereumjs-abi
     resolution:
-      tarball: https://codeload.github.com/ethereumjs/ethereumjs-abi/tar.gz/1ce6a1d64235fabe2aaf827fd606def55693508f
+      tarball: https://codeload.github.com/ethereumjs/ethereumjs-abi/tar.gz/1a27c59c15ab1e95ee8e5c4ed6ad814c49cc439e
     version: 0.6.8
   github.com/web3-js/WebSocket-Node/ef5ea2f41daf4a2113b80c9223df884b4d56c400:
     dependencies:
