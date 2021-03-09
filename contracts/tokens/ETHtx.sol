@@ -10,11 +10,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ERC20TxFee.sol";
 import "./interfaces/IETHtx.sol";
 import "./interfaces/IWETH.sol";
-
-// TODO replace after writing oracle
-interface IGasPriceOracle {
-	function gasPrice() external view returns (uint256);
-}
+import "../oracles/interfaces/IGasPrice.sol";
 
 contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 	using Address for address payable;
@@ -62,6 +58,14 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		_;
 	}
 
+	modifier priceIsFresh() {
+		require(
+			!IGasPrice(_gasOracle).hasPriceExpired(),
+			"ETHtx: gas price is outdated"
+		);
+		_;
+	}
+
 	/* Fallbacks */
 
 	receive() external payable {
@@ -97,6 +101,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		virtual
 		override
 		ensure(deadline)
+		priceIsFresh
 	{
 		uint256 amountIn = msg.value;
 		uint256 amountOut = ethtxFromEth(amountIn);
@@ -108,6 +113,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		virtual
 		override
 		ensure(deadline)
+		priceIsFresh
 	{
 		uint256 amountOut = ethtxFromEth(amountIn);
 		_buy(_msgSender(), amountIn, amountOut, true);
@@ -119,6 +125,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		virtual
 		override
 		ensure(deadline)
+		priceIsFresh
 	{
 		address account = _msgSender();
 		uint256 amountIn = ethForEthtx(amountOut);
@@ -134,7 +141,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		uint256 amountInMax,
 		uint256 amountOut,
 		uint256 deadline
-	) external virtual override ensure(deadline) {
+	) external virtual override ensure(deadline) priceIsFresh {
 		uint256 amountIn = ethForEthtx(amountOut);
 		require(amountIn <= amountInMax, "ETHtx: amountIn exceeds max");
 		_buy(_msgSender(), amountIn, amountOut, true);
@@ -146,6 +153,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		virtual
 		override
 		ensure(deadline)
+		priceIsFresh
 	{
 		uint256 amountIn = msg.value;
 		uint256 amountOut = ethtxFromEth(amountIn);
@@ -157,7 +165,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		uint256 amountIn,
 		uint256 amountOutMin,
 		uint256 deadline
-	) external virtual override ensure(deadline) {
+	) external virtual override ensure(deadline) priceIsFresh {
 		uint256 amountOut = ethtxFromEth(amountIn);
 		require(amountOut >= amountOutMin, "ETHtx: amountOut below min");
 		_buy(_msgSender(), amountIn, amountOut, true);
@@ -182,6 +190,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		virtual
 		override
 		ensure(deadline)
+		priceIsFresh
 	{
 		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
 		_redeem(_msgSender(), amountIn, amountOut);
@@ -191,7 +200,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		uint256 amountInMax,
 		uint256 amountOut,
 		uint256 deadline
-	) external virtual override ensure(deadline) {
+	) external virtual override ensure(deadline) priceIsFresh {
 		uint256 amountIn = ethtxForEthAtRedemption(amountOut);
 		require(amountIn <= amountInMax, "ETHtx: amountIn exceeds max");
 		_redeem(_msgSender(), amountIn, amountOut);
@@ -201,7 +210,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		uint256 amountIn,
 		uint256 amountOutMin,
 		uint256 deadline
-	) external virtual override ensure(deadline) {
+	) external virtual override ensure(deadline) priceIsFresh {
 		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
 		require(amountOut >= amountOutMin, "ETHtx: amountOut below min");
 		_redeem(_msgSender(), amountIn, amountOut);
@@ -283,7 +292,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 	}
 
 	function gasPrice() public view virtual override returns (uint256) {
-		return IGasPriceOracle(_gasOracle).gasPrice();
+		return IGasPrice(_gasOracle).gasPrice();
 	}
 
 	function maxGasPrice() public view virtual override returns (uint256) {

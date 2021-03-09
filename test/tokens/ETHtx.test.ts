@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
-import { parseEther } from 'ethers/lib/utils';
+import { parseEther, keccak256, toUtf8Bytes } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { JsonRpcSigner } from '@ethersproject/providers';
 
@@ -21,8 +21,8 @@ import {
 	MockETHtx__factory,
 	FeeLogic__factory,
 	WETH9__factory,
-	SimpleGasPrice,
-	SimpleGasPrice__factory,
+	MockGasPrice,
+	MockGasPrice__factory,
 	WETH9,
 	FeeLogic,
 } from '../../build/types/ethers-v5';
@@ -38,6 +38,8 @@ const targetCRatioNumerator = 2;
 const targetCRatioDenominator = 1;
 const feeNumerator = 75;
 const feeDenominator = 1000;
+const oracleRole = keccak256(toUtf8Bytes('ORACLE_ROLE'));
+const oracleUpdateInterval = 3600;
 
 async function addWETH(fixture: Fixture, amount: BigNumberish): Promise<void> {
 	const { contract, weth } = fixture;
@@ -84,7 +86,7 @@ interface Fixture {
 	testerContract: MockETHtx;
 	ethmx: ETHmx;
 	feeLogic: FeeLogic;
-	oracle: SimpleGasPrice;
+	oracle: MockGasPrice;
 	weth: WETH9;
 }
 
@@ -100,9 +102,11 @@ const loadFixture = deployments.createFixture(
 			feeDenominator,
 		);
 
-		const oracle = await new SimpleGasPrice__factory(deployerSigner).deploy(
+		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
+			oracleUpdateInterval,
 			defaultGasPrice,
 		);
+		await oracle.grantRole(oracleRole, deployer);
 
 		const weth = await new WETH9__factory(deployerSigner).deploy();
 
@@ -551,6 +555,18 @@ describe(contractName, function () {
 			).to.be.revertedWith('expired');
 		});
 
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.buy(deadline, { value: parseEther('1') }),
+			).to.be.revertedWith('gas price is outdated');
+		});
+
 		it('should revert without enough ethtxAvailable', async function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) + 3600;
@@ -595,6 +611,18 @@ describe(contractName, function () {
 			await expect(
 				contract.buyWithWETH(parseEther('1'), deadline),
 			).to.be.revertedWith('expired');
+		});
+
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.buyWithWETH(parseEther('1'), deadline),
+			).to.be.revertedWith('gas price is outdated');
 		});
 
 		it('should revert without enough ethtxAvailable', async function () {
@@ -651,6 +679,21 @@ describe(contractName, function () {
 			await expect(
 				contract.buyExact(amountETHtx, deadline, { value: amountETH }),
 			).to.be.revertedWith('expired');
+		});
+
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.buyExact(amountETHtx, deadline, { value: amountETH }),
+			).to.be.revertedWith('gas price is outdated');
 		});
 
 		it('should revert without enough ethtxAvailable', async function () {
@@ -739,6 +782,21 @@ describe(contractName, function () {
 			).to.be.revertedWith('expired');
 		});
 
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.buyExactWithWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('gas price is outdated');
+		});
+
 		it('should revert without enough ethtxAvailable', async function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) + 3600;
@@ -802,6 +860,21 @@ describe(contractName, function () {
 			).to.be.revertedWith('expired');
 		});
 
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.buyWithExactETH(amountETHtx, deadline, { value: amountETH }),
+			).to.be.revertedWith('gas price is outdated');
+		});
+
 		it('should revert without enough ethtxAvailable', async function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) + 3600;
@@ -863,6 +936,21 @@ describe(contractName, function () {
 			await expect(
 				contract.buyWithExactWETH(amountETH, amountETHtx, deadline),
 			).to.be.revertedWith('expired');
+		});
+
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			const amountETH = parseEther('1');
+			const amountETHtx = parseETHtx('1');
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.buyWithExactWETH(amountETH, amountETHtx, deadline),
+			).to.be.revertedWith('gas price is outdated');
 		});
 
 		it('should revert without enough ethtxAvailable', async function () {
@@ -972,6 +1060,20 @@ describe(contractName, function () {
 			const amountETHtx = parseETHtx('100');
 			await expect(contract.redeem(amountETHtx, deadline)).to.be.revertedWith(
 				'expired',
+			);
+		});
+
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			const amountETHtx = parseETHtx('100');
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(contract.redeem(amountETHtx, deadline)).to.be.revertedWith(
+				'gas price is outdated',
 			);
 		});
 
@@ -1097,6 +1199,21 @@ describe(contractName, function () {
 			await expect(
 				contract.redeemExact(amountETHtx, amountETH, deadline),
 			).to.be.revertedWith('expired');
+		});
+
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			const amountETHtx = parseETHtx('100');
+			const amountETH = parseEther('1');
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.redeemExact(amountETHtx, amountETH, deadline),
+			).to.be.revertedWith('gas price is outdated');
 		});
 
 		it('should revert when ETHtx amountIn > amountInMax', async function () {
@@ -1226,6 +1343,21 @@ describe(contractName, function () {
 			await expect(
 				contract.redeemWithExact(amountETHtx, amountETH, deadline),
 			).to.be.revertedWith('expired');
+		});
+
+		it('should revert with expired gas price', async function () {
+			const { contract, oracle } = fixture;
+			const now = Math.floor(Date.now() / 1000);
+			const deadline = now + 3600;
+
+			const amountETHtx = parseETHtx('100');
+			const amountETH = parseEther('1');
+
+			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
+
+			await expect(
+				contract.redeemWithExact(amountETHtx, amountETH, deadline),
+			).to.be.revertedWith('gas price is outdated');
 		});
 
 		it('should revert when ETH amountOut < amountOutMin', async function () {
