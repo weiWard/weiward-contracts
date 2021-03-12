@@ -125,6 +125,7 @@ const loadFixture = deployments.createFixture(
 			mintGasPrice,
 			roiNumerator,
 			roiDenominator,
+			0,
 		);
 
 		await contract.setMinter(ethmx.address);

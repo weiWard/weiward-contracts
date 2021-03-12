@@ -19,12 +19,14 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 
 	/* Immutable Public State */
 
+	uint256 public immutable override earlyThreshold;
 	address public immutable override wethAddr;
 
 	/* Mutable Public State */
 
 	address public override ethtxAddr;
 	uint256 public override mintGasPrice;
+	uint256 public override totalGiven;
 
 	/* Mutable Internal State */
 
@@ -38,12 +40,14 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 		address wethAddr_,
 		uint256 mintGasPrice_,
 		uint128 roiNumerator,
-		uint128 roiDenominator
+		uint128 roiDenominator,
+		uint256 earlyThreshold_
 	) Ownable() ERC20("ETHtx Minter Token", "ETHmx", 18) {
 		wethAddr = wethAddr_;
 		setEthtxAddress(ethtxAddr_);
 		setMintGasPrice(mintGasPrice_);
 		setRoi(roiNumerator, roiDenominator);
+		earlyThreshold = earlyThreshold_;
 	}
 
 	/* External Views */
@@ -67,6 +71,7 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 
 		uint256 amountOut = ethmxFromEth(amountIn);
 		_mint(_msgSender(), amountOut);
+		totalGiven += amountIn;
 	}
 
 	function mintWithETHtx(uint256 amount) external override whenNotPaused {
@@ -91,6 +96,7 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 
 		uint256 amountOut = ethmxFromEth(amount);
 		_mint(account, amountOut);
+		totalGiven += amount;
 	}
 
 	function pause() external override onlyOwner {
@@ -138,7 +144,24 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 		override
 		returns (uint256)
 	{
-		return amountETHIn.mul(_roiNum).div(_roiDen);
+		// Gas savings
+		uint256 totalGiven_ = totalGiven;
+		uint256 earlyThreshold_ = earlyThreshold;
+
+		// Check for early-bird rewards (will repeat after ~1e59 ETH given)
+		if (totalGiven_ < earlyThreshold_) {
+			uint256 currentLeft = earlyThreshold_ - totalGiven_;
+			if (amountETHIn < currentLeft) {
+				amountETHIn = (2 *
+					amountETHIn -
+					(2 * totalGiven_ * amountETHIn + amountETHIn**2) /
+					(2 * earlyThreshold_));
+			} else {
+				amountETHIn += (currentLeft * currentLeft) / (2 * earlyThreshold_);
+			}
+		}
+
+		return _ethmxFromEth(amountETHIn);
 	}
 
 	function ethmxFromEthtx(uint256 amountETHtxIn)
@@ -148,7 +171,7 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 		returns (uint256)
 	{
 		uint256 amountETHIn = IETHtx(ethtxAddr).ethForEthtx(amountETHtxIn);
-		return ethmxFromEth(amountETHIn);
+		return _ethmxFromEth(amountETHIn);
 	}
 
 	function ethtxFromEth(uint256 amountETHIn)
@@ -160,5 +183,11 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 		uint256 numerator = amountETHIn.mul(1e18);
 		uint256 denominator = mintGasPrice.mul(IETHtx(ethtxAddr).gasPerETHtx());
 		return numerator.div(denominator);
+	}
+
+	/* Internal Views */
+
+	function _ethmxFromEth(uint256 amountETHIn) internal view returns (uint256) {
+		return amountETHIn.mul(_roiNum).div(_roiDen);
 	}
 }

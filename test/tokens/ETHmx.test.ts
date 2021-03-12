@@ -1,8 +1,9 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { BigNumber } from '@ethersproject/bignumber';
+import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { JsonRpcSigner } from '@ethersproject/providers';
+import { Zero } from '@ethersproject/constants';
 
 import { zeroAddress, zeroPadAddress } from '../helpers/address';
 import {
@@ -33,6 +34,45 @@ const mintGasPrice = parseGwei('1800');
 const roiNumerator = 5;
 const roiDenominator = 1;
 const feeRecipient = zeroPadAddress('0x1');
+const earlyThreshold = parseEther('1000');
+const earlyMultiplier = 2;
+
+function ethmxFromEthIntegral(amountETH: BigNumber): BigNumber {
+	return amountETH
+		.mul(earlyMultiplier)
+		.sub(amountETH.mul(amountETH).div(earlyThreshold.mul(2)));
+}
+
+function ethmxFromEth(
+	totalGiven: BigNumber,
+	amountETH: BigNumber,
+	roiNum: BigNumberish = roiNumerator,
+	roiDen: BigNumberish = roiDenominator,
+): BigNumber {
+	if (totalGiven.lt(earlyThreshold)) {
+		const start = ethmxFromEthIntegral(totalGiven);
+
+		const currentLeft = earlyThreshold.sub(totalGiven);
+		if (amountETH.lt(currentLeft)) {
+			const end = ethmxFromEthIntegral(totalGiven.add(amountETH));
+			amountETH = end.sub(start);
+		} else {
+			const end = ethmxFromEthIntegral(earlyThreshold);
+			const added = end.sub(start).sub(currentLeft);
+			amountETH = amountETH.add(added);
+		}
+	}
+
+	return ethmxFromEthRaw(amountETH, roiNum, roiDen);
+}
+
+function ethmxFromEthRaw(
+	amountETH: BigNumber,
+	roiNum: BigNumberish = roiNumerator,
+	roiDen: BigNumberish = roiDenominator,
+): BigNumber {
+	return amountETH.mul(roiNum).div(roiDen);
+}
 
 interface Fixture {
 	deployer: string;
@@ -79,6 +119,7 @@ const loadFixture = deployments.createFixture(
 			mintGasPrice,
 			roiNumerator,
 			roiDenominator,
+			earlyThreshold,
 		);
 
 		await ethtx.setMinter(contract.address);
@@ -142,12 +183,108 @@ describe(contractName, function () {
 	});
 
 	describe('ethmxFromEth', function () {
-		it('should be correct', async function () {
-			const { contract } = fixture;
+		describe('should be correct', function () {
+			it('when totalGiven == 0', async function () {
+				const { contract } = fixture;
 
-			const amount = parseEther('10');
-			const expected = amount.mul(roiNumerator).div(roiDenominator);
-			expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				const amount = parseEther('10');
+				const expected = ethmxFromEth(Zero, amount);
+				expect(expected, 'test calculation mismatch').to.eq(
+					parseEther('99.75'), // 10x amount - 2.5x amount/1000
+				);
+
+				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+			});
+
+			it('when totalGiven == earlyThreshold / 4', async function () {
+				const { contract } = fixture;
+
+				const ethGiven = earlyThreshold.div(4);
+				await contract.mint({ value: ethGiven });
+
+				const amount = parseEther('10');
+				const expected = ethmxFromEth(ethGiven, amount);
+				expect(expected, 'test calculation mismatch').to.eq(
+					parseEther('87.25'), // 8.75x amount - 2.5x amount/1000
+				);
+
+				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+			});
+
+			it('when totalGiven == earlyThreshold / 2', async function () {
+				const { contract } = fixture;
+
+				const ethGiven = earlyThreshold.div(2);
+				await contract.mint({ value: ethGiven });
+
+				const amount = parseEther('10');
+				const expected = ethmxFromEth(ethGiven, amount);
+				expect(expected, 'test calculation mismatch').to.eq(
+					parseEther('74.75'), // 7.5x amount - 2.5x amount/1000
+				);
+
+				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+			});
+
+			it('when totalGiven == earlyThreshold * 3 / 4', async function () {
+				const { contract } = fixture;
+
+				const ethGiven = earlyThreshold.mul(3).div(4);
+				await contract.mint({ value: ethGiven });
+
+				const amount = parseEther('10');
+				const expected = ethmxFromEth(ethGiven, amount);
+				expect(expected, 'test calculation mismatch').to.eq(
+					parseEther('62.25'), // 6.25x amount - 2.5x amount/1000
+				);
+
+				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+			});
+
+			it('when totalGiven == earlyThreshold', async function () {
+				const { contract } = fixture;
+
+				const ethGiven = earlyThreshold;
+				await contract.mint({ value: ethGiven });
+
+				const amount = parseEther('10');
+				const expected = ethmxFromEth(ethGiven, amount);
+				expect(expected, 'test calculation mismatch').to.eq(
+					parseEther('50'), // 5x amount
+				);
+
+				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+			});
+
+			it('when totalGiven > earlyThreshold', async function () {
+				const { contract } = fixture;
+
+				const ethGiven = earlyThreshold.add(1);
+				await contract.mint({ value: ethGiven });
+
+				const amount = parseEther('10');
+				const expected = ethmxFromEth(ethGiven, amount);
+				expect(expected, 'test calculation mismatch').to.eq(
+					parseEther('50'), // 5x amount
+				);
+
+				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+			});
+
+			it('when amountEthIn > earlyThreshold - totalGiven', async function () {
+				const { contract } = fixture;
+
+				const amount = parseEther('10');
+				const ethGiven = earlyThreshold.sub(amount.div(2));
+				await contract.mint({ value: ethGiven });
+
+				const expected = ethmxFromEth(ethGiven, amount);
+				expect(expected, 'test calculation mismatch').to.eq(
+					parseEther('50.0625'),
+				);
+
+				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+			});
 		});
 
 		it('should change with roi', async function () {
@@ -161,7 +298,7 @@ describe(contractName, function () {
 			);
 
 			const amount = parseEther('10');
-			const expected = amount.mul(roiNum).div(roiDen);
+			const expected = ethmxFromEth(Zero, amount, roiNum, roiDen);
 
 			await contract.setRoi(roiNum, roiDen);
 
@@ -175,7 +312,7 @@ describe(contractName, function () {
 
 			const amountEthtx = parseETHtx('10000');
 			const amountEth = await ethtx.ethForEthtx(amountEthtx);
-			const expected = await contract.ethmxFromEth(amountEth);
+			const expected = ethmxFromEthRaw(amountEth);
 
 			expect(await contract.ethmxFromEthtx(amountEthtx)).to.eq(expected);
 		});
@@ -248,8 +385,13 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount', async function () {
 				const { contract, deployer } = fixture;
-				const expected = await contract.ethmxFromEth(amount);
+				const expected = ethmxFromEth(Zero, amount);
 				expect(await contract.balanceOf(deployer)).to.eq(expected);
+			});
+
+			it('and increase totalGiven', async function () {
+				const { contract } = fixture;
+				expect(await contract.totalGiven()).to.eq(amount);
 			});
 		});
 
@@ -348,8 +490,13 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount', async function () {
 				const { contract, deployer } = fixture;
-				const expected = await contract.ethmxFromEth(amount);
+				const expected = ethmxFromEth(Zero, amount);
 				expect(await contract.balanceOf(deployer)).to.eq(expected);
+			});
+
+			it('and increase totalGiven', async function () {
+				const { contract } = fixture;
+				expect(await contract.totalGiven()).to.eq(amount);
 			});
 		});
 

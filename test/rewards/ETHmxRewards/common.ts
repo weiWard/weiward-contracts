@@ -78,6 +78,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			mintGasPrice,
 			roiNumerator,
 			roiDenominator,
+			0,
 		);
 
 		await ethtx.setMinter(ethmx.address);

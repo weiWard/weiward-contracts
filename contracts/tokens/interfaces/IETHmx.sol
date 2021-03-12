@@ -4,6 +4,8 @@ pragma solidity ^0.7.0;
 interface IETHmx {
 	/* Views */
 
+	function earlyThreshold() external view returns (uint256);
+
 	function ethmxFromEth(uint256 amountETHIn) external view returns (uint256);
 
 	function ethmxFromEthtx(uint256 amountETHtxIn)
@@ -21,6 +23,8 @@ interface IETHmx {
 		external
 		view
 		returns (uint128 numerator, uint128 denominator);
+
+	function totalGiven() external view returns (uint256);
 
 	function wethAddr() external view returns (address);
 
