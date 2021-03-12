@@ -1,8 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { parseUnits } from 'ethers/lib/utils';
 
-const contractName = 'GasPrice';
+import { zeroPadAddress } from '../test/helpers/address';
+
+const contractName = 'FeeLogic';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts } = hre;
@@ -10,13 +11,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const { deployer } = await getNamedAccounts();
 
-	const updateThreshold = 1800;
-	const gasPrice = parseUnits('200', 9);
+	const feeRecipient = zeroPadAddress('0x2');
+	const feeNum = 75;
+	const feeDen = 1000;
 
 	await deploy(contractName, {
 		from: deployer,
 		log: true,
-		args: [updateThreshold, gasPrice],
+		args: [feeRecipient, feeNum, feeDen],
 	});
 };
 
