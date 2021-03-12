@@ -153,7 +153,7 @@ describe(contractName, function () {
 		const amountA = parseTokenA('1000');
 		const amountB = parseTokenB('100');
 
-		async function addLiquidity(): Promise<void> {
+		async function addLiquidity(fixture: Fixture): Promise<void> {
 			const { deployer, tokenA, tokenB, pool, token0 } = fixture;
 
 			await tokenA.mint(deployer, amountA);
@@ -177,7 +177,7 @@ describe(contractName, function () {
 
 		beforeEach(async function () {
 			// Create liquidity
-			await addLiquidity();
+			await addLiquidity(fixture);
 		});
 
 		it('numerator should match correct pool balance', async function () {
@@ -211,13 +211,13 @@ describe(contractName, function () {
 
 				await factory.setFee(parseUnits('3', 15));
 
-				await addLiquidity();
+				await addLiquidity(fixture);
 
 				await tokenA.mint(deployer, swapAmount);
 				await tokenA.increaseAllowance(pool.address, swapAmount);
 				pool.swap(tokenA.address, tokenB.address, swapAmount, 0, zeroAddress);
 
-				await addLiquidity();
+				await addLiquidity(fixture);
 			});
 
 			it('numerator should be correct', async function () {
