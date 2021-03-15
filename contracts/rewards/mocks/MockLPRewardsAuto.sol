@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import "../LPRewards.sol";
+import "../LPRewardsAuto.sol";
 
-contract MockLPRewards is LPRewards {
-	constructor(address _rewardsToken) LPRewards(_rewardsToken) {
+contract MockLPRewardsAuto is LPRewardsAuto {
+	constructor(address _rewardsToken) LPRewardsAuto(_rewardsToken) {
 		return;
 	}
 

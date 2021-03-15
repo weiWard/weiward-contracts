@@ -1,6 +1,6 @@
 import * as modules from './modules';
 
-describe('LPRewards', function () {
+describe.skip('LPRewardsAuto', function () {
 	const addTest = (name: string, fn: () => void): void => {
 		describe(name, fn.bind(this));
 	};
@@ -22,7 +22,7 @@ describe('LPRewards', function () {
 		'currentAccruedRewardsPerTokenFor',
 		modules.currentAccruedRewardsPerTokenFor,
 	);
-	addTestOnly('currentRewardsBalanceOf', modules.currentRewardsBalanceOf);
+	addTest('currentRewardsBalanceOf', modules.currentRewardsBalanceOf);
 	addTest('currentRewardsBalanceOfFor', modules.currentRewardsBalanceOfFor);
 	addTest('currentSharesFor', modules.currentSharesFor);
 	addTest('currentSharesOf', modules.currentSharesOf);

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
@@ -12,10 +11,10 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../libraries/EnumerableMap.sol";
-import "./interfaces/ILPRewards.sol";
+import "./interfaces/ILPRewardsAuto.sol";
 import "./interfaces/IValuePerToken.sol";
 
-contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
+contract LPRewardsAuto is Ownable, Pausable, ReentrancyGuard, ILPRewardsAuto {
 	using EnumerableMap for EnumerableMap.AddressToUintMap;
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
@@ -137,7 +136,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
-		require(_tokens.contains(token), "LPRewards: token not supported");
+		require(_tokens.contains(token), "LPRewardsAuto: token not supported");
 		return _totalSharesFor(token);
 	}
 
@@ -162,7 +161,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
-		require(_tokens.contains(token), "LPRewards: token not supported");
+		require(_tokens.contains(token), "LPRewardsAuto: token not supported");
 		return _shares(token, stakedBalanceOfFor(account, token));
 	}
 
@@ -172,7 +171,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
-		require(_tokens.contains(token), "LPRewards: token not supported");
+		require(_tokens.contains(token), "LPRewardsAuto: token not supported");
 		return _shares(token, 1);
 	}
 
@@ -541,13 +540,13 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 
 	/**
 	 * WARNING: Avoid adding too many tokens to save on gas.
-	 * See {LPRewards-_updateRewards} for explanation.
+	 * See {LPRewardsAuto-_updateRewards} for explanation.
 	 */
 	function _addToken(address token, address tokenValueImpl) internal {
-		require(!_tokens.contains(token), "LPRewards: token already added");
+		require(!_tokens.contains(token), "LPRewardsAuto: token already added");
 		require(
 			tokenValueImpl != address(0),
-			"LPRewards: tokenValueImpl cannot be zero address"
+			"LPRewardsAuto: tokenValueImpl cannot be zero address"
 		);
 		_updateRewards();
 		_tokens.add(token);
@@ -559,10 +558,13 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	function _changeTokenValueImpl(address token, address tokenValueImpl)
 		internal
 	{
-		require(_tokens.contains(token), "LPRewards: token has not been added");
+		require(
+			_tokens.contains(token),
+			"LPRewardsAuto: token has not been added"
+		);
 		require(
 			tokenValueImpl != address(0),
-			"LPRewards: tokenValueImpl cannot be zero address"
+			"LPRewardsAuto: tokenValueImpl cannot be zero address"
 		);
 		_updateRewards();
 		_tokenData[token].valueImpl = tokenValueImpl;
@@ -593,7 +595,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 
 		require(
 			amount <= unstaked,
-			"LPRewards: cannot recover more tokens than are not staked"
+			"LPRewardsAuto: cannot recover more tokens than are not staked"
 		);
 
 		IERC20(token).safeTransfer(to, amount);
@@ -620,7 +622,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		uint256 reward = _users[account].totalRewards;
 		require(
 			amount <= reward,
-			"LPRewards: cannot redeem more rewards than you have earned"
+			"LPRewardsAuto: cannot redeem more rewards than you have earned"
 		);
 		_redeemRewardImpl(account, amount);
 	}
@@ -631,7 +633,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		uint256 reward = _users[account].rewards[token].pending;
 		require(
 			amount <= reward,
-			"LPRewards: cannot redeem more rewards than you have earned"
+			"LPRewardsAuto: cannot redeem more rewards than you have earned"
 		);
 		_redeemRewardFromImpl(account, token, amount);
 	}
@@ -684,7 +686,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 			}
 		}
 
-		require(amountLeft == 0, "LPRewards: failed to redeem enough rewards");
+		require(amountLeft == 0, "LPRewardsAuto: failed to redeem enough rewards");
 
 		user.totalRewards = user.totalRewards.sub(amount);
 		user.totalRedeemed += amount;
@@ -724,7 +726,10 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	}
 
 	function _removeToken(address token) internal {
-		require(_tokens.contains(token), "LPRewards: token has not been added");
+		require(
+			_tokens.contains(token),
+			"LPRewardsAuto: token has not been added"
+		);
 		_updateRewards();
 		_tokens.remove(token);
 		// Clean up. Keep totalStaked and rewards since those will be cleaned up by
@@ -734,20 +739,23 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	}
 
 	function _stake(address token, uint256 amount) internal virtual {
-		require(amount > 0, "LPRewards: cannot stake zero");
-		require(_tokens.contains(token), "LPRewards: token not supported");
+		require(amount > 0, "LPRewardsAuto: cannot stake zero");
+		require(_tokens.contains(token), "LPRewardsAuto: token not supported");
 
 		address account = _msgSender();
 
 		// Prevent spending gas without having a balance
 		uint256 balance = IERC20(token).balanceOf(account);
-		require(amount <= balance, "LPRewards: cannot stake more than balance");
+		require(
+			amount <= balance,
+			"LPRewardsAuto: cannot stake more than balance"
+		);
 
 		// Prevent spending gas without having an allowance
 		uint256 allowance = IERC20(token).allowance(account, address(this));
 		require(
 			amount <= allowance,
-			"LPRewards: cannot stake more than allowance"
+			"LPRewardsAuto: cannot stake more than allowance"
 		);
 
 		UserData storage user = _users[account];
@@ -773,14 +781,14 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	}
 
 	function _unstake(address token, uint256 amount) internal virtual {
-		require(amount > 0, "LPRewards: cannot unstake zero");
+		require(amount > 0, "LPRewardsAuto: cannot unstake zero");
 
 		address account = _msgSender();
 		// This prevents making calls to any addresses that were never supported.
 		uint256 staked = stakedBalanceOfFor(account, token);
 		require(
 			amount <= staked,
-			"LPRewards: cannot unstake more than staked balance"
+			"LPRewardsAuto: cannot unstake more than staked balance"
 		);
 
 		_updateRewardOfFor(account, token);
