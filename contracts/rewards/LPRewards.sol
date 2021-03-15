@@ -49,6 +49,10 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	/* Immutable Public State */
 	address public immutable override rewardsToken;
 
+	/* Immutable Internal State */
+
+	uint256 internal constant _MULTIPLIER = 1e36;
+
 	/* Mutable Internal State */
 
 	uint256 internal _lastTotalRewardsAccrued;
@@ -86,7 +90,15 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	{
 		// Get current pending rewards.
 		uint256 totalPending = totalRewardsAccrued() - _lastTotalRewardsAccrued;
+		if (totalPending == 0) {
+			return this.rewardsBalanceOf(account);
+		}
+
+		// Expensive operation, so duplicate return
 		uint256 totalShares = _totalShares();
+		if (totalShares == 0) {
+			return this.rewardsBalanceOf(account);
+		}
 
 		UserData storage user = _users[account];
 		uint256 total = user.totalRewards;
@@ -125,6 +137,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
+		require(_tokens.contains(token), "LPRewards: token not supported");
 		return _totalSharesFor(token);
 	}
 
@@ -150,7 +163,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		returns (uint256)
 	{
 		require(_tokens.contains(token), "LPRewards: token not supported");
-		return _shares(token, _users[account].staked.get(token));
+		return _shares(token, stakedBalanceOfFor(account, token));
 	}
 
 	function currentSharesPerTokenFor(address token)
@@ -169,16 +182,24 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
+		uint256 lastRewardsAccrued = totalRewardsAccruedFor(token);
+
 		// Get current pending rewards.
 		uint256 totalPending = totalRewardsAccrued() - _lastTotalRewardsAccrued;
+		if (totalPending == 0) {
+			return lastRewardsAccrued;
+		}
 
 		// Divide pending by share
 		uint256 totalShares = _totalShares();
+		if (totalShares == 0) {
+			return lastRewardsAccrued;
+		}
 		uint256 shares = _totalSharesFor(token);
 		uint256 pending = totalPending.mul(shares).div(totalShares);
 
 		// Overflow is OK
-		return pending + _tokenData[token].rewardsRedeemed;
+		return pending + lastRewardsAccrued;
 	}
 
 	function currentTotalShares() external view override returns (uint256) {
@@ -386,7 +407,11 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		override
 		returns (uint256)
 	{
-		return _users[account].staked.get(token);
+		EnumerableMap.AddressToUintMap storage staked = _users[account].staked;
+		if (staked.contains(token)) {
+			return staked.get(token);
+		}
+		return 0;
 	}
 
 	function totalRewardsAccrued() public view override returns (uint256) {
@@ -457,7 +482,8 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 			return td.accruedRewardsPerToken;
 		}
 
-		uint256 rewardsPerToken = delta.div(td.totalStaked);
+		// Usemultiplier for better rounding
+		uint256 rewardsPerToken = delta.mul(_MULTIPLIER).div(td.totalStaked);
 
 		// Overflow is OK
 		return td.accruedRewardsPerToken + rewardsPerToken;
@@ -472,7 +498,9 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 		// Overflow is OK: delta is correct anyway
 		uint256 accruedDelta = accruedRewardsPerToken - arptPaid;
 
-		return stakedBalanceOfFor(account, token).mul(accruedDelta);
+		// Divide by _MULTIPLIER to convert back to rewards decimals
+		return
+			stakedBalanceOfFor(account, token).mul(accruedDelta).div(_MULTIPLIER);
 	}
 
 	/**
@@ -490,6 +518,9 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 	{
 		IValuePerToken vptHandle = IValuePerToken(valuePerTokenImplFor(token));
 		(uint256 numerator, uint256 denominator) = vptHandle.valuePerToken();
+		if (denominator == 0) {
+			return 0;
+		}
 		// TODO handle fractional (i.e. improve rounding)
 		// Return a 1:1 ratio for value to shares
 		return amountStaked.mul(numerator).div(denominator);
@@ -729,7 +760,7 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 
 		uint256 totalStaked = amount;
 		if (user.staked.contains(token)) {
-			totalStaked.add(user.staked.get(token));
+			totalStaked = totalStaked.add(stakedBalanceOfFor(account, token));
 		}
 		user.staked.set(token, totalStaked);
 
@@ -855,6 +886,10 @@ contract LPRewards is Context, Ownable, Pausable, ReentrancyGuard, ILPRewards {
 			uint256 share = _totalSharesFor(_tokens.at(i));
 			pendingSharesFor[i] = pending.mul(share);
 			totalShares = totalShares.add(share);
+		}
+
+		if (totalShares == 0) {
+			return;
 		}
 
 		// Iterate twice to give rewards.
