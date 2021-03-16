@@ -112,6 +112,28 @@ export default function run(): void {
 		});
 	});
 
+	it('when new rewards > stake mid-loop', async function () {
+		const { contract, deployer } = fixture;
+		const staked = parseEther('10');
+
+		await stake(fixture, staked);
+		await addRewards(fixture, staked.div(2));
+		await contract.mockUpdateAccrual();
+
+		await addRewards(fixture, staked.mul(2));
+		await contract.mockUpdateAccrual();
+		await contract.updateReward();
+
+		expect(
+			await contract.stakedBalanceOf(deployer),
+			'stakedBalanceOf mismatch',
+		).to.eq(0);
+		expect(
+			await contract.rewardsBalanceOf(deployer),
+			'rewardsBalanceOf mismatch',
+		).to.eq(staked);
+	});
+
 	it('should be correct with multiple parties', async function () {
 		const staked = parseEther('50');
 		const rewards = parseEther('7');

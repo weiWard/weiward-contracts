@@ -360,7 +360,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 			arptDelta = arptValues[i] - arptValues[i - 1];
 			if (arptDelta >= _MULTIPLIER) {
 				// This should handle any plausible overflow
-				newRewards = staked;
+				newRewards += staked;
 				staked = 0;
 				break;
 			}
