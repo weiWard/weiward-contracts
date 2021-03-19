@@ -15,9 +15,14 @@ interface IETHmxRewards {
 
 	function ethmxAddr() external view returns (address);
 
-	function lastTotalRewardsAccrued() external view returns (uint256);
-
 	function lastAccrualUpdate() external view returns (uint256);
+
+	function lastRewardsBalanceOf(address account)
+		external
+		view
+		returns (uint256);
+
+	function lastTotalRewardsAccrued() external view returns (uint256);
 
 	function readyForUpdate() external view returns (bool);
 

@@ -82,9 +82,9 @@ export default function run(): void {
 			expect(await contract.stakedBalanceOf(deployer)).to.eq(expected);
 		});
 
-		it('should update rewardsBalanceOf', async function () {
+		it('should update lastRewardsBalanceOf', async function () {
 			const { contract, deployer } = fixture;
-			expect(await contract.rewardsBalanceOf(deployer)).to.eq(rewards);
+			expect(await contract.lastRewardsBalanceOf(deployer)).to.eq(rewards);
 		});
 	});
 
@@ -106,9 +106,9 @@ export default function run(): void {
 			expect(await contract.stakedBalanceOf(deployer)).to.eq(0);
 		});
 
-		it('should update rewardsBalanceOf', async function () {
+		it('should update lastRewardsBalanceOf', async function () {
 			const { contract, deployer } = fixture;
-			expect(await contract.rewardsBalanceOf(deployer)).to.eq(staked);
+			expect(await contract.lastRewardsBalanceOf(deployer)).to.eq(staked);
 		});
 	});
 
@@ -129,8 +129,8 @@ export default function run(): void {
 			'stakedBalanceOf mismatch',
 		).to.eq(0);
 		expect(
-			await contract.rewardsBalanceOf(deployer),
-			'rewardsBalanceOf mismatch',
+			await contract.lastRewardsBalanceOf(deployer),
+			'lastRewardsBalanceOf mismatch',
 		).to.eq(staked);
 	});
 
@@ -174,15 +174,15 @@ export default function run(): void {
 			).to.eq(totalRewards);
 
 			expect(
-				await contract.rewardsBalanceOf(deployer),
-				`checkpoint ${checkpoint}: deployer rewardsBalanceOf mismatch`,
+				await contract.lastRewardsBalanceOf(deployer),
+				`checkpoint ${checkpoint}: deployer lastRewardsBalanceOf mismatch`,
 			)
 				.to.be.gte(rewardsA.sub(error))
 				.and.lte(rewardsA);
 
 			expect(
-				await contract.rewardsBalanceOf(tester),
-				`checkpoint ${checkpoint}: tester rewardsBalanceOf mismatch`,
+				await contract.lastRewardsBalanceOf(tester),
+				`checkpoint ${checkpoint}: tester lastRewardsBalanceOf mismatch`,
 			)
 				.to.be.gte(rewardsB.sub(error))
 				.and.lte(rewardsB);
