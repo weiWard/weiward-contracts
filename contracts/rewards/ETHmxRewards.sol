@@ -86,6 +86,14 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		return _lastTotalRewardsAccrued;
 	}
 
+	function readyForUpdate() external view override returns (bool) {
+		if (_lastAccrualUpdate > block.timestamp) {
+			return false;
+		}
+		uint256 timePassed = block.timestamp - _lastAccrualUpdate;
+		return timePassed >= _accrualUpdateInterval;
+	}
+
 	function rewardsBalanceOf(address account)
 		public
 		view
