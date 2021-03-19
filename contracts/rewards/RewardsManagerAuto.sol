@@ -8,9 +8,9 @@ import "@openzeppelin/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./interfaces/IRewardsManager.sol";
+import "./interfaces/IRewardsManagerAuto.sol";
 
-contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
+contract RewardsManagerAuto is ReentrancyGuard, Ownable, IRewardsManagerAuto {
 	using SafeCast for uint256;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
@@ -62,7 +62,7 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 	{
 		require(
 			account != address(0),
-			"RewardsManager: cannot add shares to the zero address"
+			"RewardsManagerAuto: cannot add shares to the zero address"
 		);
 		_addShares(account, amount);
 	}
@@ -98,7 +98,7 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 	) external override onlyOwner {
 		require(
 			account != address(0),
-			"RewardsManager: cannot set shares for zero address"
+			"RewardsManagerAuto: cannot set shares for zero address"
 		);
 		_setShares(account, value, isActive);
 	}
@@ -106,11 +106,11 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 	function setDefaultRecipient(address account) external override onlyOwner {
 		require(
 			account != address(0),
-			"RewardsManager: cannot set zero address as the default recipient"
+			"RewardsManagerAuto: cannot set zero address as the default recipient"
 		);
 		require(
 			account != address(this),
-			"RewardsManager: cannot use this contract as the default recipient"
+			"RewardsManagerAuto: cannot use this contract as the default recipient"
 		);
 		_setDefaultRecipient(account);
 	}
@@ -289,7 +289,7 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 	) internal virtual {
 		require(
 			token != rewardsToken,
-			"RewardsManager: cannot recover the rewards token"
+			"RewardsManagerAuto: cannot recover the rewards token"
 		);
 		token.safeTransfer(to, amount);
 		emit RecoveredUnsupported(token, to, amount);
@@ -306,7 +306,7 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 		_updateRewardFor(from);
 		require(
 			amount <= _rewards[from],
-			"RewardsManager: cannot redeem more rewards than you have earned"
+			"RewardsManagerAuto: cannot redeem more rewards than you have earned"
 		);
 		_redeemRewardToImpl(from, to, amount);
 	}

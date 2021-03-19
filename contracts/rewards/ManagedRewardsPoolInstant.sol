@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import "./interfaces/IRewardsManager.sol";
+import "./interfaces/IRewardsManagerAuto.sol";
 import "./RewardsPoolInstant.sol";
 
 contract ManagedRewardsPoolInstant is RewardsPoolInstant {
 	/* Mutable Internal State */
 
-	IRewardsManager internal _manager;
+	IRewardsManagerAuto internal _manager;
 
 	/* Constructor */
 
@@ -15,20 +15,20 @@ contract ManagedRewardsPoolInstant is RewardsPoolInstant {
 		IERC20 _rewardsToken,
 		IERC20 _stakingToken,
 		uint8 _stakingTokenDecimals,
-		IRewardsManager rewardsManager
+		IRewardsManagerAuto rewardsManager
 	) RewardsPoolInstant(_rewardsToken, _stakingToken, _stakingTokenDecimals) {
 		_manager = rewardsManager;
 	}
 
 	/* External Mutators */
 
-	function setManager(IRewardsManager account) external onlyOwner {
+	function setManager(IRewardsManagerAuto account) external onlyOwner {
 		_manager = account;
 	}
 
 	/* Public Views */
 
-	function manager() public view returns (IRewardsManager) {
+	function manager() public view returns (IRewardsManagerAuto) {
 		return _manager;
 	}
 
