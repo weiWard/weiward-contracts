@@ -92,15 +92,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		return _users[account].rewardsFor[token].arptLast;
 	}
 
-	function lastTotalRewardsAccrued() external view override returns (uint256) {
-		return _lastTotalRewardsAccrued;
-	}
-
-	function numStakingTokens() external view override returns (uint256) {
-		return _tokens.length();
-	}
-
-	function rewardsBalanceOf(address account)
+	function lastRewardsBalanceOf(address account)
 		public
 		view
 		override
@@ -113,13 +105,44 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		}
 	}
 
+	function lastRewardsBalanceOfFor(address account, address token)
+		public
+		view
+		override
+		returns (uint256)
+	{
+		return _users[account].rewardsFor[token].pending;
+	}
+
+	function lastTotalRewardsAccrued() external view override returns (uint256) {
+		return _lastTotalRewardsAccrued;
+	}
+
+	function numStakingTokens() external view override returns (uint256) {
+		return _tokens.length();
+	}
+
+	function rewardsBalanceOf(address account)
+		external
+		view
+		override
+		returns (uint256)
+	{
+		return lastRewardsBalanceOf(account) + _allPendingRewardsFor(account);
+	}
+
 	function rewardsBalanceOfFor(address account, address token)
 		external
 		view
 		override
 		returns (uint256)
 	{
-		return _users[account].rewardsFor[token].pending;
+		uint256 rewards = lastRewardsBalanceOfFor(account, token);
+		uint256 amountStaked = stakedBalanceOf(account, token);
+		if (amountStaked != 0) {
+			rewards += _pendingRewardsFor(account, token, amountStaked);
+		}
+		return rewards;
 	}
 
 	function rewardsForToken(address token)
@@ -407,7 +430,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		address account = _msgSender();
 		_updateAllRewardsFor(account);
 		require(
-			amount <= rewardsBalanceOf(account),
+			amount <= lastRewardsBalanceOf(account),
 			"LPRewards: cannot redeem more rewards than earned"
 		);
 
@@ -571,8 +594,8 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	{
 		EnumerableMap.AddressToUintMap storage staked = _users[account].staked;
 		for (uint256 i = 0; i < staked.length(); i++) {
-			(address token, ) = staked.at(i);
-			total += _pendingRewardsFor(account, token);
+			(address token, uint256 amount) = staked.at(i);
+			total += _pendingRewardsFor(account, token, amount);
 		}
 	}
 
@@ -580,17 +603,17 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		return IERC20(wethAddr).balanceOf(address(this));
 	}
 
-	function _pendingRewardsFor(address account, address token)
-		internal
-		view
-		returns (uint256)
-	{
+	function _pendingRewardsFor(
+		address account,
+		address token,
+		uint256 amountStaked
+	) internal view returns (uint256) {
 		uint256 arpt = accruedRewardsPerTokenFor(token);
 		uint256 arptLast = accruedRewardsPerTokenLastFor(account, token);
 		// Overflow is OK
 		uint256 arptDelta = arpt - arptLast;
 
-		return stakedBalanceOf(account, token).mul(arptDelta) / _MULTIPLIER;
+		return amountStaked.mul(arptDelta) / _MULTIPLIER;
 	}
 
 	function _shares(address token, uint256 amountStaked)
@@ -707,7 +730,8 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		UserData storage user = _users[account];
 		UserTokenRewards storage rewards = user.rewardsFor[token];
 		uint256 total = rewards.pending; // Save gas
-		uint256 pending = _pendingRewardsFor(account, token);
+		uint256 amountStaked = stakedBalanceOf(account, token);
+		uint256 pending = _pendingRewardsFor(account, token, amountStaked);
 		if (pending != 0) {
 			total += pending;
 			rewards.pending = total;

@@ -14,6 +14,16 @@ interface ILPRewards {
 		view
 		returns (uint256);
 
+	function lastRewardsBalanceOf(address account)
+		external
+		view
+		returns (uint256);
+
+	function lastRewardsBalanceOfFor(address account, address token)
+		external
+		view
+		returns (uint256);
+
 	function lastTotalRewardsAccrued() external view returns (uint256);
 
 	function numStakingTokens() external view returns (uint256);
