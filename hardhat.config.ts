@@ -93,7 +93,15 @@ const config: HardhatUserConfig = {
 		path: './build/abi',
 		clear: true,
 		flat: true,
-		only: ['ETHtx', 'Frackt', 'GasPrice'],
+		only: [
+			'ETHtx',
+			'ETHmx',
+			'ETHmxRewards',
+			'FeeLogic',
+			'GasPrice',
+			'LPRewards',
+			'WETH9',
+		],
 	},
 };
 
