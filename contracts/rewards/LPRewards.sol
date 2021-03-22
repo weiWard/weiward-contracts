@@ -44,7 +44,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	/* Immutable Public State */
 
-	address public immutable override wethAddr;
+	address public immutable override rewardsToken;
 
 	/* Immutable Internal State */
 
@@ -61,8 +61,8 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	/* Constructor */
 
-	constructor(address wethAddr_) Ownable() {
-		wethAddr = wethAddr_;
+	constructor(address rewardsToken_) Ownable() {
+		rewardsToken = rewardsToken_;
 	}
 
 	/* Modifiers */
@@ -346,7 +346,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 			"LPRewards: recovery amount > unredeemable"
 		);
 		_unredeemableRewards -= amount;
-		IERC20(wethAddr).safeTransfer(to, amount);
+		IERC20(rewardsToken).safeTransfer(to, amount);
 		emit RecoveredUnredeemableRewards(_msgSender(), to, amount);
 	}
 
@@ -369,7 +369,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		address to,
 		uint256 amount
 	) external override onlyOwner {
-		require(token != wethAddr, "LPRewards: cannot recover WETH");
+		require(token != rewardsToken, "LPRewards: cannot recover WETH");
 
 		require(
 			!supportsStakingToken(token),
@@ -414,7 +414,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		user.totalRedeemed += redemption;
 		_totalRewardsRedeemed += redemption;
 
-		IERC20(wethAddr).safeTransfer(account, redemption);
+		IERC20(rewardsToken).safeTransfer(account, redemption);
 	}
 
 	function redeemAllRewardsFrom(address token) public override {
@@ -470,7 +470,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		user.totalRedeemed += amount;
 		_totalRewardsRedeemed += amount;
 
-		IERC20(wethAddr).safeTransfer(account, amount);
+		IERC20(rewardsToken).safeTransfer(account, amount);
 	}
 
 	function redeemRewardFrom(address token, uint256 amount) external override {
@@ -600,7 +600,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	}
 
 	function _currentRewardsBalance() internal view returns (uint256) {
-		return IERC20(wethAddr).balanceOf(address(this));
+		return IERC20(rewardsToken).balanceOf(address(this));
 	}
 
 	function _pendingRewardsFor(
@@ -659,7 +659,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		user.totalRedeemed += amount;
 		_totalRewardsRedeemed += amount;
 
-		IERC20(wethAddr).safeTransfer(account, amount);
+		IERC20(rewardsToken).safeTransfer(account, amount);
 		emit RewardPaid(account, token, amount);
 	}
 

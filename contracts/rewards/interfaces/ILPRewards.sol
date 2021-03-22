@@ -44,6 +44,8 @@ interface ILPRewards {
 		view
 		returns (uint256);
 
+	function rewardsToken() external view returns (address);
+
 	function sharesFor(address account, address token)
 		external
 		view
@@ -85,8 +87,6 @@ interface ILPRewards {
 	function unredeemableRewards() external view returns (uint256);
 
 	function valuePerTokenImpl(address token) external view returns (address);
-
-	function wethAddr() external view returns (address);
 
 	/* Mutators */
 
