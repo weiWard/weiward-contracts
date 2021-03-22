@@ -109,12 +109,6 @@ interface ILPRewards {
 		uint256 amount
 	) external;
 
-	function recoverUnsupportedERC20(
-		address token,
-		address to,
-		uint256 amount
-	) external;
-
 	function redeemAllRewards() external;
 
 	function redeemAllRewardsFrom(address token) external;
@@ -150,12 +144,6 @@ interface ILPRewards {
 		uint256 amount
 	);
 	event RecoveredUnstaked(
-		address indexed author,
-		address indexed token,
-		address indexed to,
-		uint256 amount
-	);
-	event RecoveredUnsupported(
 		address indexed author,
 		address indexed token,
 		address indexed to,

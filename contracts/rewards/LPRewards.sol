@@ -368,7 +368,9 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		address token,
 		address to,
 		uint256 amount
-	) external override onlyOwner supportsToken(token) {
+	) external override onlyOwner {
+		require(token != rewardsToken, "LPRewards: cannot recover rewardsToken");
+
 		uint256 unstaked =
 			IERC20(token).balanceOf(address(this)).sub(totalStaked(token));
 
@@ -376,27 +378,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 		IERC20(token).safeTransfer(to, amount);
 		emit RecoveredUnstaked(_msgSender(), token, to, amount);
-	}
-
-	function recoverUnsupportedERC20(
-		address token,
-		address to,
-		uint256 amount
-	) external override onlyOwner {
-		require(token != rewardsToken, "LPRewards: cannot recover WETH");
-
-		require(
-			!supportsStakingToken(token),
-			"LPRewards: cannot recover active staking token"
-		);
-
-		require(
-			totalStaked(token) == 0,
-			"LPRewards: cannot recover inactive staking token"
-		);
-
-		IERC20(token).safeTransfer(to, amount);
-		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
 
 	function redeemAllRewards() public override {
