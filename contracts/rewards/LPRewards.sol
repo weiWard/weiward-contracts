@@ -320,6 +320,20 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		emit TokenAdded(_msgSender(), token, tokenValueImpl);
 	}
 
+	function changeTokenValueImpl(address token, address tokenValueImpl)
+		external
+		override
+		onlyOwner
+		supportsToken(token)
+	{
+		require(
+			tokenValueImpl != address(0),
+			"LPRewards: tokenValueImpl cannot be zero address"
+		);
+		_tokenData[token].valueImpl = tokenValueImpl;
+		emit TokenValueImplChanged(_msgSender(), token, tokenValueImpl);
+	}
+
 	function exit() external override {
 		// TODO perform simultaneously to optimize gas
 		unstakeAll();

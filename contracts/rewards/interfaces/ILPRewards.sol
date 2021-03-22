@@ -92,6 +92,9 @@ interface ILPRewards {
 
 	function addToken(address token, address tokenValueImpl) external;
 
+	function changeTokenValueImpl(address token, address tokenValueImpl)
+		external;
+
 	function exit() external;
 
 	function exitFrom(address token) external;
