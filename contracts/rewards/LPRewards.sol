@@ -31,12 +31,10 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	struct UserTokenRewards {
 		uint256 pending;
-		uint256 redeemed;
 		uint256 arptLast;
 	}
 
 	struct UserData {
-		uint256 totalRedeemed;
 		EnumerableSet.AddressSet tokensWithRewards;
 		mapping(address => UserTokenRewards) rewardsFor;
 		EnumerableMap.AddressToUintMap staked;
@@ -152,24 +150,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		returns (uint256)
 	{
 		return _tokenData[token].rewards;
-	}
-
-	function rewardsRedeemedBy(address account)
-		external
-		view
-		override
-		returns (uint256 redeemed)
-	{
-		return _users[account].totalRedeemed;
-	}
-
-	function rewardsRedeemedByFor(address account, address token)
-		external
-		view
-		override
-		returns (uint256)
-	{
-		return _users[account].rewardsFor[token].redeemed;
 	}
 
 	function sharesFor(address account, address token)
@@ -396,7 +376,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 			redemption += pending;
 
-			rewards.redeemed += pending;
 			rewards.pending = 0;
 
 			td.rewards = td.rewards.sub(pending);
@@ -406,7 +385,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 			tokens.remove(token);
 		}
 
-		user.totalRedeemed += redemption;
 		_totalRewardsRedeemed += redemption;
 
 		IERC20(rewardsToken).safeTransfer(account, redemption);
@@ -447,7 +425,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 				taken = amountLeft;
 			}
 
-			rewards.redeemed += taken;
 			rewards.pending = pending - taken;
 
 			td.rewards = td.rewards.sub(taken);
@@ -462,7 +439,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 			}
 		}
 
-		user.totalRedeemed += amount;
 		_totalRewardsRedeemed += amount;
 
 		IERC20(rewardsToken).safeTransfer(account, amount);
@@ -642,7 +618,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		TokenData storage td = _tokenData[token];
 		uint256 rewardLeft = rewards.pending - amount;
 
-		rewards.redeemed += amount;
 		rewards.pending = rewardLeft;
 		if (rewardLeft == 0) {
 			user.tokensWithRewards.remove(token);
@@ -651,7 +626,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		td.rewards = td.rewards.sub(amount);
 		td.rewardsRedeemed += amount;
 
-		user.totalRedeemed += amount;
 		_totalRewardsRedeemed += amount;
 
 		IERC20(rewardsToken).safeTransfer(account, amount);

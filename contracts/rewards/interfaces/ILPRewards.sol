@@ -37,13 +37,6 @@ interface ILPRewards {
 
 	function rewardsForToken(address token) external view returns (uint256);
 
-	function rewardsRedeemedBy(address account) external view returns (uint256);
-
-	function rewardsRedeemedByFor(address account, address token)
-		external
-		view
-		returns (uint256);
-
 	function rewardsToken() external view returns (address);
 
 	function sharesFor(address account, address token)
