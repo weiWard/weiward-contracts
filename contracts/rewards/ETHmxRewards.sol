@@ -256,11 +256,11 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 		address account = _msgSender();
 		_updateRewardFor(account);
-		IERC20(ethmxAddr).safeTransferFrom(account, address(this), amount);
 
 		_stakedFor[account] = _stakedFor[account].add(amount);
 		_totalStaked = _totalStaked.add(amount);
 
+		IERC20(ethmxAddr).safeTransferFrom(account, address(this), amount);
 		emit Staked(account, amount);
 	}
 
