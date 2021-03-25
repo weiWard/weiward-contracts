@@ -156,7 +156,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		external
 		view
 		override
-		supportsToken(token)
 		returns (uint256)
 	{
 		return _shares(token, stakedBalanceOf(account, token));
@@ -166,7 +165,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		external
 		view
 		override
-		supportsToken(token)
 		returns (uint256)
 	{
 		return _shares(token, 1e18);
@@ -247,10 +245,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		EnumerableMap.AddressToUintMap storage staked = _users[account].staked;
 		for (uint256 i = 0; i < staked.length(); i++) {
 			(address token, uint256 amount) = staked.at(i);
-			// Ignore if it's no longer supported
-			if (supportsStakingToken(token)) {
-				total = total.add(_shares(token, amount));
-			}
+			total = total.add(_shares(token, amount));
 		}
 	}
 
@@ -258,7 +253,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		external
 		view
 		override
-		supportsToken(token)
 		returns (uint256)
 	{
 		return _totalSharesForToken(token);
@@ -592,6 +586,9 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		view
 		returns (uint256)
 	{
+		if (!supportsStakingToken(token)) {
+			return 0;
+		}
 		IValuePerToken vptHandle = IValuePerToken(valuePerTokenImpl(token));
 		(uint256 numerator, uint256 denominator) = vptHandle.valuePerToken();
 		if (denominator == 0) {
