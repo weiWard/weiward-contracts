@@ -400,6 +400,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	}
 
 	function redeemReward(uint256 amount) external override {
+		require(amount != 0, "LPRewards: cannot redeem zero");
 		address account = _msgSender();
 		_updateAllRewardsFor(account);
 		require(
