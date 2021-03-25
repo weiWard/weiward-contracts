@@ -276,7 +276,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		public
 		view
 		override
-		supportsToken(token)
 		returns (address)
 	{
 		return _tokenData[token].valueImpl;
