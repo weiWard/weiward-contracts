@@ -317,13 +317,11 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	}
 
 	function exit() external override {
-		// TODO perform simultaneously to optimize gas
 		unstakeAll();
 		redeemAllRewards();
 	}
 
 	function exitFrom(address token) external override {
-		// TODO perform simultaneously to optimize gas
 		unstakeAllFrom(token);
 		redeemAllRewardsFrom(token);
 	}

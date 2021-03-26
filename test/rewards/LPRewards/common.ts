@@ -2,14 +2,14 @@ import { deployments } from 'hardhat';
 import { parseUnits } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { Contract } from '@ethersproject/contracts';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { JsonRpcSigner } from '@ethersproject/providers';
 
 import {
 	MockERC20,
-	MockLPRewardsAuto,
-	Mooniswap,
 	MockERC20__factory,
-	MockLPRewardsAuto__factory,
+	Mooniswap,
+	MockLPRewards,
+	MockLPRewards__factory,
 	ValuePerUNIV2,
 	ValuePerUNIV2__factory,
 	ValuePerMoonV1,
@@ -21,7 +21,6 @@ import {
 	uniswapPairFixture,
 } from '../../helpers/fixtures';
 import { sqrt } from '../../helpers/math';
-import { mineBlock as mineBlockWithProvider } from '../../helpers/timeTravel';
 
 export const tokenADecimals = 18;
 export function parseTokenA(value: string): BigNumber {
@@ -40,27 +39,18 @@ export function parseLPToken(value: string): BigNumber {
 	return parseUnits(value, lpDecimals);
 }
 
-export const roundingExponent = 36;
-export const roundingMultiplier = BigNumber.from(10).pow(roundingExponent);
-
-export const defaultAmountA = parseTokenA('10000');
-export const defaultAmountB = parseTokenB('50');
-export const defaultRewards = parseRewardsToken('5');
-
-export const defaultAmounts = {
-	a: defaultAmountA,
-	b: defaultAmountB,
-	rewards: defaultRewards,
-};
+export const roundingMultiplier = BigNumber.from(10).pow(36);
 
 export const mooniswapBaseSupply = BigNumber.from(1000);
 export const uniswapMinLiquidity = BigNumber.from(1000);
 
 export interface Fixture {
 	deployer: string;
+	deployerSigner: JsonRpcSigner;
 	tester: string;
-	contract: MockLPRewardsAuto;
-	testerContract: MockLPRewardsAuto;
+	testerSigner: JsonRpcSigner;
+	contract: MockLPRewards;
+	testerContract: MockLPRewards;
 	tokenA: MockERC20;
 	tokenB: MockERC20;
 	rewardsToken: MockERC20;
@@ -79,7 +69,6 @@ export interface Fixture {
 
 export const loadFixture = deployments.createFixture<Fixture, unknown>(
 	async ({ getNamedAccounts, waffle }) => {
-		// Get accounts
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -109,7 +98,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const testerMooniswapPool = mooniswapPool.connect(testerSigner);
 		const valuePerMoonV1 = await new ValuePerMoonV1__factory(
 			deployerSigner,
-		).deploy(mooniswapPool.address, tokenA.address);
+		).deploy(mooniswapPool.address, tokenB.address);
 
 		const { pair: sushiswapPool } = await sushiswapPairFixture(
 			deployer,
@@ -119,7 +108,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const testerSushiswapPool = sushiswapPool.connect(testerSigner);
 		const valuePerSushi = await new ValuePerUNIV2__factory(
 			deployerSigner,
-		).deploy(sushiswapPool.address, tokenA.address);
+		).deploy(sushiswapPool.address, tokenB.address);
 
 		const { pair: uniswapPool } = await uniswapPairFixture(
 			deployer,
@@ -129,7 +118,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const testerUniswapPool = uniswapPool.connect(testerSigner);
 		const valuePerUNIV2 = await new ValuePerUNIV2__factory(
 			deployerSigner,
-		).deploy(uniswapPool.address, tokenA.address);
+		).deploy(uniswapPool.address, tokenB.address);
 
 		const { pair: testPool } = await uniswapPairFixture(
 			deployer,
@@ -138,12 +127,12 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		);
 		const valuePerTest = await new ValuePerUNIV2__factory(
 			deployerSigner,
-		).deploy(testPool.address, tokenA.address);
+		).deploy(testPool.address, tokenB.address);
 
 		// Deploy contract
-		const contract = await new MockLPRewardsAuto__factory(
-			deployerSigner,
-		).deploy(rewardsToken.address);
+		const contract = await new MockLPRewards__factory(deployerSigner).deploy(
+			rewardsToken.address,
+		);
 		const testerContract = contract.connect(testerSigner);
 
 		// Add support for tokens
@@ -153,7 +142,9 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		return {
 			deployer,
+			deployerSigner,
 			tester,
+			testerSigner,
 			contract,
 			testerContract,
 			tokenA,
@@ -179,51 +170,40 @@ async function stakeImpl(
 	pool: Contract,
 	addLiquidity: (
 		fixture: Fixture,
-		from?: string,
-		amountA?: BigNumberish,
-		amountB?: BigNumberish,
+		amountA: BigNumberish,
+		amountB: BigNumberish,
+		signer?: JsonRpcSigner,
 	) => Promise<BigNumber>,
-	from?: string,
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
-	const { deployer, tester, contract, testerContract } = fixture;
+	const { contract, deployerSigner } = fixture;
 
-	let contractHandle: MockLPRewardsAuto;
-	let poolHandle: Contract;
-
-	switch (from) {
-		case tester:
-			contractHandle = testerContract;
-			poolHandle = pool.connect(testerContract.signer);
-			break;
-		case undefined:
-		case deployer:
-			contractHandle = contract;
-			poolHandle = pool;
-			break;
-		default:
-			throw Error('stakeImpl: unsupported from parameter');
+	if (!signer) {
+		signer = deployerSigner;
 	}
 
-	const amount = await addLiquidity(fixture, from, amountA, amountB);
-	await poolHandle.approve(contract.address, amount);
-	await contractHandle.stake(pool.address, amount);
+	const lpAmount = await addLiquidity(fixture, amountA, amountB, signer);
+	await pool.connect(signer).approve(contract.address, lpAmount);
+	await contract.connect(signer).stake(pool.address, lpAmount);
 
-	return amount;
+	return lpAmount;
 }
 
 async function uniAddLiquidityImpl(
 	fixture: Fixture,
 	pool: Contract,
-	from?: string,
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
-	const { deployer, tokenA, tokenB } = fixture;
-	if (!from) {
-		from = deployer;
+	const { deployerSigner, tokenA, tokenB } = fixture;
+
+	if (!signer) {
+		signer = deployerSigner;
 	}
+	const from = await signer.getAddress();
 
 	const initBalance: BigNumber = await pool.balanceOf(from);
 
@@ -238,20 +218,20 @@ async function uniAddLiquidityImpl(
 
 export async function uniAddLiquidity(
 	fixture: Fixture,
-	from?: string,
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
 	const { uniswapPool } = fixture;
-	return uniAddLiquidityImpl(fixture, uniswapPool, from, amountA, amountB);
+	return uniAddLiquidityImpl(fixture, uniswapPool, amountA, amountB, signer);
 }
 
 export async function uniLiquidityMintedImpl(
 	fixture: Fixture,
 	pool: Contract,
+	amountA: BigNumber,
+	amountB: BigNumber,
 	totalSupply: BigNumber = BigNumber.from(0),
-	amountA: BigNumber = defaultAmountA,
-	amountB: BigNumber = defaultAmountB,
 ): Promise<BigNumber> {
 	if (totalSupply.eq(0)) {
 		return sqrt(amountA.mul(amountB)).sub(uniswapMinLiquidity);
@@ -280,123 +260,102 @@ export async function uniLiquidityMintedImpl(
 
 export async function uniLiquidityMinted(
 	fixture: Fixture,
+	amountA: BigNumber,
+	amountB: BigNumber,
 	totalSupply: BigNumber = BigNumber.from(0),
-	amountA: BigNumber = defaultAmountA,
-	amountB: BigNumber = defaultAmountB,
 ): Promise<BigNumber> {
 	return uniLiquidityMintedImpl(
 		fixture,
 		fixture.uniswapPool,
-		totalSupply,
 		amountA,
 		amountB,
+		totalSupply,
 	);
 }
 
 export async function uniStake(
 	fixture: Fixture,
-	from?: string,
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
 	const { uniswapPool } = fixture;
 	return stakeImpl(
 		fixture,
 		uniswapPool,
 		uniAddLiquidity,
-		from,
 		amountA,
 		amountB,
+		signer,
 	);
 }
 
 export async function sushiAddLiquidity(
 	fixture: Fixture,
-	from?: string,
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
 	const { sushiswapPool } = fixture;
-	return uniAddLiquidityImpl(fixture, sushiswapPool, from, amountA, amountB);
+	return uniAddLiquidityImpl(fixture, sushiswapPool, amountA, amountB, signer);
 }
 
 export async function sushiLiquidityMinted(
 	fixture: Fixture,
+	amountA: BigNumber,
+	amountB: BigNumber,
 	totalSupply: BigNumber = BigNumber.from(0),
-	amountA: BigNumber = defaultAmountA,
-	amountB: BigNumber = defaultAmountB,
 ): Promise<BigNumber> {
 	return uniLiquidityMintedImpl(
 		fixture,
 		fixture.sushiswapPool,
-		totalSupply,
 		amountA,
 		amountB,
+		totalSupply,
 	);
 }
 
 export async function sushiStake(
 	fixture: Fixture,
-	from?: string,
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
 	const { sushiswapPool } = fixture;
 	return await stakeImpl(
 		fixture,
 		sushiswapPool,
 		sushiAddLiquidity,
-		from,
 		amountA,
 		amountB,
+		signer,
 	);
 }
 
 export async function moonAddLiquidity(
 	fixture: Fixture,
-	from = '',
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
-	const {
-		deployer,
-		tester,
-		tokenA,
-		tokenB,
-		mooniswapPool,
-		testerMooniswapPool,
-	} = fixture;
-	if (from.length === 0) {
-		from = deployer;
-	}
+	const { deployerSigner, tokenA, tokenB, mooniswapPool } = fixture;
 
-	let poolHandle: Mooniswap;
-	let tokenAHandle: MockERC20;
-	let tokenBHandle: MockERC20;
-	switch (from) {
-		case tester:
-			const signer = testerMooniswapPool.signer;
-			poolHandle = testerMooniswapPool;
-			tokenAHandle = tokenA.connect(signer);
-			tokenBHandle = tokenB.connect(signer);
-			break;
-		case undefined:
-		case deployer:
-			poolHandle = mooniswapPool;
-			tokenAHandle = tokenA;
-			tokenBHandle = tokenB;
-			break;
-		default:
-			throw Error('moonAddLiquidity: unsupported from parameter');
+	if (!signer) {
+		signer = deployerSigner;
 	}
+	const from = await signer.getAddress();
 
 	const initBalance = await mooniswapPool.balanceOf(from);
 
 	await tokenA.mint(from, amountA);
 	await tokenB.mint(from, amountB);
 
-	await tokenAHandle.increaseAllowance(mooniswapPool.address, amountA);
-	await tokenBHandle.increaseAllowance(mooniswapPool.address, amountB);
+	await tokenA
+		.connect(signer)
+		.increaseAllowance(mooniswapPool.address, amountA);
+	await tokenB
+		.connect(signer)
+		.increaseAllowance(mooniswapPool.address, amountB);
 
 	const tokens = await mooniswapPool.getTokens();
 	if (tokens.length === 0) {
@@ -413,7 +372,7 @@ export async function moonAddLiquidity(
 		amount1 = amountA;
 	}
 
-	await poolHandle.deposit([amount0, amount1], [0, 0]);
+	await mooniswapPool.connect(signer).deposit([amount0, amount1], [0, 0]);
 
 	const newBalance = await mooniswapPool.balanceOf(from);
 
@@ -422,9 +381,9 @@ export async function moonAddLiquidity(
 
 export async function moonLiquidityMinted(
 	fixture: Fixture,
+	amountA: BigNumber,
+	amountB: BigNumber,
 	totalSupply: BigNumber = BigNumber.from(0),
-	amountA: BigNumber = defaultAmountA,
-	amountB: BigNumber = defaultAmountB,
 ): Promise<BigNumber> {
 	if (totalSupply.eq(0)) {
 		let fairSupply = mooniswapBaseSupply.mul(99);
@@ -462,56 +421,52 @@ export async function moonLiquidityMinted(
 
 export async function moonStake(
 	fixture: Fixture,
-	from?: string,
-	amountA: BigNumberish = defaultAmountA,
-	amountB: BigNumberish = defaultAmountB,
+	amountA: BigNumberish,
+	amountB: BigNumberish,
+	signer?: JsonRpcSigner,
 ): Promise<BigNumber> {
 	const { mooniswapPool } = fixture;
 	return await stakeImpl(
 		fixture,
 		mooniswapPool,
 		moonAddLiquidity,
-		from,
 		amountA,
 		amountB,
+		signer,
 	);
 }
 
 export async function addRewards(
 	fixture: Fixture,
-	amount: BigNumberish = defaultRewards,
+	amount: BigNumberish,
 ): Promise<BigNumber> {
 	const { contract, rewardsToken } = fixture;
-	await rewardsToken.mint(contract.address, amount);
-	return BigNumber.from(amount);
+	const amountBig = BigNumber.from(amount);
+	await rewardsToken.mint(contract.address, amountBig);
+	return amountBig;
 }
 
-export function accruedRewardsPerToken(
+export function arpt(
 	totalStake: BigNumberish,
-	rewards: BigNumberish = defaultRewards,
+	rewards: BigNumberish,
 ): BigNumber {
 	return BigNumber.from(rewards).mul(roundingMultiplier).div(totalStake);
 }
 
-interface Shares {
+export interface Shares {
 	moon: BigNumber;
 	sushi: BigNumber;
 	uni: BigNumber;
 	total: BigNumber;
 }
 
-export async function getCurrentShares(fixture: Fixture): Promise<Shares> {
+export async function getTotalShares(fixture: Fixture): Promise<Shares> {
 	const { contract, mooniswapPool, sushiswapPool, uniswapPool } = fixture;
 
-	const moon = await contract.currentSharesFor(mooniswapPool.address);
-	const sushi = await contract.currentSharesFor(sushiswapPool.address);
-	const uni = await contract.currentSharesFor(uniswapPool.address);
+	const moon = await contract.totalSharesForToken(mooniswapPool.address);
+	const sushi = await contract.totalSharesForToken(sushiswapPool.address);
+	const uni = await contract.totalSharesForToken(uniswapPool.address);
 	const total = moon.add(sushi).add(uni);
 
 	return { moon, sushi, uni, total };
-}
-
-export async function mineBlock(fixture: Fixture): Promise<void> {
-	const { contract } = fixture;
-	await mineBlockWithProvider(contract.provider as JsonRpcProvider);
 }
