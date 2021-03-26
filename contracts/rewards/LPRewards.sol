@@ -522,7 +522,42 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	}
 
 	function updateAccrual() external override {
-		_updateAccrual();
+		// Gas savings
+		uint256 totalRewardsAccrued_ = totalRewardsAccrued();
+		uint256 pending = totalRewardsAccrued_ - _lastTotalRewardsAccrued;
+		if (pending == 0) {
+			return;
+		}
+
+		_lastTotalRewardsAccrued = totalRewardsAccrued_;
+
+		// Iterate once to know totalShares
+		uint256 totalShares_ = 0;
+		// Store some math for current shares to save on gas and revert ASAP.
+		uint256[] memory pendingSharesFor = new uint256[](_tokens.length());
+		for (uint256 i = 0; i < _tokens.length(); i++) {
+			uint256 share = _totalSharesForToken(_tokens.at(i));
+			pendingSharesFor[i] = pending.mul(share);
+			totalShares_ = totalShares_.add(share);
+		}
+
+		if (totalShares_ == 0) {
+			_unredeemableRewards = _unredeemableRewards.add(pending);
+			emit AccrualUpdated(_msgSender(), pending);
+			return;
+		}
+
+		// Iterate twice to allocate rewards to each token.
+		for (uint256 i = 0; i < _tokens.length(); i++) {
+			address token = _tokens.at(i);
+			TokenData storage td = _tokenData[token];
+			td.rewards += pendingSharesFor[i] / totalShares_;
+			uint256 rewardsAccrued = totalRewardsAccruedFor(token);
+			td.arpt = _accruedRewardsPerTokenFor(token, rewardsAccrued);
+			td.lastRewardsAccrued = rewardsAccrued;
+		}
+
+		emit AccrualUpdated(_msgSender(), pending);
 	}
 
 	function updateReward() external override {
@@ -659,43 +694,6 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 		IERC20(token).safeTransfer(account, amount);
 		emit Unstaked(account, token, amount);
-	}
-
-	function _updateAccrual() internal {
-		// Gas savings
-		uint256 totalRewardsAccrued_ = totalRewardsAccrued();
-		uint256 pending = totalRewardsAccrued_ - _lastTotalRewardsAccrued;
-
-		_lastTotalRewardsAccrued = totalRewardsAccrued_;
-
-		// Iterate once to know totalShares
-		uint256 totalShares_ = 0;
-		// Store some math for current shares to save on gas and revert ASAP.
-		uint256[] memory pendingSharesFor = new uint256[](_tokens.length());
-		for (uint256 i = 0; i < _tokens.length(); i++) {
-			uint256 share = _totalSharesForToken(_tokens.at(i));
-			pendingSharesFor[i] = pending.mul(share);
-			totalShares_ = totalShares_.add(share);
-		}
-
-		if (totalShares_ == 0) {
-			_unredeemableRewards = _unredeemableRewards.add(pending);
-			return;
-		}
-
-		// Iterate twice to give rewards.
-		for (uint256 i = 0; i < _tokens.length(); i++) {
-			address token = _tokens.at(i);
-			_tokenData[token].rewards += pendingSharesFor[i] / totalShares_;
-			_updateAccrualFor(token);
-		}
-	}
-
-	function _updateAccrualFor(address token) internal {
-		uint256 rewardsAccrued = totalRewardsAccruedFor(token);
-		TokenData storage td = _tokenData[token];
-		td.arpt = _accruedRewardsPerTokenFor(token, rewardsAccrued);
-		td.lastRewardsAccrued = rewardsAccrued;
 	}
 
 	function _updateRewardFor(address account, address token)
