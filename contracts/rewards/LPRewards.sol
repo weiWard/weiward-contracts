@@ -116,6 +116,15 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		return _lastTotalRewardsAccrued;
 	}
 
+	function lastTotalRewardsAccruedFor(address token)
+		external
+		view
+		override
+		returns (uint256)
+	{
+		return _tokenData[token].lastRewardsAccrued;
+	}
+
 	function numStakingTokens() external view override returns (uint256) {
 		return _tokens.length();
 	}
