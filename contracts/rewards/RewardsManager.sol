@@ -199,8 +199,18 @@ contract RewardsManager is Ownable, IRewardsManager {
 			"RewardsManager: cannot set shares for this contract address"
 		);
 
+		// Gas savings
+		address defaultRecipient_ = _defaultRecipient;
+		Shares storage d = _shares[defaultRecipient_];
+
+		if (account == defaultRecipient_) {
+			d.active = d.active.sub(d.total).add(value).toUint128();
+			d.total = value;
+			emit SharesSet(_msgSender(), account, value, isActive);
+			return;
+		}
+
 		Shares storage s = _shares[account];
-		Shares storage d = _shares[_defaultRecipient];
 
 		if (s.total != 0 && s.active == 0) {
 			// Subtract old inactive value
