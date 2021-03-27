@@ -218,6 +218,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 		}
 
 		if (!isActive) {
+			s.active = 0;
 			// Add new inactive value
 			d.active = d.active.add(value).toUint128();
 		} else {
