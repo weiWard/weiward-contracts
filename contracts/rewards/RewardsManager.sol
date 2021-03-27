@@ -90,8 +90,13 @@ contract RewardsManager is Ownable, IRewardsManager {
 	{
 		require(
 			account != address(0),
-			"RewardsManager: cannot add shares to the zero address"
+			"RewardsManager: cannot add shares to zero address"
 		);
+		require(
+			account != address(this),
+			"RewardsManager: cannot add shares to this contract address"
+		);
+		require(amount != 0, "RewardsManager: cannot add zero shares");
 
 		Shares storage s = _shares[account];
 		if (s.active == 0) {
@@ -132,6 +137,8 @@ contract RewardsManager is Ownable, IRewardsManager {
 		override
 		onlyOwner
 	{
+		require(amount != 0, "RewardsManager: cannot remove zero shares");
+
 		Shares storage s = _shares[account];
 		if (s.active == 0) {
 			// Remove from inactive value
@@ -150,11 +157,11 @@ contract RewardsManager is Ownable, IRewardsManager {
 	function setDefaultRecipient(address account) public override onlyOwner {
 		require(
 			account != address(0),
-			"RewardsManager: cannot set zero address as the default recipient"
+			"RewardsManager: cannot set to zero address"
 		);
 		require(
 			account != address(this),
-			"RewardsManager: cannot use this contract as the default recipient"
+			"RewardsManager: cannot set to this contract"
 		);
 
 		// Activate
@@ -186,6 +193,10 @@ contract RewardsManager is Ownable, IRewardsManager {
 		require(
 			account != address(0),
 			"RewardsManager: cannot set shares for zero address"
+		);
+		require(
+			account != address(this),
+			"RewardsManager: cannot set shares for this contract address"
 		);
 
 		Shares storage s = _shares[account];
@@ -224,7 +235,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 		Shares storage s = _shares[account];
 
 		// Do nothing if already active
-		if (s.active > 0) {
+		if (s.total == 0 || s.active > 0) {
 			return;
 		}
 
