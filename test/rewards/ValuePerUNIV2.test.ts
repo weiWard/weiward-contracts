@@ -71,7 +71,7 @@ function getFixtureLoader(
 		// Deploy contract
 		const contract = await new ValuePerUNIV2__factory(deployerSigner).deploy(
 			pair.address,
-			tokenA.address,
+			tokenB.address,
 		);
 
 		const testerContract = contract.connect(testerSigner);
@@ -92,7 +92,7 @@ function getFixtureLoader(
 function runCommonTests(f: () => Fixture): void {
 	describe('constructor', function () {
 		it('initial state is correct', async function () {
-			const { contract, tokenA, pair } = f();
+			const { contract, tokenB, pair } = f();
 
 			// Log addresses
 			// console.log(`deployer: ${f().deployer}`);
@@ -108,7 +108,7 @@ function runCommonTests(f: () => Fixture): void {
 			expect(
 				await contract.valueToken(),
 				'value token address mismatch',
-			).to.eq(tokenA.address);
+			).to.eq(tokenB.address);
 
 			const { numerator, denominator } = await contract.valuePerToken();
 			expect(numerator, 'valuePerToken numerator mismatch').to.eq(0);
@@ -185,12 +185,12 @@ function runCommonTests(f: () => Fixture): void {
 		});
 
 		it('numerator should match correct pair.reserve', async function () {
-			const { contract, tokenA, pair } = f();
+			const { contract, tokenB, pair } = f();
 
 			const token0 = await pair.token0();
 			const { _reserve0, _reserve1 } = await pair.getReserves();
 
-			const reserve = tokenA.address === token0 ? _reserve0 : _reserve1;
+			const reserve = tokenB.address === token0 ? _reserve0 : _reserve1;
 
 			const { numerator } = await contract.valuePerToken();
 			expect(numerator).to.eq(reserve);
@@ -199,7 +199,7 @@ function runCommonTests(f: () => Fixture): void {
 		it('numerator should be correct', async function () {
 			const { contract } = f();
 			const { numerator } = await contract.valuePerToken();
-			expect(numerator).to.eq(amountA);
+			expect(numerator).to.eq(amountB);
 		});
 
 		it('denominator should match pair.totalSupply', async function () {

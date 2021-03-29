@@ -82,17 +82,67 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		return _lastAccrualUpdate;
 	}
 
-	function lastTotalRewardsAccrued() public view override returns (uint256) {
-		return _lastTotalRewardsAccrued;
-	}
-
-	function rewardsBalanceOf(address account)
-		public
+	function lastRewardsBalanceOf(address account)
+		external
 		view
 		override
 		returns (uint256)
 	{
 		return _rewardsFor[account];
+	}
+
+	function lastTotalRewardsAccrued() public view override returns (uint256) {
+		return _lastTotalRewardsAccrued;
+	}
+
+	function readyForUpdate() external view override returns (bool) {
+		if (_lastAccrualUpdate > block.timestamp) {
+			return false;
+		}
+		uint256 timePassed = block.timestamp - _lastAccrualUpdate;
+		return timePassed >= _accrualUpdateInterval;
+	}
+
+	function rewardsBalanceOf(address account)
+		external
+		view
+		override
+		returns (uint256)
+	{
+		// Gas savings
+		uint256 rewards = _rewardsFor[account];
+		uint256 staked = _stakedFor[account];
+
+		if (staked == 0) {
+			return rewards;
+		}
+
+		uint256[] memory arptValues = _arptSnapshots;
+		uint256 length = arptValues.length;
+		uint256 arpt = arptValues[length - 1];
+		uint256 lastIdx = _arptLastIdx[account];
+		uint256 arptDelta = arpt - arptValues[lastIdx];
+
+		if (arptDelta == 0) {
+			return rewards;
+		}
+
+		// Calculate reward and new stake
+		uint256 currentRewards = 0;
+		for (uint256 i = lastIdx + 1; i < length; i++) {
+			arptDelta = arptValues[i] - arptValues[i - 1];
+			if (arptDelta >= _MULTIPLIER) {
+				// This should handle any plausible overflow
+				rewards += staked;
+				staked = 0;
+				break;
+			}
+			currentRewards = staked.mul(arptDelta) / _MULTIPLIER;
+			rewards += currentRewards;
+			staked -= currentRewards;
+		}
+
+		return rewards;
 	}
 
 	function stakedBalanceOf(address account)
@@ -206,11 +256,11 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 		address account = _msgSender();
 		_updateRewardFor(account);
-		IERC20(ethmxAddr).safeTransferFrom(account, address(this), amount);
 
 		_stakedFor[account] = _stakedFor[account].add(amount);
 		_totalStaked = _totalStaked.add(amount);
 
+		IERC20(ethmxAddr).safeTransferFrom(account, address(this), amount);
 		emit Staked(account, amount);
 	}
 
@@ -360,7 +410,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 			arptDelta = arptValues[i] - arptValues[i - 1];
 			if (arptDelta >= _MULTIPLIER) {
 				// This should handle any plausible overflow
-				newRewards = staked;
+				newRewards += staked;
 				staked = 0;
 				break;
 			}

@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import "@openzeppelin/contracts/GSN/Context.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./interfaces/IRewardsManager.sol";
 
-contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
+contract RewardsManager is Ownable, IRewardsManager {
+	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeCast for uint256;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
@@ -25,24 +26,51 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 
 	/* Immutable Public State */
 
-	IERC20 public immutable override rewardsToken;
+	address public immutable override rewardsToken;
 
 	/* Mutable Internal State */
 
-	uint256 internal _accruedRewardsPerShare;
-	mapping(address => uint256) internal _accruedRewardsPerSharePaid;
 	address internal _defaultRecipient;
-	uint256 internal _lastTotalRewardsAccrued;
-	mapping(address => uint256) internal _rewards;
 	uint256 internal _totalRewardsRedeemed;
+	EnumerableSet.AddressSet internal _recipients;
 	mapping(address => Shares) internal _shares;
-	uint128 internal _totalActiveShares;
-	uint128 internal _totalShares;
 
 	/* Constructor */
 
-	constructor(IERC20 _rewardsToken) Ownable() {
-		rewardsToken = _rewardsToken;
+	constructor(address defaultRecipient_, address rewardsToken_) Ownable() {
+		rewardsToken = rewardsToken_;
+		setDefaultRecipient(defaultRecipient_);
+	}
+
+	/* External Views */
+
+	function defaultRecipient() external view override returns (address) {
+		return _defaultRecipient;
+	}
+
+	function sharesFor(address account)
+		external
+		view
+		override
+		returns (uint128 active, uint128 total)
+	{
+		Shares storage s = _shares[account];
+		return (s.active, s.total);
+	}
+
+	function totalRewardsAccrued() external view override returns (uint256) {
+		// Overflow is OK
+		return _currentRewardsBalance() + _totalRewardsRedeemed;
+	}
+
+	function totalRewardsRedeemed() external view override returns (uint256) {
+		return _totalRewardsRedeemed;
+	}
+
+	function totalShares() public view override returns (uint256 total) {
+		for (uint256 i = 0; i < _recipients.length(); i++) {
+			total += _shares[_recipients.at(i)].total;
+		}
 	}
 
 	/* External Mutators */
@@ -62,9 +90,25 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 	{
 		require(
 			account != address(0),
-			"RewardsManager: cannot add shares to the zero address"
+			"RewardsManager: cannot add shares to zero address"
 		);
-		_addShares(account, amount);
+		require(
+			account != address(this),
+			"RewardsManager: cannot add shares to this contract address"
+		);
+		require(amount != 0, "RewardsManager: cannot add zero shares");
+
+		Shares storage s = _shares[account];
+		if (s.active == 0) {
+			// Add to inactive value
+			Shares storage d = _shares[_defaultRecipient];
+			d.active = d.active.add(amount).toUint128();
+		} else {
+			s.active = s.active.add(amount).toUint128();
+		}
+		s.total = s.total.add(amount).toUint128();
+		_recipients.add(account);
+		emit SharesAdded(_msgSender(), account, amount);
 	}
 
 	function deactivateShares() external override {
@@ -76,11 +120,16 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 	}
 
 	function recoverUnsupportedERC20(
-		IERC20 token,
+		address token,
 		address to,
 		uint256 amount
 	) external override onlyOwner {
-		_recoverUnsupportedERC20(token, to, amount);
+		require(
+			token != rewardsToken,
+			"RewardsManager: cannot recover rewards token"
+		);
+		IERC20(token).safeTransfer(to, amount);
+		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
 
 	function removeShares(address account, uint128 amount)
@@ -88,7 +137,52 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 		override
 		onlyOwner
 	{
-		_removeShares(account, amount);
+		require(amount != 0, "RewardsManager: cannot remove zero shares");
+
+		Shares storage s = _shares[account];
+		if (s.active == 0) {
+			// Remove from inactive value
+			Shares storage d = _shares[_defaultRecipient];
+			d.active = d.active.sub(amount).toUint128();
+		} else {
+			s.active = s.active.sub(amount).toUint128();
+		}
+		s.total = s.total.sub(amount).toUint128();
+		if (s.total == 0) {
+			_recipients.remove(account);
+		}
+		emit SharesRemoved(_msgSender(), account, amount);
+	}
+
+	function setDefaultRecipient(address account) public override onlyOwner {
+		require(
+			account != address(0),
+			"RewardsManager: cannot set to zero address"
+		);
+		require(
+			account != address(this),
+			"RewardsManager: cannot set to this contract"
+		);
+
+		// Activate
+		_activate(account);
+
+		// Move any inactive shares
+		Shares storage original = _shares[_defaultRecipient];
+		if (original.active > original.total) {
+			uint128 inactive = original.active - original.total;
+			original.active -= inactive;
+
+			Shares storage next = _shares[account];
+			next.active = next.active.add(inactive).toUint128();
+		}
+
+		if (original.total == 0) {
+			_recipients.remove(_defaultRecipient);
+		}
+		_defaultRecipient = account;
+		_recipients.add(account);
+		emit DefaultRecipientSet(_msgSender(), account);
 	}
 
 	function setShares(
@@ -100,145 +194,59 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 			account != address(0),
 			"RewardsManager: cannot set shares for zero address"
 		);
-		_setShares(account, value, isActive);
-	}
-
-	function setDefaultRecipient(address account) external override onlyOwner {
-		require(
-			account != address(0),
-			"RewardsManager: cannot set zero address as the default recipient"
-		);
 		require(
 			account != address(this),
-			"RewardsManager: cannot use this contract as the default recipient"
+			"RewardsManager: cannot set shares for this contract address"
 		);
-		_setDefaultRecipient(account);
-	}
 
-	/* Public Views */
+		// Gas savings
+		address defaultRecipient_ = _defaultRecipient;
+		Shares storage d = _shares[defaultRecipient_];
 
-	function accruedRewardsPerShare() public view override returns (uint256) {
-		return _getAccruedRewardsPerShare(totalRewardsAccrued());
-	}
+		if (account == defaultRecipient_) {
+			d.active = d.active.sub(d.total).add(value).toUint128();
+			d.total = value;
+			emit SharesSet(_msgSender(), account, value, isActive);
+			return;
+		}
 
-	function accruedRewardsPerSharePaid(address account)
-		public
-		view
-		override
-		returns (uint256)
-	{
-		return _accruedRewardsPerSharePaid[account];
-	}
-
-	function defaultRecipient() public view override returns (address) {
-		return _defaultRecipient;
-	}
-
-	function rewardsBalanceOf(address account)
-		public
-		view
-		override
-		returns (uint256)
-	{
-		return _rewardsBalanceOfImpl(account, accruedRewardsPerShare());
-	}
-
-	function sharesFor(address account)
-		public
-		view
-		override
-		returns (uint128 active, uint128 total)
-	{
 		Shares storage s = _shares[account];
-		return (s.active, s.total);
-	}
 
-	function totalRewardsAccrued() public view override returns (uint256) {
-		// Overflow is OK
-		return rewardsToken.balanceOf(address(this)) + _totalRewardsRedeemed;
-	}
+		if (s.total != 0 && s.active == 0) {
+			// Subtract old inactive value
+			d.active = d.active.sub(s.total).toUint128();
+		}
 
-	function totalRewardsRedeemed() public view override returns (uint256) {
-		return _totalRewardsRedeemed;
-	}
+		if (!isActive) {
+			s.active = 0;
+			// Add new inactive value
+			d.active = d.active.add(value).toUint128();
+		} else {
+			s.active = value;
+		}
 
-	function totalShares() public view override returns (uint128) {
-		return _totalShares;
-	}
-
-	/* Public Mutators */
-
-	function redeemAllRewards() public override nonReentrant {
-		_redeemAllRewards();
-	}
-
-	function redeemReward(uint256 amount) public override nonReentrant {
-		_redeemRewardTo(_msgSender(), amount);
-	}
-
-	function redeemRewardTo(address to, uint256 amount)
-		public
-		override
-		nonReentrant
-	{
-		_redeemRewardTo(to, amount);
-	}
-
-	function updateReward() public override {
-		_updateRewardFor(_msgSender());
-	}
-
-	function updateRewardFor(address account) public override {
-		_updateRewardFor(account);
+		s.total = value;
+		if (value != 0) {
+			_recipients.add(account);
+		} else {
+			_recipients.remove(account);
+		}
+		emit SharesSet(_msgSender(), account, value, isActive);
 	}
 
 	/* Internal Views */
 
-	function _getAccruedRewardsPerShare(uint256 _totalRewardsAccrued)
-		internal
-		view
-		virtual
-		returns (uint256)
-	{
-		if (_totalActiveShares == 0) {
-			return _accruedRewardsPerShare;
-		}
-
-		// Overflow is OK: delta is correct anyway
-		uint256 delta = _totalRewardsAccrued - _lastTotalRewardsAccrued;
-		if (delta == 0) {
-			return _accruedRewardsPerShare;
-		}
-
-		// Multiply by 1e18 for better rounding.
-		uint256 rewardsPerShare = delta.mul(1e18).div(_totalActiveShares);
-
-		// Overflow is OK
-		return _accruedRewardsPerShare + rewardsPerShare;
-	}
-
-	function _rewardsBalanceOfImpl(
-		address account,
-		uint256 accruedRewardsPerShareParam
-	) internal view virtual returns (uint256) {
-		// Overflow is OK: delta is correct anyway
-		uint256 accruedDelta =
-			accruedRewardsPerShareParam - _accruedRewardsPerSharePaid[account];
-
-		// Divide by 1e18 to convert to rewards decimals.
-		return
-			_shares[account].active.mul(accruedDelta).div(1e18).add(
-				_rewards[account]
-			);
+	function _currentRewardsBalance() internal view returns (uint256) {
+		return IERC20(rewardsToken).balanceOf(address(this));
 	}
 
 	/* Internal Mutators */
 
-	function _activate(address account) internal virtual {
+	function _activate(address account) internal {
 		Shares storage s = _shares[account];
 
 		// Do nothing if already active
-		if (s.active > 0) {
+		if (s.total == 0 || s.active > 0) {
 			return;
 		}
 
@@ -246,23 +254,10 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 
 		s.active = s.total;
 		d.active = d.active.sub(s.total).toUint128();
-		emit SharesActivated(account);
+		emit SharesActivated(_msgSender(), account);
 	}
 
-	function _addShares(address account, uint128 amount) internal virtual {
-		Shares storage s = _shares[account];
-		if (s.active == 0) {
-			// Add to inactive value
-			Shares storage d = _shares[_defaultRecipient];
-			d.active = d.active.add(amount).toUint128();
-		} else {
-			s.active = s.active.add(amount).toUint128();
-		}
-		s.total = s.total.add(amount).toUint128();
-		emit SharesAdded(account, amount);
-	}
-
-	function _deactivate(address account) internal virtual {
+	function _deactivate(address account) internal {
 		// Skip for the default recipient
 		if (account == _defaultRecipient) {
 			return;
@@ -279,121 +274,6 @@ contract RewardsManager is Context, ReentrancyGuard, Ownable, IRewardsManager {
 
 		s.active = 0;
 		d.active = d.active.add(s.total).toUint128();
-		emit SharesDeactivated(account);
-	}
-
-	function _recoverUnsupportedERC20(
-		IERC20 token,
-		address to,
-		uint256 amount
-	) internal virtual {
-		require(
-			token != rewardsToken,
-			"RewardsManager: cannot recover the rewards token"
-		);
-		token.safeTransfer(to, amount);
-		emit RecoveredUnsupported(token, to, amount);
-	}
-
-	function _redeemAllRewards() internal virtual {
-		address account = _msgSender();
-		_updateRewardFor(account);
-		_redeemRewardToImpl(account, account, _rewards[account]);
-	}
-
-	function _redeemRewardTo(address to, uint256 amount) internal virtual {
-		address from = _msgSender();
-		_updateRewardFor(from);
-		require(
-			amount <= _rewards[from],
-			"RewardsManager: cannot redeem more rewards than you have earned"
-		);
-		_redeemRewardToImpl(from, to, amount);
-	}
-
-	function _redeemRewardToImpl(
-		address from,
-		address to,
-		uint256 amount
-	) internal virtual {
-		if (amount == 0) {
-			return;
-		}
-		// Overflow is OK
-		_totalRewardsRedeemed += amount;
-		_rewards[from] = _rewards[from].sub(amount);
-		rewardsToken.safeTransfer(to, amount);
-		emit RewardPaid(from, to, amount);
-	}
-
-	function _removeShares(address account, uint128 amount) internal virtual {
-		Shares storage s = _shares[account];
-		if (s.active == 0) {
-			// Remove from inactive value
-			Shares storage d = _shares[_defaultRecipient];
-			d.active = d.active.sub(amount).toUint128();
-		} else {
-			s.active = s.active.sub(amount).toUint128();
-		}
-		s.total = s.total.sub(amount).toUint128();
-		emit SharesRemoved(account, amount);
-	}
-
-	function _setDefaultRecipient(address account) internal virtual {
-		// Activate
-		_activate(account);
-
-		// Move any inactive shares
-		{
-			Shares storage original = _shares[_defaultRecipient];
-			if (original.active > original.total) {
-				uint128 inactive = original.active - original.total;
-				original.active -= inactive;
-
-				Shares storage next = _shares[account];
-				next.active = next.active.add(inactive).toUint128();
-			}
-		}
-
-		_defaultRecipient = account;
-		emit DefaultRecipientSet(account);
-	}
-
-	function _setShares(
-		address account,
-		uint128 value,
-		bool isActive
-	) internal virtual {
-		Shares storage s = _shares[account];
-		Shares storage d = _shares[_defaultRecipient];
-
-		if (s.active == 0) {
-			// Subtract old inactive value
-			d.active = d.active.sub(s.total).toUint128();
-		}
-
-		if (!isActive) {
-			// Add new inactive value
-			d.active = d.active.add(value).toUint128();
-		} else {
-			s.active = value;
-		}
-
-		s.total = value;
-		emit SharesSet(account, value);
-	}
-
-	function _updateAccrual() internal virtual {
-		uint256 rewardsAccrued = totalRewardsAccrued();
-		_accruedRewardsPerShare = _getAccruedRewardsPerShare(rewardsAccrued);
-		_lastTotalRewardsAccrued = rewardsAccrued;
-	}
-
-	function _updateRewardFor(address account) internal virtual {
-		_updateAccrual();
-		uint256 arps = _accruedRewardsPerShare;
-		// Gas savings since _updateAccrual does half the work
-		_rewards[account] = _rewardsBalanceOfImpl(account, arps);
-		_accruedRewardsPerSharePaid[account] = arps;
+		emit SharesDeactivated(_msgSender(), account);
 	}
 }

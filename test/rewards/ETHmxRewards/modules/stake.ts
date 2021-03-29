@@ -22,22 +22,31 @@ export default function run(): void {
 		const { contract, deployer, testerSigner } = fixture;
 		const rewardsAmount = parseEther('7');
 
+		let expected = rewardsAmount.div(2);
+		if (expected.gt(stakeAmount)) {
+			expected = stakeAmount;
+		}
+
 		await addRewards(fixture, rewardsAmount);
 		await stake(fixture, stakeAmount);
 		await stake(fixture, stakeAmount, testerSigner);
 		await contract.updateAccrual();
 
 		expect(
+			await contract.lastRewardsBalanceOf(deployer),
+			'lastRewardsBalanceOf mismatch before stake',
+		).to.eq(0);
+		expect(
 			await contract.rewardsBalanceOf(deployer),
 			'rewardsBalanceOf mismatch before stake',
-		).to.eq(0);
+		).to.eq(expected);
 
 		await stake(fixture, stakeAmount);
 
-		let expected = rewardsAmount.div(2);
-		if (expected.gt(stakeAmount)) {
-			expected = stakeAmount;
-		}
+		expect(
+			await contract.lastRewardsBalanceOf(deployer),
+			'lastRewardsBalanceOf mismatch after stake',
+		).to.eq(expected);
 		expect(
 			await contract.rewardsBalanceOf(deployer),
 			'rewardsBalanceOf mismatch after stake',

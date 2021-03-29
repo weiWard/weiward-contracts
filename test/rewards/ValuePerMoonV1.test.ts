@@ -71,7 +71,7 @@ const loadFixture = deployments.createFixture(
 		// Deploy contract
 		const contract = await new ValuePerMoonV1__factory(deployerSigner).deploy(
 			pool.address,
-			tokenA.address,
+			tokenB.address,
 		);
 
 		const testerContract = contract.connect(testerSigner);
@@ -100,7 +100,7 @@ describe(contractName, function () {
 
 	describe('constructor', function () {
 		it('initial state is correct', async function () {
-			const { contract, tokenA, pool } = fixture;
+			const { contract, tokenB, pool } = fixture;
 
 			// Log addresses
 			// console.log(`deployer: ${f.deployer}`);
@@ -116,7 +116,7 @@ describe(contractName, function () {
 			expect(
 				await contract.valueToken(),
 				'value token address mismatch',
-			).to.eq(tokenA.address);
+			).to.eq(tokenB.address);
 
 			const { numerator, denominator } = await contract.valuePerToken();
 			expect(numerator, 'valuePerToken numerator mismatch').to.eq(0);
@@ -181,9 +181,9 @@ describe(contractName, function () {
 		});
 
 		it('numerator should match correct pool balance', async function () {
-			const { contract, tokenA, pool } = fixture;
+			const { contract, tokenB, pool } = fixture;
 
-			const expected = await tokenA.balanceOf(pool.address);
+			const expected = await tokenB.balanceOf(pool.address);
 
 			const { numerator } = await contract.valuePerToken();
 			expect(numerator).to.eq(expected);
@@ -192,7 +192,7 @@ describe(contractName, function () {
 		it('numerator should be correct', async function () {
 			const { contract } = fixture;
 			const { numerator } = await contract.valuePerToken();
-			expect(numerator).to.eq(amountA);
+			expect(numerator).to.eq(amountB);
 		});
 
 		it('denominator should match pool.totalSupply', async function () {
@@ -205,7 +205,7 @@ describe(contractName, function () {
 		});
 
 		describe('with fee', function () {
-			const swapAmount = parseTokenA('1');
+			const swapAmount = parseTokenB('1');
 			beforeEach(async function () {
 				const { deployer, tokenA, tokenB, factory, pool } = fixture;
 
@@ -213,20 +213,20 @@ describe(contractName, function () {
 
 				await addLiquidity(fixture);
 
-				await tokenA.mint(deployer, swapAmount);
-				await tokenA.increaseAllowance(pool.address, swapAmount);
-				pool.swap(tokenA.address, tokenB.address, swapAmount, 0, zeroAddress);
+				await tokenB.mint(deployer, swapAmount);
+				await tokenB.increaseAllowance(pool.address, swapAmount);
+				pool.swap(tokenB.address, tokenA.address, swapAmount, 0, zeroAddress);
 
 				await addLiquidity(fixture);
 			});
 
 			it('numerator should be correct', async function () {
-				const { contract, tokenA, pool } = fixture;
+				const { contract, tokenB, pool } = fixture;
 
-				const expected = amountA.mul(3).add(swapAmount);
+				const expected = amountB.mul(3).add(swapAmount);
 
 				expect(
-					await tokenA.balanceOf(pool.address),
+					await tokenB.balanceOf(pool.address),
 					'tokenA.balanceOf(pool) mismatch',
 				).to.eq(expected);
 

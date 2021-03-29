@@ -9,46 +9,27 @@ interface ILPRewards {
 		view
 		returns (uint256);
 
-	function accruedRewardsPerTokenPaidFor(address account, address token)
+	function accruedRewardsPerTokenLastFor(address account, address token)
 		external
 		view
 		returns (uint256);
 
-	function currentAccruedRewardsPerTokenFor(address token)
+	function lastRewardsBalanceOf(address account)
 		external
 		view
 		returns (uint256);
 
-	function currentRewardsBalanceOf(address account)
+	function lastRewardsBalanceOfFor(address account, address token)
 		external
 		view
 		returns (uint256);
 
-	function currentRewardsBalanceOfFor(address account, address token)
+	function lastTotalRewardsAccrued() external view returns (uint256);
+
+	function lastTotalRewardsAccruedFor(address token)
 		external
 		view
 		returns (uint256);
-
-	function currentSharesFor(address token) external view returns (uint256);
-
-	function currentSharesOf(address account) external view returns (uint256);
-
-	function currentSharesOfFor(address account, address token)
-		external
-		view
-		returns (uint256);
-
-	function currentSharesPerTokenFor(address token)
-		external
-		view
-		returns (uint256);
-
-	function currentTotalRewardsAccruedFor(address token)
-		external
-		view
-		returns (uint256);
-
-	function currentTotalShares() external view returns (uint256);
 
 	function numStakingTokens() external view returns (uint256);
 
@@ -59,18 +40,18 @@ interface ILPRewards {
 		view
 		returns (uint256);
 
-	function rewardsFor(address token) external view returns (uint256);
+	function rewardsForToken(address token) external view returns (uint256);
 
-	function rewardsRedeemedBy(address account) external view returns (uint256);
+	function rewardsToken() external view returns (address);
 
-	function rewardsRedeemedByFor(address account, address token)
+	function sharesFor(address account, address token)
 		external
 		view
 		returns (uint256);
 
-	function rewardsToken() external view returns (address);
+	function sharesPerToken(address token) external view returns (uint256);
 
-	function stakedBalanceOfFor(address account, address token)
+	function stakedBalanceOf(address account, address token)
 		external
 		view
 		returns (uint256);
@@ -93,9 +74,17 @@ interface ILPRewards {
 		view
 		returns (uint256);
 
-	function totalStakedFor(address token) external view returns (uint256);
+	function totalShares() external view returns (uint256);
 
-	function valuePerTokenImplFor(address token) external view returns (address);
+	function totalSharesFor(address account) external view returns (uint256);
+
+	function totalSharesForToken(address token) external view returns (uint256);
+
+	function totalStaked(address token) external view returns (uint256);
+
+	function unredeemableRewards() external view returns (uint256);
+
+	function valuePerTokenImpl(address token) external view returns (address);
 
 	/* Mutators */
 
@@ -109,6 +98,8 @@ interface ILPRewards {
 	function exitFrom(address token) external;
 
 	function pause() external;
+
+	function recoverUnredeemableRewards(address to, uint256 amount) external;
 
 	function recoverUnstaked(
 		address token,
@@ -136,26 +127,46 @@ interface ILPRewards {
 
 	function unstakeAllFrom(address token) external;
 
+	function updateAccrual() external;
+
 	function updateReward() external;
 
-	function updateRewardFor(address account) external;
-
-	function updateTokenRewards() external;
+	function updateRewardFor(address token) external;
 
 	/* Events */
 
+	event AccrualUpdated(address indexed author, uint256 accruedRewards);
+	event RecoveredUnredeemableRewards(
+		address indexed author,
+		address indexed to,
+		uint256 amount
+	);
 	event RecoveredUnstaked(
+		address indexed author,
 		address indexed token,
 		address indexed to,
 		uint256 amount
 	);
-	event RewardPaid(address indexed account, uint256 amount);
-	event Staked(address indexed account, uint256 amount);
-	event Unstaked(address indexed account, uint256 amount);
-	event TokenAdded(address indexed token, address indexed tokenValueImpl);
-	event TokenRemoved(address indexed token);
-	event TokenValueImplChanged(
+	event RewardPaid(
+		address indexed account,
+		address indexed token,
+		uint256 amount
+	);
+	event Staked(address indexed account, address indexed token, uint256 amount);
+	event TokenAdded(
+		address indexed author,
 		address indexed token,
 		address indexed tokenValueImpl
+	);
+	event TokenRemoved(address indexed author, address indexed token);
+	event TokenValueImplChanged(
+		address indexed author,
+		address indexed token,
+		address indexed tokenValueImpl
+	);
+	event Unstaked(
+		address indexed account,
+		address indexed token,
+		uint256 amount
 	);
 }

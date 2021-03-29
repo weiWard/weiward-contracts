@@ -26,17 +26,23 @@ export default function run(): void {
 			'contract rewards balance mismatch',
 		).to.eq(rewardsAmount);
 
-		// await contract.updateReward();
-		// await testerContract.updateReward();
-
+		expect(
+			await contract.lastRewardsBalanceOf(deployer),
+			'deployer lastRewardsBalanceOf mismatch before redemption',
+		).to.eq(0);
 		expect(
 			await contract.rewardsBalanceOf(deployer),
 			'deployer rewardsBalanceOf mismatch before redemption',
+		).to.eq(earnedRewards);
+
+		expect(
+			await contract.lastRewardsBalanceOf(tester),
+			'tester lastRewardsBalanceOf mismatch before redemption',
 		).to.eq(0);
 		expect(
 			await contract.rewardsBalanceOf(tester),
 			'tester rewardsBalanceOf mismatch before redemption',
-		).to.eq(0);
+		).to.eq(earnedRewards);
 	});
 
 	it('should transfer all rewards', async function () {
@@ -98,15 +104,23 @@ export default function run(): void {
 		await contract.redeemAllRewards();
 
 		expect(
-			await contract.rewardsBalanceOf(tester),
-			'mismatch before update',
+			await contract.lastRewardsBalanceOf(tester),
+			'lastRewardsBalanceOf mismatch before update',
 		).to.eq(0);
+		expect(
+			await contract.rewardsBalanceOf(tester),
+			'rewardsBalanceOf mismatch before update',
+		).to.eq(earnedRewards);
 
 		await testerContract.updateReward();
 
 		expect(
+			await contract.lastRewardsBalanceOf(tester),
+			'lastRewardsBalanceOf mismatch after update',
+		).to.eq(earnedRewards);
+		expect(
 			await contract.rewardsBalanceOf(tester),
-			'mismatch after update',
+			'rewardsBalanceOf mismatch after update',
 		).to.eq(earnedRewards);
 	});
 

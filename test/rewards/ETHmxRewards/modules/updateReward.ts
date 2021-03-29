@@ -82,9 +82,9 @@ export default function run(): void {
 			expect(await contract.stakedBalanceOf(deployer)).to.eq(expected);
 		});
 
-		it('should update rewardsBalanceOf', async function () {
+		it('should update lastRewardsBalanceOf', async function () {
 			const { contract, deployer } = fixture;
-			expect(await contract.rewardsBalanceOf(deployer)).to.eq(rewards);
+			expect(await contract.lastRewardsBalanceOf(deployer)).to.eq(rewards);
 		});
 	});
 
@@ -106,10 +106,32 @@ export default function run(): void {
 			expect(await contract.stakedBalanceOf(deployer)).to.eq(0);
 		});
 
-		it('should update rewardsBalanceOf', async function () {
+		it('should update lastRewardsBalanceOf', async function () {
 			const { contract, deployer } = fixture;
-			expect(await contract.rewardsBalanceOf(deployer)).to.eq(staked);
+			expect(await contract.lastRewardsBalanceOf(deployer)).to.eq(staked);
 		});
+	});
+
+	it('when new rewards > stake mid-loop', async function () {
+		const { contract, deployer } = fixture;
+		const staked = parseEther('10');
+
+		await stake(fixture, staked);
+		await addRewards(fixture, staked.div(2));
+		await contract.mockUpdateAccrual();
+
+		await addRewards(fixture, staked.mul(2));
+		await contract.mockUpdateAccrual();
+		await contract.updateReward();
+
+		expect(
+			await contract.stakedBalanceOf(deployer),
+			'stakedBalanceOf mismatch',
+		).to.eq(0);
+		expect(
+			await contract.lastRewardsBalanceOf(deployer),
+			'lastRewardsBalanceOf mismatch',
+		).to.eq(staked);
 	});
 
 	it('should be correct with multiple parties', async function () {
@@ -152,15 +174,15 @@ export default function run(): void {
 			).to.eq(totalRewards);
 
 			expect(
-				await contract.rewardsBalanceOf(deployer),
-				`checkpoint ${checkpoint}: deployer rewardsBalanceOf mismatch`,
+				await contract.lastRewardsBalanceOf(deployer),
+				`checkpoint ${checkpoint}: deployer lastRewardsBalanceOf mismatch`,
 			)
 				.to.be.gte(rewardsA.sub(error))
 				.and.lte(rewardsA);
 
 			expect(
-				await contract.rewardsBalanceOf(tester),
-				`checkpoint ${checkpoint}: tester rewardsBalanceOf mismatch`,
+				await contract.lastRewardsBalanceOf(tester),
+				`checkpoint ${checkpoint}: tester lastRewardsBalanceOf mismatch`,
 			)
 				.to.be.gte(rewardsB.sub(error))
 				.and.lte(rewardsB);
