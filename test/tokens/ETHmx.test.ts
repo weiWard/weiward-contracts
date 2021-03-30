@@ -1,80 +1,18 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
+import { parseEther } from 'ethers/lib/utils';
 import { JsonRpcSigner } from '@ethersproject/providers';
-import { Zero } from '@ethersproject/constants';
 
-import { zeroAddress, zeroPadAddress } from '../helpers/address';
+import { zeroAddress } from '../helpers/address';
+import { parseETHmx } from '../helpers/conversions';
 import {
 	ETHmx,
 	ETHmx__factory,
-	ETHtxAMM,
-	ETHtxAMM__factory,
-	MockETHtx,
-	MockETHtx__factory,
-	FeeLogic__factory,
-	WETH9__factory,
-	SimpleGasPrice__factory,
-	WETH9,
-	FeeLogic,
+	MockERC20,
+	MockERC20__factory,
 } from '../../build/types/ethers-v5';
 
 const contractName = 'ETHmx';
-
-function parseETHmx(value: string): BigNumber {
-	return parseUnits(value, 18);
-}
-function parseETHtx(value: string): BigNumber {
-	return parseUnits(value, 18);
-}
-function parseGwei(value: string): BigNumber {
-	return parseUnits(value, 9);
-}
-
-const mintGasPrice = parseGwei('1800');
-const roiNumerator = 5;
-const roiDenominator = 1;
-const feeRecipient = zeroPadAddress('0x1');
-const earlyThreshold = parseEther('1000');
-const earlyMultiplier = 2;
-
-function ethmxFromEthIntegral(amountETH: BigNumber): BigNumber {
-	return amountETH
-		.mul(earlyMultiplier)
-		.sub(amountETH.mul(amountETH).div(earlyThreshold.mul(2)));
-}
-
-function ethmxFromEth(
-	totalGiven: BigNumber,
-	amountETH: BigNumber,
-	roiNum: BigNumberish = roiNumerator,
-	roiDen: BigNumberish = roiDenominator,
-): BigNumber {
-	if (totalGiven.lt(earlyThreshold)) {
-		const start = ethmxFromEthIntegral(totalGiven);
-
-		const currentLeft = earlyThreshold.sub(totalGiven);
-		if (amountETH.lt(currentLeft)) {
-			const end = ethmxFromEthIntegral(totalGiven.add(amountETH));
-			amountETH = end.sub(start);
-		} else {
-			const end = ethmxFromEthIntegral(earlyThreshold);
-			const added = end.sub(start).sub(currentLeft);
-			amountETH = amountETH.add(added);
-		}
-	}
-
-	return ethmxFromEthRaw(amountETH, roiNum, roiDen);
-}
-
-function ethmxFromEthRaw(
-	amountETH: BigNumber,
-	roiNum: BigNumberish = roiNumerator,
-	roiDen: BigNumberish = roiDenominator,
-): BigNumber {
-	return amountETH.mul(roiNum).div(roiDen);
-}
 
 interface Fixture {
 	deployer: string;
@@ -83,57 +21,24 @@ interface Fixture {
 	testerSigner: JsonRpcSigner;
 	contract: ETHmx;
 	testerContract: ETHmx;
-	ethtx: MockETHtx;
-	ethtxAMM: ETHtxAMM;
-	feeLogic: FeeLogic;
-	weth: WETH9;
+	testToken: MockERC20;
 }
 
-const loadFixture = deployments.createFixture(
+const loadFixture = deployments.createFixture<Fixture, unknown>(
 	async ({ getNamedAccounts, waffle }) => {
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
-			feeRecipient,
-			75,
-			1000,
-		);
-
-		const oracle = await new SimpleGasPrice__factory(deployerSigner).deploy(
-			parseGwei('200'),
-		);
-
-		const weth = await new WETH9__factory(deployerSigner).deploy();
-
-		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
-			feeLogic.address,
-			zeroAddress, // ethmx address
-		);
-
-		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
-			ethtx.address,
-			oracle.address,
-			weth.address,
-			2,
-			1,
-		);
-		await feeLogic.setExempt(ethtxAMM.address, true);
-
-		const contract = await new ETHmx__factory(deployerSigner).deploy(
-			ethtx.address,
-			ethtxAMM.address,
-			weth.address,
-			mintGasPrice,
-			roiNumerator,
-			roiDenominator,
-			earlyThreshold,
-		);
-
-		await ethtx.setMinter(contract.address);
-
+		const contract = await new ETHmx__factory(deployerSigner).deploy(deployer);
 		const testerContract = contract.connect(testerSigner);
+
+		const testToken = await new MockERC20__factory(deployerSigner).deploy(
+			'Test Token',
+			'TEST',
+			18,
+			0,
+		);
 
 		return {
 			deployer,
@@ -142,10 +47,7 @@ const loadFixture = deployments.createFixture(
 			testerSigner,
 			contract,
 			testerContract,
-			ethtx,
-			ethtxAMM,
-			feeLogic,
-			weth,
+			testToken,
 		};
 	},
 );
@@ -159,29 +61,13 @@ describe(contractName, function () {
 
 	describe('constructor', function () {
 		it('initial state is correct', async function () {
-			const { deployer, contract, ethtx, ethtxAMM, weth } = fixture;
+			const { deployer, contract } = fixture;
 
 			expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
 
-			expect(await contract.ethtx(), 'ETHtx address mismatch').to.eq(
-				ethtx.address,
+			expect(await contract.minter(), 'minter address mismatch').to.eq(
+				deployer,
 			);
-			expect(await contract.ethtxAMM(), 'ETHtxAMM address mismatch').to.eq(
-				ethtxAMM.address,
-			);
-			expect(await contract.weth(), 'WETH address mismatch').to.eq(
-				weth.address,
-			);
-
-			expect(await contract.mintGasPrice(), 'mintGasPrice mismatch').to.eq(
-				mintGasPrice,
-			);
-
-			expect(await contract.totalGiven(), 'totalGiven mismatch').to.eq(0);
-
-			const [roiNum, roiDen] = await contract.roi();
-			expect(roiNum, 'roi numerator mismatch').to.eq(roiNumerator);
-			expect(roiDen, 'roi denominator mismatch').to.eq(roiDenominator);
 		});
 	});
 
@@ -197,329 +83,47 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('ethmxFromEth', function () {
-		describe('should be correct', function () {
-			it('when totalGiven == 0', async function () {
-				const { contract } = fixture;
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(Zero, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('99.75'), // 10x amount - 2.5x amount/1000
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven == earlyThreshold / 4', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold.div(4);
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('87.25'), // 8.75x amount - 2.5x amount/1000
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven == earlyThreshold / 2', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold.div(2);
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('74.75'), // 7.5x amount - 2.5x amount/1000
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven == earlyThreshold * 3 / 4', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold.mul(3).div(4);
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('62.25'), // 6.25x amount - 2.5x amount/1000
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven == earlyThreshold', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold;
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('50'), // 5x amount
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven > earlyThreshold', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold.add(1);
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('50'), // 5x amount
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when amountEthIn > earlyThreshold - totalGiven', async function () {
-				const { contract } = fixture;
-
-				const amount = parseEther('10');
-				const ethGiven = earlyThreshold.sub(amount.div(2));
-				await contract.mint({ value: ethGiven });
-
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('50.0625'),
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-		});
-
-		it('should change with roi', async function () {
-			const { contract } = fixture;
-
-			const roiNum = 7;
-			const roiDen = 5;
-			expect(roiNum, 'roi numerator will not change').to.not.eq(roiNumerator);
-			expect(roiDen, 'roi denominator will not change').to.not.eq(
-				roiDenominator,
-			);
-
-			const amount = parseEther('10');
-			const expected = ethmxFromEth(Zero, amount, roiNum, roiDen);
-
-			await contract.setRoi(roiNum, roiDen);
-
-			expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-		});
-	});
-
-	describe('ethmxFromEthtx', function () {
-		it('should be  correct', async function () {
-			const { contract, ethtxAMM } = fixture;
-
-			const amountEthtx = parseETHtx('10000');
-			const amountEth = await ethtxAMM.ethForEthtx(amountEthtx);
-			const expected = ethmxFromEthRaw(amountEth);
-
-			expect(await contract.ethmxFromEthtx(amountEthtx)).to.eq(expected);
-		});
-	});
-
-	describe('ethtxFromEth', function () {
-		it('should be correct', async function () {
-			const { contract, ethtxAMM } = fixture;
-
-			const amount = parseEther('10');
-			const num = amount.mul(parseUnits('1', 18));
-			const den = mintGasPrice.mul(await ethtxAMM.gasPerETHtx());
-			const expected = num.div(den);
-
-			expect(await contract.ethtxFromEth(amount)).to.eq(expected);
-		});
-
-		it('should change with mintGasPrice', async function () {
-			const { contract, ethtxAMM } = fixture;
-
-			const newMintPrice = parseGwei('600');
-			expect(newMintPrice).to.not.eq(mintGasPrice);
-
-			await contract.setMintGasPrice(newMintPrice);
-
-			const amount = parseEther('10');
-			const num = amount.mul(parseUnits('1', 18));
-			const den = newMintPrice.mul(await ethtxAMM.gasPerETHtx());
-			const expected = num.div(den);
-
-			expect(await contract.ethtxFromEth(amount)).to.eq(expected);
-		});
-	});
-
 	describe('burn', function () {
 		it('should burn correct amount from sender', async function () {
 			const { contract, deployer } = fixture;
+			const minted = parseETHmx('10');
 
-			await contract.mint({ value: parseEther('10') });
-
-			const balanceBefore = await contract.balanceOf(deployer);
+			await contract.mintTo(deployer, minted);
 
 			const burnt = parseETHmx('5');
 			await contract.burn(burnt);
 
 			const balanceAfter = await contract.balanceOf(deployer);
-			expect(balanceAfter).to.eq(balanceBefore.sub(burnt));
+			expect(balanceAfter).to.eq(minted.sub(burnt));
 		});
 	});
 
-	describe('mint', function () {
-		const amount = parseEther('10');
+	describe('mintTo', function () {
+		it('can only be called by minter', async function () {
+			const { testerContract, tester } = fixture;
 
-		describe('should mint', function () {
-			beforeEach(async function () {
-				const { contract } = fixture;
-				await contract.mint({ value: amount });
-			});
-
-			it('and wrap and transfer correct WETH amount', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(amount);
-			});
-
-			it('correct ETHtx amount', async function () {
-				const { contract, ethtxAMM } = fixture;
-				const expected = await contract.ethtxFromEth(amount);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
-
-			it('correct ETHmx amount', async function () {
-				const { contract, deployer } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
-				expect(await contract.balanceOf(deployer)).to.eq(expected);
-			});
-
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
-
-		it('should revert when paused', async function () {
-			const { contract } = fixture;
-			await contract.pause();
-			await expect(contract.mint({ value: amount })).to.be.revertedWith(
-				'paused',
+			await expect(testerContract.mintTo(tester, 1)).to.be.revertedWith(
+				'caller is not the minter',
 			);
 		});
-	});
 
-	describe('mintWithETHtx', function () {
-		const amount = parseETHtx('10000');
+		it('reverts when paused', async function () {
+			const { contract, tester } = fixture;
 
-		beforeEach(async function () {
-			const { deployer, ethtx } = fixture;
-			await ethtx.mockMint(deployer, amount);
+			await contract.pause();
+
+			await expect(contract.mintTo(tester, 1)).to.be.revertedWith('paused');
 		});
 
-		it('should burn correct ETHtx amount from sender', async function () {
-			const { contract, deployer, ethtx } = fixture;
+		it('mints correct amount to account', async function () {
+			const { contract, tester } = fixture;
+			const amount = parseETHmx('10');
 
-			await expect(contract.mintWithETHtx(amount), 'event mismatch')
-				.to.emit(ethtx, 'Transfer')
-				.withArgs(deployer, zeroAddress, amount);
-
-			expect(await ethtx.balanceOf(deployer), 'balance mismatch').to.eq(0);
-			expect(await ethtx.totalSupply(), 'totalSupply mismatch').to.eq(0);
-		});
-
-		it('should mint correct ETHmx amount', async function () {
-			const { contract, deployer } = fixture;
-			const amountETHmx = await contract.ethmxFromEthtx(amount);
-
-			await expect(contract.mintWithETHtx(amount), 'event mismatch')
+			await expect(contract.mintTo(tester, amount))
 				.to.emit(contract, 'Transfer')
-				.withArgs(zeroAddress, deployer, amountETHmx);
+				.withArgs(zeroAddress, tester, amount);
 
-			expect(await contract.balanceOf(deployer), 'balance mismatch').to.eq(
-				amountETHmx,
-			);
-			expect(await contract.totalSupply(), 'totalSupply mismatch').to.eq(
-				amountETHmx,
-			);
-		});
-
-		it('should revert with enough collateral', async function () {
-			const { contract, deployerSigner, ethtxAMM } = fixture;
-
-			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
-			const amountETH = (await ethtxAMM.ethForEthtx(amount))
-				.mul(targetNum)
-				.div(targetDen);
-
-			await deployerSigner.sendTransaction({
-				to: ethtxAMM.address,
-				value: amountETH,
-			});
-
-			await expect(contract.mintWithETHtx(amount)).to.be.revertedWith(
-				'can only burn ETHtx if undercollateralized',
-			);
-		});
-
-		it('should revert when paused', async function () {
-			const { contract } = fixture;
-			await contract.pause();
-			await expect(contract.mintWithETHtx(amount)).to.be.revertedWith(
-				'paused',
-			);
-		});
-	});
-
-	describe('mintWithWETH', function () {
-		const amount = parseEther('10');
-
-		describe('should mint', function () {
-			beforeEach(async function () {
-				const { contract, weth } = fixture;
-				await weth.deposit({ value: amount });
-				await weth.approve(contract.address, amount);
-				await contract.mintWithWETH(amount);
-			});
-
-			it('and transfer correct WETH amount', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(amount);
-			});
-
-			it('correct ETHtx amount', async function () {
-				const { contract, ethtxAMM } = fixture;
-				const expected = await contract.ethtxFromEth(amount);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
-
-			it('correct ETHmx amount', async function () {
-				const { contract, deployer } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
-				expect(await contract.balanceOf(deployer)).to.eq(expected);
-			});
-
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
-
-		it('should revert when paused', async function () {
-			const { contract, weth } = fixture;
-			await contract.pause();
-			await weth.deposit({ value: amount });
-			await expect(contract.mintWithWETH(amount)).to.be.revertedWith('paused');
+			expect(await contract.balanceOf(tester)).to.eq(amount);
 		});
 	});
 
@@ -546,152 +150,71 @@ describe(contractName, function () {
 	});
 
 	describe('recoverERC20', function () {
-		it('should fail to recover nonexistent token', async function () {
-			const { contract, deployer, ethtx } = fixture;
+		it('can only be called by owner', async function () {
+			const { testerContract, tester, testToken } = fixture;
+
 			await expect(
-				contract.recoverERC20(ethtx.address, deployer, 1),
+				testerContract.recoverERC20(testToken.address, tester, 1),
+			).to.be.revertedWith('caller is not the owner');
+		});
+
+		it('should fail to recover nonexistent token', async function () {
+			const { contract, tester, testToken } = fixture;
+			await expect(
+				contract.recoverERC20(testToken.address, tester, 1),
 			).to.be.revertedWith('transfer amount exceeds balance');
 		});
 
-		describe('should succeed', function () {
-			const amount = parseETHtx('100');
+		it('should transfer amount', async function () {
+			const { contract, tester, testToken } = fixture;
+			const amount = parseEther('10');
 
-			beforeEach(async function () {
-				const { contract, ethtx } = fixture;
-				await ethtx.mockMint(contract.address, amount);
-			});
+			await testToken.mint(contract.address, amount);
+			await contract.recoverERC20(testToken.address, tester, amount);
 
-			it('and recover an ERC20', async function () {
-				const { contract, tester, ethtx, feeLogic } = fixture;
-				await contract.recoverERC20(ethtx.address, tester, amount);
-
-				const fee = await feeLogic.getFee(contract.address, tester, amount);
-				expect(await ethtx.balanceOf(tester)).to.eq(amount.sub(fee));
-			});
-
-			it('and emit Recovered event', async function () {
-				const { contract, deployer, tester, ethtx } = fixture;
-				await expect(contract.recoverERC20(ethtx.address, tester, amount))
-					.to.emit(contract, 'Recovered')
-					.withArgs(deployer, ethtx.address, tester, amount);
-			});
+			expect(
+				await testToken.balanceOf(contract.address),
+				'contract balance mismatch',
+			).to.eq(0);
+			expect(
+				await testToken.balanceOf(tester),
+				'target balance mismatch',
+			).to.eq(amount);
 		});
 
-		it('can only be called by owner', async function () {
-			const { testerContract, tester, ethtx } = fixture;
-			await expect(
-				testerContract.recoverERC20(ethtx.address, tester, 1),
-			).to.be.revertedWith('caller is not the owner');
+		it('should emit Recovered event', async function () {
+			const { contract, deployer, tester, testToken } = fixture;
+			const amount = parseEther('10');
+
+			await testToken.mint(contract.address, amount);
+
+			await expect(contract.recoverERC20(testToken.address, tester, amount))
+				.to.emit(contract, 'Recovered')
+				.withArgs(deployer, testToken.address, tester, amount);
 		});
 	});
 
-	describe('setEthtxAddress', function () {
-		it('should set ETHtx address', async function () {
-			const { contract } = fixture;
-			const address = zeroPadAddress('0x1');
-			await contract.setEthtxAddress(address);
-			expect(await contract.ethtx()).to.eq(address);
-		});
-
-		it('should emit EthtxAddressSet event', async function () {
-			const { contract, deployer } = fixture;
-			const address = zeroPadAddress('0x1');
-			await expect(contract.setEthtxAddress(address))
-				.to.emit(contract, 'EthtxAddressSet')
-				.withArgs(deployer, address);
-		});
+	describe('setMinter', function () {
+		const newMinter = zeroAddress;
 
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
-			const address = zeroPadAddress('0x1');
-			await expect(testerContract.setEthtxAddress(address)).to.be.revertedWith(
+			await expect(testerContract.setMinter(newMinter)).to.be.revertedWith(
 				'caller is not the owner',
 			);
 		});
-	});
 
-	describe('setEthtxAMMAddress', function () {
-		it('should set ETHtxAMM address', async function () {
+		it('should set minter address', async function () {
 			const { contract } = fixture;
-			const address = zeroPadAddress('0x1');
-			await contract.setEthtxAMMAddress(address);
-			expect(await contract.ethtxAMM()).to.eq(address);
+			await contract.setMinter(newMinter);
+			expect(await contract.minter()).to.eq(newMinter);
 		});
 
-		it('should emit EthtxAMMAddressSet event', async function () {
+		it('should emit MinterSet event', async function () {
 			const { contract, deployer } = fixture;
-			const address = zeroPadAddress('0x1');
-			await expect(contract.setEthtxAMMAddress(address))
-				.to.emit(contract, 'EthtxAMMAddressSet')
-				.withArgs(deployer, address);
-		});
-
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			const address = zeroPadAddress('0x1');
-			await expect(
-				testerContract.setEthtxAMMAddress(address),
-			).to.be.revertedWith('caller is not the owner');
-		});
-	});
-
-	describe('setMintGasPrice', function () {
-		it('should set mintGasPrice', async function () {
-			const { contract } = fixture;
-			const value = 5;
-			await contract.setMintGasPrice(value);
-			expect(await contract.mintGasPrice()).to.eq(value);
-		});
-
-		it('should emit MintGasPriceSet event', async function () {
-			const { contract, deployer } = fixture;
-			const value = 5;
-			await expect(contract.setMintGasPrice(value))
-				.to.emit(contract, 'MintGasPriceSet')
-				.withArgs(deployer, value);
-		});
-
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			await expect(testerContract.setMintGasPrice(5)).to.be.revertedWith(
-				'caller is not the owner',
-			);
-		});
-	});
-
-	describe('setRoi', function () {
-		const roiNum = 7;
-		const roiDen = 5;
-
-		before(function () {
-			expect(roiNum, 'roi numerator will not change').to.not.eq(roiNumerator);
-			expect(roiDen, 'roi denominator will not change').to.not.eq(
-				roiDenominator,
-			);
-		});
-
-		it('should set roi', async function () {
-			const { contract } = fixture;
-			await contract.setRoi(roiNum, roiDen);
-
-			const [num, den] = await contract.roi();
-			expect(num, 'roi numerator mismatch').to.eq(roiNum);
-			expect(den, 'roi denominator mismatch').to.eq(roiDen);
-		});
-
-		it('should emit RoiSet event', async function () {
-			const { contract, deployer } = fixture;
-
-			await expect(contract.setRoi(roiNum, roiDen))
-				.to.emit(contract, 'RoiSet')
-				.withArgs(deployer, roiNum, roiDen);
-		});
-
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			await expect(testerContract.setRoi(roiNum, roiDen)).to.be.revertedWith(
-				'caller is not the owner',
-			);
+			await expect(contract.setMinter(newMinter))
+				.to.emit(contract, 'MinterSet')
+				.withArgs(deployer, newMinter);
 		});
 	});
 
