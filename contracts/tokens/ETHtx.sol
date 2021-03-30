@@ -236,7 +236,8 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 		override
 		returns (uint256)
 	{
-		return _ethtxToEth(gasPrice(), amountETHtxOut);
+		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
+		return _ethtxToEth(gasPrice(), amountETHtxOut).add(1);
 	}
 
 	function ethFromEthtxAtRedemption(uint256 amountETHtxIn)
