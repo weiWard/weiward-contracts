@@ -82,9 +82,9 @@ export default function run(): void {
 	});
 
 	it('should emit Staked event', async function () {
-		const { contract, deployer, ethmx } = fixture;
+		const { contract, deployer, ethmx, ethmxMinter } = fixture;
 
-		await ethmx.mint({ value: ethmxToEth(stakeAmount) });
+		await ethmxMinter.mint({ value: ethmxToEth(stakeAmount) });
 		await ethmx.increaseAllowance(contract.address, stakeAmount);
 
 		await expect(contract.stake(stakeAmount))

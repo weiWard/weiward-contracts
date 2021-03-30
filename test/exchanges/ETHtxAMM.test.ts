@@ -18,6 +18,7 @@ import {
 import {
 	ETHmx,
 	ETHmx__factory,
+	ETHmxMinter__factory,
 	ETHtxAMM,
 	ETHtxAMM__factory,
 	FeeLogic,
@@ -127,7 +128,10 @@ const loadFixture = deployments.createFixture(
 			targetCRatioDenominator,
 		);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
+
+		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
+			ethmx.address,
 			ethtx.address,
 			contract.address,
 			weth.address,
@@ -138,7 +142,8 @@ const loadFixture = deployments.createFixture(
 		);
 
 		await feeLogic.setExempt(contract.address, true);
-		await ethtx.setMinter(ethmx.address);
+		await ethmx.setMinter(ethmxMinter.address);
+		await ethtx.setMinter(ethmxMinter.address);
 		const testerContract = contract.connect(testerSigner);
 
 		return {

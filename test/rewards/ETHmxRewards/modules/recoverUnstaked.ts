@@ -10,8 +10,8 @@ export default function run(): void {
 	beforeEach(async function () {
 		fixture = await loadFixture();
 
-		const { contract, ethmx } = fixture;
-		await ethmx.mint({ value: amount.mul(2) });
+		const { contract, ethmx, ethmxMinter } = fixture;
+		await ethmxMinter.mint({ value: amount.mul(2) });
 
 		await ethmx.increaseAllowance(contract.address, amount);
 		await contract.stake(amount);

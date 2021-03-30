@@ -8,6 +8,7 @@ import {
 	ETHtxAMM,
 	ETHtxAMM__factory,
 	ETHmx__factory,
+	ETHmxMinter__factory,
 	FeeLogic__factory,
 	MockETHmxRewards,
 	MockETHmxRewards__factory,
@@ -102,7 +103,10 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		);
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
+
+		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
+			ethmx.address,
 			ethtx.address,
 			ethtxAMM.address,
 			weth.address,
@@ -111,7 +115,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			roiDenominator,
 			0,
 		);
-		await ethtx.setMinter(ethmx.address);
+		await ethmx.setMinter(ethmxMinter.address);
+		await ethtx.setMinter(ethmxMinter.address);
 
 		const ethmxRewards = await new MockETHmxRewards__factory(
 			deployerSigner,

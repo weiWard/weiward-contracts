@@ -9,6 +9,8 @@ import {
 	MockETHmxRewards__factory,
 	ETHmx,
 	ETHmx__factory,
+	ETHmxMinter,
+	ETHmxMinter__factory,
 	MockETHtx,
 	MockETHtx__factory,
 	FeeLogic__factory,
@@ -41,6 +43,7 @@ export interface Fixture {
 	contract: MockETHmxRewards;
 	testerContract: MockETHmxRewards;
 	ethmx: ETHmx;
+	ethmxMinter: ETHmxMinter;
 	ethtx: MockETHtx;
 	feeLogic: FeeLogic;
 	weth: WETH9;
@@ -78,7 +81,10 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		);
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
+
+		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
+			ethmx.address,
 			ethtx.address,
 			ethtxAMM.address,
 			weth.address,
@@ -87,7 +93,8 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			roiDenominator,
 			0,
 		);
-		await ethtx.setMinter(ethmx.address);
+		await ethmx.setMinter(ethmxMinter.address);
+		await ethtx.setMinter(ethmxMinter.address);
 
 		const contract = await new MockETHmxRewards__factory(
 			deployerSigner,
@@ -102,6 +109,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			contract,
 			testerContract,
 			ethmx,
+			ethmxMinter,
 			ethtx,
 			feeLogic,
 			weth,
@@ -123,13 +131,14 @@ export async function stake(
 	amountETHmx: BigNumber,
 	signer?: JsonRpcSigner,
 ): Promise<void> {
-	let { contract, ethmx } = fixture;
+	let { contract, ethmx, ethmxMinter } = fixture;
 	if (signer) {
 		contract = contract.connect(signer);
+		ethmxMinter = ethmxMinter.connect(signer);
 		ethmx = ethmx.connect(signer);
 	}
 
-	await ethmx.mint({ value: ethmxToEth(amountETHmx) });
+	await ethmxMinter.mint({ value: ethmxToEth(amountETHmx) });
 	await ethmx.increaseAllowance(contract.address, amountETHmx);
 	await contract.stake(amountETHmx);
 }
