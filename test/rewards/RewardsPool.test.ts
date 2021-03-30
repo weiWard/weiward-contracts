@@ -82,7 +82,7 @@ const loadFixture = deployments.createFixture(
 	},
 );
 
-describe(contractName, function () {
+describe.skip(contractName, function () {
 	let deployer: string;
 	let tester: string;
 	let contract: MockRewardsPool;
