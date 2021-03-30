@@ -5,6 +5,8 @@ import { MaxUint256 } from '@ethersproject/constants';
 import { parseEther } from '@ethersproject/units';
 
 import {
+	ETHtxAMM,
+	ETHtxAMM__factory,
 	ETHmx__factory,
 	FeeLogic__factory,
 	MockETHmxRewards,
@@ -55,6 +57,7 @@ interface Fixture {
 	contract: MockETHtxRewardsManager;
 	testerContract: MockETHtxRewardsManager;
 	ethtx: MockETHtx;
+	ethtxAMM: ETHtxAMM;
 	ethmxRewards: MockETHmxRewards;
 	lpRewards: MockLPRewards;
 	weth: WETH9;
@@ -87,15 +90,21 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
 			feeLogic.address,
-			oracle.address,
 			zeroAddress, // ETHmx
+		);
+
+		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
+			ethtx.address,
+			oracle.address,
 			weth.address,
 			targetCRatioNumerator,
 			targetCRatioDenominator,
 		);
+		await feeLogic.setExempt(ethtxAMM.address, true);
 
 		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
 			ethtx.address,
+			ethtxAMM.address,
 			weth.address,
 			mintGasPrice,
 			roiNumerator,
@@ -119,6 +128,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		await lpRewards.addToken(uniPool.address, valuePerUNIV2.address);
 
 		await contract.setEthmxRewardsAddress(ethmxRewards.address);
+		await contract.setEthtxAMMAddress(ethtxAMM.address);
 		await contract.setEthtxAddress(ethtx.address);
 		await contract.setLPRewardsAddress(lpRewards.address);
 
@@ -134,6 +144,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			contract,
 			testerContract,
 			ethtx,
+			ethtxAMM,
 			ethmxRewards,
 			lpRewards,
 			weth,
@@ -155,6 +166,7 @@ describe(contractName, function () {
 				deployer,
 				ethmxRewards,
 				ethtx,
+				ethtxAMM,
 				lpRewards,
 				weth,
 			} = fixture;
@@ -171,18 +183,19 @@ describe(contractName, function () {
 				'rewardsToken address mismatch',
 			).to.eq(weth.address);
 
-			expect(
-				await contract.ethmxRewardsAddr(),
-				'ethmxRewardsAddr mismatch',
-			).to.eq(ethmxRewards.address);
+			expect(await contract.ethmxRewards(), 'ethmxRewards mismatch').to.eq(
+				ethmxRewards.address,
+			);
 			let [active] = await contract.sharesFor(ethmxRewards.address);
 			expect(active, 'ethmxRewards shares mismatch').to.eq(ethmxRewardsShares);
 
-			expect(await contract.ethtxAddr(), 'ethtxAddr mismatch').to.eq(
-				ethtx.address,
+			expect(await contract.ethtx(), 'ethtx mismatch').to.eq(ethtx.address);
+
+			expect(await contract.ethtxAMM(), 'ethtxAMM mismatch').to.eq(
+				ethtxAMM.address,
 			);
 
-			expect(await contract.lpRewardsAddr(), 'lpRewardsAddr mismatch').to.eq(
+			expect(await contract.lpRewards(), 'lpRewardsAddr mismatch').to.eq(
 				lpRewards.address,
 			);
 			[active] = await contract.sharesFor(lpRewards.address);
@@ -201,10 +214,10 @@ describe(contractName, function () {
 		});
 
 		it('should redeem ETHtx for WETH', async function () {
-			const { contract, ethtx, weth } = fixture;
+			const { contract, ethtx, ethtxAMM, weth } = fixture;
 			const amount = parseEther('10');
 
-			await sendWETH(weth, ethtx.address, amount.mul(10));
+			await sendWETH(weth, ethtxAMM.address, amount.mul(10));
 			await ethtx.mockMint(
 				contract.address,
 				ethToEthtx(defaultGasPrice, amount),
@@ -224,22 +237,22 @@ describe(contractName, function () {
 
 	describe('distributeRewards', function () {
 		it('should convertETHtx', async function () {
-			const { contract, ethtx } = fixture;
+			const { contract, ethtx, ethtxAMM } = fixture;
 			const amount = parseETHtx('100');
 
 			await ethtx.mockMint(contract.address, amount);
 
 			await expect(contract.distributeRewards())
 				.to.emit(ethtx, 'Transfer')
-				.withArgs(contract.address, ethtx.address, amount);
+				.withArgs(contract.address, ethtxAMM.address, amount);
 		});
 
 		it('should sendRewards', async function () {
-			const { contract, ethtx, weth } = fixture;
+			const { contract, ethtx, ethtxAMM, weth } = fixture;
 			const amount = parseEther('10');
 			const amountToDefault = amount.mul(defaultShares).div(totalShares);
 
-			await sendWETH(weth, ethtx.address, amount.mul(10));
+			await sendWETH(weth, ethtxAMM.address, amount.mul(10));
 			await ethtx.mockMint(
 				contract.address,
 				ethToEthtx(defaultGasPrice, amount),
@@ -251,11 +264,11 @@ describe(contractName, function () {
 		});
 
 		it('should notifyRecipients', async function () {
-			const { contract, ethtx, lpRewards, weth } = fixture;
+			const { contract, ethtx, ethtxAMM, lpRewards, weth } = fixture;
 			const amount = parseEther('10');
 			const amountToLpRewards = amount.mul(lpRewardsShares).div(totalShares);
 
-			await sendWETH(weth, ethtx.address, amount.mul(10));
+			await sendWETH(weth, ethtxAMM.address, amount.mul(10));
 			await ethtx.mockMint(
 				contract.address,
 				ethToEthtx(defaultGasPrice, amount),
@@ -401,7 +414,7 @@ describe(contractName, function () {
 		it('should set ethmxRewardsAddr', async function () {
 			const { contract } = fixture;
 			await contract.setEthmxRewardsAddress(zeroAddress);
-			expect(await contract.ethmxRewardsAddr()).to.eq(zeroAddress);
+			expect(await contract.ethmxRewards()).to.eq(zeroAddress);
 		});
 
 		it('should emit EthmxRewardsAddressSet event', async function () {
@@ -423,13 +436,35 @@ describe(contractName, function () {
 		it('should set ethtxAddr', async function () {
 			const { contract } = fixture;
 			await contract.setEthtxAddress(zeroAddress);
-			expect(await contract.ethtxAddr()).to.eq(zeroAddress);
+			expect(await contract.ethtx()).to.eq(zeroAddress);
 		});
 
 		it('should emit EthtxAddressSet event', async function () {
 			const { contract, deployer } = fixture;
 			await expect(contract.setEthtxAddress(zeroAddress))
 				.to.emit(contract, 'EthtxAddressSet')
+				.withArgs(deployer, zeroAddress);
+		});
+	});
+
+	describe('setEthtxAMMAddress', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			await expect(
+				testerContract.setEthtxAMMAddress(zeroAddress),
+			).to.be.revertedWith('caller is not the owner');
+		});
+
+		it('should set ethtxAddr', async function () {
+			const { contract } = fixture;
+			await contract.setEthtxAMMAddress(zeroAddress);
+			expect(await contract.ethtxAMM()).to.eq(zeroAddress);
+		});
+
+		it('should emit EthtxAddressSet event', async function () {
+			const { contract, deployer } = fixture;
+			await expect(contract.setEthtxAMMAddress(zeroAddress))
+				.to.emit(contract, 'EthtxAMMAddressSet')
 				.withArgs(deployer, zeroAddress);
 		});
 	});
@@ -445,7 +480,7 @@ describe(contractName, function () {
 		it('should set lpRewardsAddr', async function () {
 			const { contract } = fixture;
 			await contract.setLPRewardsAddress(zeroAddress);
-			expect(await contract.lpRewardsAddr()).to.eq(zeroAddress);
+			expect(await contract.lpRewards()).to.eq(zeroAddress);
 		});
 
 		it('should emit LPRewardsAddressSet event', async function () {

@@ -17,6 +17,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ethmxRewardsAddr = (await deployments.get('ETHmxRewards')).address;
 	const ethtxAddr = (await deployments.get('ETHtx')).address;
+	const ethtxAMMAddr = (await deployments.get('ETHtxAMM')).address;
 	const feeLogicAddr = (await deployments.get('FeeLogic')).address;
 	const lpRewardsAddr = (await deployments.get('LPRewards')).address;
 	const defaultRecipient = ethmxRewardsAddr;
@@ -45,9 +46,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 	await ethtxRewardsMgr.setEthmxRewardsAddress(ethmxRewardsAddr);
 	await ethtxRewardsMgr.setEthtxAddress(ethtxAddr);
+	await ethtxRewardsMgr.setEthtxAMMAddress(ethtxAMMAddr);
 	await ethtxRewardsMgr.setLPRewardsAddress(lpRewardsAddr);
 };
 
 export default func;
 func.tags = [contractName];
-func.dependencies = ['ETHmxRewards', 'ETHtx', 'FeeLogic', 'LPRewards'];
+func.dependencies = [
+	'ETHmxRewards',
+	'ETHtx',
+	'ETHtxAMM',
+	'FeeLogic',
+	'LPRewards',
+];

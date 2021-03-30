@@ -185,7 +185,7 @@ export default function run(): void {
 	it('should revert when accrualUpdateInterval > block.timestamp', async function () {
 		const { contract } = fixture;
 		const unixTime = Math.floor(Date.now() / 1000);
-		await contract.setLastAccrualUpdate(unixTime + 10);
+		await contract.setLastAccrualUpdate(unixTime + 3600);
 		await expect(contract.updateAccrual()).to.be.revertedWith(
 			'block is older than last accrual update',
 		);

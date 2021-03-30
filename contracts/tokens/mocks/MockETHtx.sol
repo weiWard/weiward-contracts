@@ -4,23 +4,7 @@ pragma solidity ^0.7.0;
 import "../ETHtx.sol";
 
 contract MockETHtx is ETHtx {
-	constructor(
-		address feeLogic_,
-		address gasOracle_,
-		address minter_,
-		address wethAddr_,
-		uint128 targetCRatioNumerator,
-		uint128 targetCRatioDenominator
-	)
-		ETHtx(
-			feeLogic_,
-			gasOracle_,
-			minter_,
-			wethAddr_,
-			targetCRatioNumerator,
-			targetCRatioDenominator
-		)
-	{
+	constructor(address feeLogic_, address minter_) ETHtx(feeLogic_, minter_) {
 		return;
 	}
 

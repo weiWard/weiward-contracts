@@ -3,12 +3,13 @@ pragma solidity ^0.7.0;
 
 import "./ERC20.sol";
 
+import "./interfaces/IERC20TxFee.sol";
 import "../rewards/interfaces/IFeeLogic.sol";
 
 /**
  * @dev Adds a transfer fee to {ERC20} using the {IFeeLogic} interface.
  */
-contract ERC20TxFee is ERC20 {
+contract ERC20TxFee is ERC20, IERC20TxFee {
 	using SafeMath for uint256;
 
 	/* Mutable Internal State */
@@ -32,7 +33,7 @@ contract ERC20TxFee is ERC20 {
 	/**
 	 * @dev Returns the feeLogic handler address.
 	 */
-	function feeLogic() public view virtual returns (address) {
+	function feeLogic() public view virtual override returns (address) {
 		return _feeLogic;
 	}
 

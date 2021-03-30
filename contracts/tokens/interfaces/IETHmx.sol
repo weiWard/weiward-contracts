@@ -13,7 +13,9 @@ interface IETHmx {
 		view
 		returns (uint256);
 
-	function ethtxAddr() external view returns (address);
+	function ethtx() external view returns (address);
+
+	function ethtxAMM() external view returns (address);
 
 	function ethtxFromEth(uint256 amountETHIn) external view returns (uint256);
 
@@ -26,7 +28,7 @@ interface IETHmx {
 
 	function totalGiven() external view returns (uint256);
 
-	function wethAddr() external view returns (address);
+	function weth() external view returns (address);
 
 	/* Mutators */
 
@@ -48,6 +50,8 @@ interface IETHmx {
 
 	function setEthtxAddress(address addr) external;
 
+	function setEthtxAMMAddress(address addr) external;
+
 	function setMintGasPrice(uint256 value) external;
 
 	function setRoi(uint128 numerator, uint128 denominator) external;
@@ -57,6 +61,7 @@ interface IETHmx {
 	/* Events */
 
 	event EthtxAddressSet(address indexed author, address indexed addr);
+	event EthtxAMMAddressSet(address indexed author, address indexed addr);
 	event MintGasPriceSet(address indexed author, uint256 value);
 	event Recovered(
 		address indexed author,
