@@ -13,7 +13,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const { deployer } = await getNamedAccounts();
 
-	const ethtx = await deployments.get('ETHtx');
+	const ethtxAddr = (await deployments.get('ETHtx')).address;
+	const ethtxAMMAddr = (await deployments.get('ETHtxAMM')).address;
 	const mintGasPrice = parseUnits('1800', 9);
 	const roiNum = 5;
 	const roiDen = 1;
@@ -29,7 +30,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		from: deployer,
 		log: true,
 		args: [
-			ethtx.address,
+			ethtxAddr,
+			ethtxAMMAddr,
 			wethAddr,
 			mintGasPrice,
 			roiNum,
@@ -39,10 +41,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	});
 
 	const deployerSigner = ethers.provider.getSigner(deployer);
-	const ethtxContract = ETHtx__factory.connect(ethtx.address, deployerSigner);
-	await ethtxContract.setMinter(result.address);
+	const ethtx = ETHtx__factory.connect(ethtxAddr, deployerSigner);
+	await ethtx.setMinter(result.address);
 };
 
 export default func;
 func.tags = [contractName];
-func.dependencies = ['ETHtx'];
+func.dependencies = ['ETHtx', 'ETHtxAMM'];

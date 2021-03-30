@@ -16,6 +16,7 @@ import {
 	SimpleGasPrice__factory,
 	WETH9,
 	FeeLogic,
+	ETHtxAMM__factory,
 } from '../../../build/types/ethers-v5';
 
 export const mintGasPrice = parseGwei('1800');
@@ -65,22 +66,27 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
 			feeLogic.address,
-			oracle.address,
 			zeroAddress, // ethmx address
+		);
+
+		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
+			ethtx.address,
+			oracle.address,
 			weth.address,
 			2,
 			1,
 		);
+		await feeLogic.setExempt(ethtxAMM.address, true);
 
 		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
 			ethtx.address,
+			ethtxAMM.address,
 			weth.address,
 			mintGasPrice,
 			roiNumerator,
 			roiDenominator,
 			0,
 		);
-
 		await ethtx.setMinter(ethmx.address);
 
 		const contract = await new MockETHmxRewards__factory(

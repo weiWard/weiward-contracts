@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import "../tokens/interfaces/IETHtx.sol";
+import "../exchanges/interfaces/IETHtxAMM.sol";
 import "./interfaces/IETHtxRewardsManager.sol";
 import "./interfaces/IETHmxRewards.sol";
 import "./interfaces/ILPRewards.sol";
@@ -12,11 +12,12 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Mutable Public State */
+	/* Mutable Private State */
 
-	address public override ethmxRewardsAddr;
-	address public override ethtxAddr;
-	address public override lpRewardsAddr;
+	address private _ethmxRewards;
+	address private _ethtx;
+	address private _ethtxAMM;
+	address private _lpRewards;
 
 	/* Constructor */
 
@@ -29,13 +30,18 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 	/* External Mutators */
 
 	function convertETHtx() public override {
-		uint256 amount = IERC20(ethtxAddr).balanceOf(address(this));
+		IERC20 ethtxHandle = IERC20(ethtx());
+		uint256 amount = ethtxHandle.balanceOf(address(this));
 		if (amount == 0) {
 			return;
 		}
+
+		address ethtxAMM_ = ethtxAMM(); // Gas savings
+		ethtxHandle.safeIncreaseAllowance(ethtxAMM_, amount);
+
 		// solhint-disable-next-line not-rely-on-time
 		uint256 deadline = block.timestamp + 3600;
-		IETHtx(ethtxAddr).redeem(amount, deadline);
+		IETHtxAMM(ethtxAMM_).redeem(amount, deadline);
 	}
 
 	function distributeRewards() external override returns (uint256) {
@@ -69,31 +75,54 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 	}
 
 	function setEthmxRewardsAddress(address addr) public override onlyOwner {
-		ethmxRewardsAddr = addr;
+		_ethmxRewards = addr;
 		emit EthmxRewardsAddressSet(_msgSender(), addr);
 	}
 
 	function setEthtxAddress(address addr) public override onlyOwner {
-		ethtxAddr = addr;
+		_ethtx = addr;
 		emit EthtxAddressSet(_msgSender(), addr);
 	}
 
+	function setEthtxAMMAddress(address addr) public override onlyOwner {
+		_ethtxAMM = addr;
+		emit EthtxAMMAddressSet(_msgSender(), addr);
+	}
+
 	function setLPRewardsAddress(address addr) public override onlyOwner {
-		lpRewardsAddr = addr;
+		_lpRewards = addr;
 		emit LPRewardsAddressSet(_msgSender(), addr);
+	}
+
+	/* Public Views */
+
+	function ethmxRewards() public view override returns (address) {
+		return _ethmxRewards;
+	}
+
+	function ethtx() public view override returns (address) {
+		return _ethtx;
+	}
+
+	function ethtxAMM() public view override returns (address) {
+		return _ethtxAMM;
+	}
+
+	function lpRewards() public view override returns (address) {
+		return _lpRewards;
 	}
 
 	/* Internal Mutators */
 
 	function _notifyEthmxRewards() internal {
-		IETHmxRewards ethmxRewardsHandle = IETHmxRewards(ethmxRewardsAddr);
+		IETHmxRewards ethmxRewardsHandle = IETHmxRewards(ethmxRewards());
 		if (ethmxRewardsHandle.readyForUpdate()) {
 			ethmxRewardsHandle.updateAccrual();
 		}
 	}
 
 	function _notifyLpRewards() internal {
-		ILPRewards(lpRewardsAddr).updateAccrual();
+		ILPRewards(lpRewards()).updateAccrual();
 	}
 
 	function _sendTo(

@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ERC20.sol";
 import "./interfaces/IETHmx.sol";
 import "./interfaces/IETHtx.sol";
+import "../exchanges/interfaces/IETHtxAMM.sol";
 import "./interfaces/IWETH.sol";
 
 contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
@@ -17,43 +18,37 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Immutable Public State */
-
-	uint256 public immutable override earlyThreshold;
-	address public immutable override wethAddr;
-
-	/* Mutable Public State */
-
-	address public override ethtxAddr;
-	uint256 public override mintGasPrice;
-	uint256 public override totalGiven;
-
 	/* Mutable Internal State */
 
+	address internal _ethtx;
+	address internal _ethtxAMM;
+	uint256 internal _mintGasPrice;
+	uint256 internal _totalGiven;
 	uint128 internal _roiNum;
 	uint128 internal _roiDen;
+
+	/* Immutable Private State */
+
+	uint256 private immutable _earlyThreshold;
+	address private immutable _weth;
 
 	/* Constructor */
 
 	constructor(
-		address ethtxAddr_,
+		address ethtx_,
+		address ethtxAMM_,
 		address wethAddr_,
 		uint256 mintGasPrice_,
 		uint128 roiNumerator,
 		uint128 roiDenominator,
 		uint256 earlyThreshold_
 	) Ownable() ERC20("ETHtx Minter Token", "ETHmx", 18) {
-		wethAddr = wethAddr_;
-		setEthtxAddress(ethtxAddr_);
+		setEthtxAddress(ethtx_);
+		setEthtxAMMAddress(ethtxAMM_);
 		setMintGasPrice(mintGasPrice_);
 		setRoi(roiNumerator, roiDenominator);
-		earlyThreshold = earlyThreshold_;
-	}
-
-	/* External Views */
-
-	function roi() external view override returns (uint128, uint128) {
-		return (_roiNum, _roiDen);
+		_earlyThreshold = earlyThreshold_;
+		_weth = wethAddr_;
 	}
 
 	/* External Mutators */
@@ -65,24 +60,24 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 	function mint() external payable override whenNotPaused {
 		uint256 amountIn = msg.value;
 
-		IWETH(wethAddr).deposit{ value: amountIn }();
-		IERC20(wethAddr).safeTransfer(ethtxAddr, amountIn);
-		IETHtx(ethtxAddr).mint(ethtxAddr, ethtxFromEth(amountIn));
+		IWETH(weth()).deposit{ value: amountIn }();
+		IERC20(weth()).safeTransfer(ethtxAMM(), amountIn);
+		IETHtx(ethtx()).mint(ethtxAMM(), ethtxFromEth(amountIn));
 
 		uint256 amountOut = ethmxFromEth(amountIn);
 		_mint(_msgSender(), amountOut);
-		totalGiven += amountIn;
+		_totalGiven += amountIn;
 	}
 
 	function mintWithETHtx(uint256 amount) external override whenNotPaused {
 		require(
-			IETHtx(ethtxAddr).cRatioBelowTarget(),
+			IETHtxAMM(ethtxAMM()).cRatioBelowTarget(),
 			"ETHmx: can only burn ETHtx if undercollateralized"
 		);
 
 		address account = _msgSender();
 
-		IETHtx(ethtxAddr).burn(account, amount);
+		IETHtx(ethtx()).burn(account, amount);
 
 		uint256 amountOut = ethmxFromEthtx(amount);
 		_mint(account, amountOut);
@@ -91,12 +86,12 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 	function mintWithWETH(uint256 amount) external override whenNotPaused {
 		address account = _msgSender();
 
-		IERC20(wethAddr).safeTransferFrom(account, ethtxAddr, amount);
-		IETHtx(ethtxAddr).mint(ethtxAddr, ethtxFromEth(amount));
+		IERC20(weth()).safeTransferFrom(account, ethtxAMM(), amount);
+		IETHtx(ethtx()).mint(ethtxAMM(), ethtxFromEth(amount));
 
 		uint256 amountOut = ethmxFromEth(amount);
 		_mint(account, amountOut);
-		totalGiven += amount;
+		_totalGiven += amount;
 	}
 
 	function pause() external override onlyOwner {
@@ -113,12 +108,17 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 	}
 
 	function setEthtxAddress(address addr) public override onlyOwner {
-		ethtxAddr = addr;
+		_ethtx = addr;
 		emit EthtxAddressSet(_msgSender(), addr);
 	}
 
+	function setEthtxAMMAddress(address addr) public override onlyOwner {
+		_ethtxAMM = addr;
+		emit EthtxAMMAddressSet(_msgSender(), addr);
+	}
+
 	function setMintGasPrice(uint256 value) public override onlyOwner {
-		mintGasPrice = value;
+		_mintGasPrice = value;
 		emit MintGasPriceSet(_msgSender(), value);
 	}
 
@@ -138,6 +138,10 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 
 	/* Public Views */
 
+	function earlyThreshold() public view override returns (uint256) {
+		return _earlyThreshold;
+	}
+
 	function ethmxFromEth(uint256 amountETHIn)
 		public
 		view
@@ -145,8 +149,8 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 		returns (uint256)
 	{
 		// Gas savings
-		uint256 totalGiven_ = totalGiven;
-		uint256 earlyThreshold_ = earlyThreshold;
+		uint256 totalGiven_ = totalGiven();
+		uint256 earlyThreshold_ = earlyThreshold();
 
 		// Check for early-bird rewards (will repeat after ~1e59 ETH given)
 		if (totalGiven_ < earlyThreshold_) {
@@ -170,8 +174,16 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 		override
 		returns (uint256)
 	{
-		uint256 amountETHIn = IETHtx(ethtxAddr).ethForEthtx(amountETHtxIn);
+		uint256 amountETHIn = IETHtxAMM(ethtxAMM()).ethForEthtx(amountETHtxIn);
 		return _ethmxFromEth(amountETHIn);
+	}
+
+	function ethtx() public view override returns (address) {
+		return _ethtx;
+	}
+
+	function ethtxAMM() public view override returns (address) {
+		return _ethtxAMM;
 	}
 
 	function ethtxFromEth(uint256 amountETHIn)
@@ -181,13 +193,31 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 		returns (uint256)
 	{
 		uint256 numerator = amountETHIn.mul(1e18);
-		uint256 denominator = mintGasPrice.mul(IETHtx(ethtxAddr).gasPerETHtx());
+		uint256 denominator =
+			mintGasPrice().mul(IETHtxAMM(ethtxAMM()).gasPerETHtx());
 		return numerator.div(denominator);
+	}
+
+	function mintGasPrice() public view override returns (uint256) {
+		return _mintGasPrice;
+	}
+
+	function roi() public view override returns (uint128, uint128) {
+		return (_roiNum, _roiDen);
+	}
+
+	function totalGiven() public view override returns (uint256) {
+		return _totalGiven;
+	}
+
+	function weth() public view override returns (address) {
+		return _weth;
 	}
 
 	/* Internal Views */
 
 	function _ethmxFromEth(uint256 amountETHIn) internal view returns (uint256) {
-		return amountETHIn.mul(_roiNum).div(_roiDen);
+		(uint128 roiNum, uint128 roiDen) = roi();
+		return amountETHIn.mul(roiNum).div(roiDen);
 	}
 }
