@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.7.0;
+pragma abicoder v2;
+
+/**
+ * EIP-2535 Diamond Standard: https://eips.ethereum.org/EIPS/eip-2535
+ * Based on: https://github.com/mudgen/diamond-2/blob/86148391a6b8f2645a28ea45b3d38441b5a76c78/contracts/facets/DiamondCutFacet.sol
+ *
+ * Changes:
+ * - Reformatted styling in line with this repository.
+ */
+
+import "../interfaces/IDiamondCut.sol";
+import "../libraries/LibDiamond.sol";
+
+contract DiamondCutFacet is IDiamondCut {
+	/// @notice Add/replace/remove any number of functions and optionally execute
+	///         a function with delegatecall
+	/// @param _diamondCut Contains the facet addresses and function selectors
+	/// @param _init The address of the contract or facet to execute _calldata
+	/// @param _calldata A function call, including function selector and arguments
+	///                  _calldata is executed with delegatecall on _init
+	function diamondCut(
+		FacetCut[] calldata _diamondCut,
+		address _init,
+		bytes calldata _calldata
+	) external override {
+		LibDiamond.enforceIsContractOwner();
+		LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+		uint256 originalSelectorCount = ds.selectorCount;
+		uint256 selectorCount = originalSelectorCount;
+		bytes32 selectorSlot;
+		// Check if last selector slot is not full
+		if (selectorCount % 8 > 0) {
+			// get last selectorSlot
+			selectorSlot = ds.selectorSlots[selectorCount / 8];
+		}
+		// loop through diamond cut
+		for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
+			(selectorCount, selectorSlot) = LibDiamond
+				.addReplaceRemoveFacetSelectors(
+				selectorCount,
+				selectorSlot,
+				_diamondCut[facetIndex].facetAddress,
+				_diamondCut[facetIndex].action,
+				_diamondCut[facetIndex].functionSelectors
+			);
+		}
+		if (selectorCount != originalSelectorCount) {
+			ds.selectorCount = uint16(selectorCount);
+		}
+		// If last selector slot is not full
+		if (selectorCount % 8 > 0) {
+			ds.selectorSlots[selectorCount / 8] = selectorSlot;
+		}
+		emit DiamondCut(_diamondCut, _init, _calldata);
+		LibDiamond.initializeDiamondCut(_init, _calldata);
+	}
+}
