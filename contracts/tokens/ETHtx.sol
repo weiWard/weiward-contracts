@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "./ERC20TxFee.sol";
 import "./interfaces/IETHtx.sol";
 
 contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
+	using SafeERC20 for IERC20;
+
 	/* Mutable Internal State */
+
 	address internal _minter;
 
 	/* Constructor */
@@ -57,6 +62,15 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 
 	function pause() external virtual override onlyOwner whenNotPaused {
 		_pause();
+	}
+
+	function recoverERC20(
+		address token,
+		address to,
+		uint256 amount
+	) external override onlyOwner {
+		IERC20(token).safeTransfer(to, amount);
+		emit Recovered(_msgSender(), token, to, amount);
 	}
 
 	function unpause() external virtual override onlyOwner whenPaused {
