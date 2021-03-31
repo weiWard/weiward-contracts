@@ -14,10 +14,12 @@ import {
 	sendWETH,
 	GAS_PER_ETHTX,
 	ethUsedOnGas,
+	parseETHmx,
 } from '../helpers/conversions';
 import {
 	ETHmx,
 	ETHmx__factory,
+	ETHmxMinter,
 	ETHmxMinter__factory,
 	ETHtxAMM,
 	ETHtxAMM__factory,
@@ -90,12 +92,13 @@ interface Fixture {
 	testerContract: ETHtxAMM;
 	ethtx: MockETHtx;
 	ethmx: ETHmx;
+	ethmxMinter: ETHmxMinter;
 	feeLogic: FeeLogic;
 	oracle: MockGasPrice;
 	weth: WETH9;
 }
 
-const loadFixture = deployments.createFixture(
+const loadFixture = deployments.createFixture<Fixture, unknown>(
 	async ({ getNamedAccounts, waffle }) => {
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
@@ -155,6 +158,7 @@ const loadFixture = deployments.createFixture(
 			testerContract,
 			ethtx,
 			ethmx,
+			ethmxMinter,
 			feeLogic,
 			oracle,
 			weth,
@@ -1215,6 +1219,70 @@ describe(contractName, function () {
 			await expect(testerContract.pause()).to.be.revertedWith(
 				'caller is not the owner',
 			);
+		});
+	});
+
+	describe('recoverUnsupportedERC20', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract, ethmx, tester } = fixture;
+
+			await expect(
+				testerContract.recoverUnsupportedERC20(ethmx.address, tester, 1),
+			).to.be.revertedWith('caller is not the owner');
+		});
+
+		it('should revert on WETH', async function () {
+			const { contract, tester, weth } = fixture;
+
+			await expect(
+				contract.recoverUnsupportedERC20(weth.address, tester, 1),
+			).to.be.revertedWith('cannot recover WETH');
+		});
+
+		it('should revert on ETHtx', async function () {
+			const { contract, tester, ethtx } = fixture;
+
+			await expect(
+				contract.recoverUnsupportedERC20(ethtx.address, tester, 1),
+			).to.be.revertedWith('cannot recover ETHtx');
+		});
+
+		it('should fail to recover nonexistent token', async function () {
+			const { contract, ethmx, tester } = fixture;
+			await expect(
+				contract.recoverUnsupportedERC20(ethmx.address, tester, 1),
+			).to.be.revertedWith('transfer amount exceeds balance');
+		});
+
+		it('should transfer amount', async function () {
+			const { contract, ethmx, ethmxMinter, tester } = fixture;
+			const amount = parseETHmx('10');
+
+			await ethmxMinter.mint({ value: amount });
+			await ethmx.transfer(contract.address, amount);
+			await contract.recoverUnsupportedERC20(ethmx.address, tester, amount);
+
+			expect(
+				await ethmx.balanceOf(contract.address),
+				'contract balance mismatch',
+			).to.eq(0);
+			expect(await ethmx.balanceOf(tester), 'target balance mismatch').to.eq(
+				amount,
+			);
+		});
+
+		it('should emit RecoveredUnsupported event', async function () {
+			const { contract, deployer, ethmx, ethmxMinter, tester } = fixture;
+			const amount = parseEther('10');
+
+			await ethmxMinter.mint({ value: amount });
+			await ethmx.transfer(contract.address, amount);
+
+			await expect(
+				contract.recoverUnsupportedERC20(ethmx.address, tester, amount),
+			)
+				.to.emit(contract, 'RecoveredUnsupported')
+				.withArgs(deployer, ethmx.address, tester, amount);
 		});
 	});
 

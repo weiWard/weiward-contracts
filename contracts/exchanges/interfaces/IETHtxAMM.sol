@@ -78,6 +78,12 @@ interface IETHtxAMM {
 
 	function pause() external;
 
+	function recoverUnsupportedERC20(
+		address token,
+		address to,
+		uint256 amount
+	) external;
+
 	function redeem(uint256 amountIn, uint256 deadline) external;
 
 	function redeemExact(
@@ -101,6 +107,12 @@ interface IETHtxAMM {
 	/* Events */
 
 	event GasOracleSet(address indexed author, address indexed account);
+	event RecoveredUnsupported(
+		address indexed author,
+		address indexed token,
+		address indexed to,
+		uint256 amount
+	);
 	event TargetCRatioSet(
 		address indexed author,
 		uint128 numerator,
