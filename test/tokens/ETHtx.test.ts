@@ -1,12 +1,15 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
 import { JsonRpcSigner } from '@ethersproject/providers';
+import { parseEther } from '@ethersproject/units';
 
 import { zeroAddress, zeroPadAddress } from '../helpers/address';
 import { parseETHtx } from '../helpers/conversions';
 import {
 	MockETHtx,
 	MockETHtx__factory,
+	MockERC20,
+	MockERC20__factory,
 	FeeLogic__factory,
 	FeeLogic,
 } from '../../build/types/ethers-v5';
@@ -25,6 +28,7 @@ interface Fixture {
 	contract: MockETHtx;
 	testerContract: MockETHtx;
 	feeLogic: FeeLogic;
+	testToken: MockERC20;
 }
 
 const loadFixture = deployments.createFixture(
@@ -45,6 +49,13 @@ const loadFixture = deployments.createFixture(
 		);
 		const testerContract = contract.connect(testerSigner);
 
+		const testToken = await new MockERC20__factory(deployerSigner).deploy(
+			'Test Token',
+			'TEST',
+			18,
+			0,
+		);
+
 		return {
 			deployer,
 			deployerSigner,
@@ -53,6 +64,7 @@ const loadFixture = deployments.createFixture(
 			contract,
 			testerContract,
 			feeLogic,
+			testToken,
 		};
 	},
 );
@@ -150,6 +162,51 @@ describe(contractName, function () {
 			await expect(testerContract.pause()).to.be.revertedWith(
 				'caller is not the owner',
 			);
+		});
+	});
+
+	describe('recoverERC20', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract, tester, testToken } = fixture;
+
+			await expect(
+				testerContract.recoverERC20(testToken.address, tester, 1),
+			).to.be.revertedWith('caller is not the owner');
+		});
+
+		it('should fail to recover nonexistent token', async function () {
+			const { contract, tester, testToken } = fixture;
+			await expect(
+				contract.recoverERC20(testToken.address, tester, 1),
+			).to.be.revertedWith('transfer amount exceeds balance');
+		});
+
+		it('should transfer amount', async function () {
+			const { contract, tester, testToken } = fixture;
+			const amount = parseEther('10');
+
+			await testToken.mint(contract.address, amount);
+			await contract.recoverERC20(testToken.address, tester, amount);
+
+			expect(
+				await testToken.balanceOf(contract.address),
+				'contract balance mismatch',
+			).to.eq(0);
+			expect(
+				await testToken.balanceOf(tester),
+				'target balance mismatch',
+			).to.eq(amount);
+		});
+
+		it('should emit Recovered event', async function () {
+			const { contract, deployer, tester, testToken } = fixture;
+			const amount = parseEther('10');
+
+			await testToken.mint(contract.address, amount);
+
+			await expect(contract.recoverERC20(testToken.address, tester, amount))
+				.to.emit(contract, 'Recovered')
+				.withArgs(deployer, testToken.address, tester, amount);
 		});
 	});
 
