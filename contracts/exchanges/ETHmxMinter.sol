@@ -68,7 +68,7 @@ contract ETHmxMinter is Ownable, Pausable, IETHmxMinter {
 	function mintWithETHtx(uint256 amount) external override whenNotPaused {
 		require(
 			IETHtxAMM(ethtxAMM()).cRatioBelowTarget(),
-			"ETHmx: can only burn ETHtx if undercollateralized"
+			"ETHmxMinter: can only burn ETHtx if undercollateralized"
 		);
 
 		address account = _msgSender();
