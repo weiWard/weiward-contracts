@@ -2,6 +2,7 @@
 pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -148,6 +149,18 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 
 	function pause() external virtual override onlyOwner whenNotPaused {
 		_pause();
+	}
+
+	function recoverUnsupportedERC20(
+		address token,
+		address to,
+		uint256 amount
+	) external override onlyOwner {
+		require(token != weth(), "ETHtxAMM: cannot recover WETH");
+		require(token != ethtx(), "ETHtxAMM: cannot recover ETHtx");
+
+		IERC20(token).safeTransfer(to, amount);
+		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
 
 	function redeem(uint256 amountIn, uint256 deadline)
