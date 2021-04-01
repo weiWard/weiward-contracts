@@ -14,7 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // solhint-disable
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 contract WETH9 {
     string public name     = "Wrapped Ether";
