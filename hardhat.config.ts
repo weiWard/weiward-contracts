@@ -95,8 +95,10 @@ const config: HardhatUserConfig = {
 		flat: true,
 		only: [
 			'ETHtx',
+			'ETHtxAMM',
 			'ETHtxRewardsManager',
 			'ETHmx',
+			'ETHmxMinter',
 			'ETHmxRewards',
 			'FeeLogic',
 			'GasPrice',
