@@ -13,7 +13,7 @@ pragma abicoder v2;
 import "../interfaces/IDiamondCut.sol";
 
 library LibDiamond {
-	bytes32 public constant DIAMOND_STORAGE_POSITION =
+	bytes32 internal constant _DIAMOND_STORAGE_POSITION =
 		keccak256("diamond.standard.diamond.storage");
 
 	struct DiamondStorage {
@@ -34,7 +34,7 @@ library LibDiamond {
 	}
 
 	function diamondStorage() internal pure returns (DiamondStorage storage ds) {
-		bytes32 position = DIAMOND_STORAGE_POSITION;
+		bytes32 position = _DIAMOND_STORAGE_POSITION;
 		// solhint-disable-next-line no-inline-assembly
 		assembly {
 			ds.slot := position

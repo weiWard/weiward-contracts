@@ -3,7 +3,7 @@ pragma solidity 0.7.6;
 
 import { LibDiamond } from "../diamond/libraries/LibDiamond.sol";
 
-contract Ownable {
+abstract contract Ownable {
 	modifier onlyOwner() {
 		require(
 			msg.sender == LibDiamond.contractOwner(),

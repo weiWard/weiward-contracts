@@ -1,3 +1,4 @@
+export { diamondFixture } from './Diamond';
 export {
 	uniswapFactoryFixture,
 	uniswapPairFixture,

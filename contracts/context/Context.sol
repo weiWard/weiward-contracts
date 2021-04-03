@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
-import { IContextFacet } from "./IContextFacet.sol";
+import { IContext } from "./IContext.sol";
 
-contract Context {
+abstract contract Context {
 	function _msgSender() internal view returns (address payable) {
-		return IContextFacet(address(this)).msgSender();
+		return IContext(address(this)).msgSender();
 	}
 
 	function _msgData() internal view returns (bytes memory) {
-		return IContextFacet(address(this)).msgData();
+		return IContext(address(this)).msgData();
 
 		// TODO use assembly but maintain context and function visibility
 		// Gas-efficient call to ContextFacet

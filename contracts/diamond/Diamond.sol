@@ -44,7 +44,7 @@ contract Diamond {
 	// solhint-disable-next-line no-complex-fallback
 	fallback() external payable {
 		LibDiamond.DiamondStorage storage ds;
-		bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
+		bytes32 position = LibDiamond._DIAMOND_STORAGE_POSITION;
 		// solhint-disable-next-line no-inline-assembly
 		assembly {
 			ds.slot := position

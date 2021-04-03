@@ -76,8 +76,6 @@ interface IETHtxAMM {
 		uint256 deadline
 	) external;
 
-	function pause() external;
-
 	function recoverUnsupportedERC20(
 		address token,
 		address to,
@@ -98,14 +96,17 @@ interface IETHtxAMM {
 		uint256 deadline
 	) external;
 
+	function setETHtx(address account) external;
+
 	function setGasOracle(address account) external;
 
 	function setTargetCRatio(uint128 numerator, uint128 denominator) external;
 
-	function unpause() external;
+	function setWETH(address account) external;
 
 	/* Events */
 
+	event ETHtxSet(address indexed author, address indexed account);
 	event GasOracleSet(address indexed author, address indexed account);
 	event RecoveredUnsupported(
 		address indexed author,
@@ -118,4 +119,5 @@ interface IETHtxAMM {
 		uint128 numerator,
 		uint128 denominator
 	);
+	event WETHSet(address indexed author, address indexed account);
 }

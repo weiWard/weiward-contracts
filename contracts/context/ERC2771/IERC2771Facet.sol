@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
-interface IContextFacet {
-	function initialize(address trustedForwarder) external;
+interface IERC2771Facet {
+	function erc2771FacetInit() external;
 
 	function msgSender() external view returns (address payable);
 
