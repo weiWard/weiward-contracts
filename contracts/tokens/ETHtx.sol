@@ -55,7 +55,7 @@ contract ETHtx is
 
 	/* External Views */
 
-	function minter() public view override returns (address) {
+	function minter() public view virtual override returns (address) {
 		return _minter;
 	}
 
@@ -97,7 +97,7 @@ contract ETHtx is
 		address token,
 		address to,
 		uint256 amount
-	) external override onlyOwner {
+	) external virtual override onlyOwner {
 		IERC20(token).safeTransfer(to, amount);
 		emit Recovered(_msgSender(), token, to, amount);
 	}
