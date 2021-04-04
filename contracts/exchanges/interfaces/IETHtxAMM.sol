@@ -98,14 +98,19 @@ interface IETHtxAMM {
 		uint256 deadline
 	) external;
 
+	function setEthtx(address account) external;
+
 	function setGasOracle(address account) external;
 
 	function setTargetCRatio(uint128 numerator, uint128 denominator) external;
+
+	function setWETH(address account) external;
 
 	function unpause() external;
 
 	/* Events */
 
+	event ETHtxSet(address indexed author, address indexed account);
 	event GasOracleSet(address indexed author, address indexed account);
 	event RecoveredUnsupported(
 		address indexed author,
@@ -118,4 +123,5 @@ interface IETHtxAMM {
 		uint128 numerator,
 		uint128 denominator
 	);
+	event WETHSet(address indexed author, address indexed account);
 }

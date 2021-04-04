@@ -27,6 +27,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const result = await deploy(contractName, {
 		from: deployer,
 		log: true,
+		proxy: {
+			methodName: 'init',
+			proxyContract: 'OpenZeppelinTransparentProxy',
+			viaAdminContract: 'DefaultProxyAdmin',
+		},
 		args: [
 			ethtx.address,
 			oracle.address,
