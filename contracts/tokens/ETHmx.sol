@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./ERC20.sol";
+import "./ERC20/ERC20.sol";
 import "./interfaces/IETHmx.sol";
 
 contract ETHmx is Ownable, Pausable, ERC20, IETHmx {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
-import "../ERC20.sol";
+import "../ERC20/ERC20.sol";
 
 contract MockERC20 is ERC20 {
 	string private _name;
