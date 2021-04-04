@@ -103,6 +103,8 @@ const config: HardhatUserConfig = {
 			'FeeLogic',
 			'GasPrice',
 			'LPRewards',
+			'ProxyAdmin',
+			'TransparentUpgradeableProxy',
 			'WETH9',
 		],
 	},
