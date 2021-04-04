@@ -16,6 +16,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deploy(contractName, {
 		from: deployer,
 		log: true,
+		proxy: {
+			methodName: 'init',
+			proxyContract: 'OpenZeppelinTransparentProxy',
+			viaAdminContract: 'DefaultProxyAdmin',
+		},
 		args: [feeLogic.address, zeroAddress],
 	});
 };
