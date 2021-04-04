@@ -62,6 +62,13 @@ contract ETHtxAMM is
 		setWETH(weth_);
 	}
 
+	/* Fallbacks */
+
+	receive() external payable {
+		// Only accept random ETH if we can convert to WETH
+		IWETH(weth()).deposit{ value: msg.value }();
+	}
+
 	/* Modifiers */
 
 	modifier ensure(uint256 deadline) {
