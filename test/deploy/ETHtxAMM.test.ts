@@ -3,7 +3,12 @@ import { deployments } from 'hardhat';
 import { JsonRpcSigner } from '@ethersproject/providers';
 import { parseEther } from 'ethers/lib/utils';
 
-import { ETHtxAMM, ETHtxAMM__factory } from '../../build/types/ethers-v5';
+import {
+	ETHtxAMM,
+	ETHtxAMM__factory,
+	WETH9,
+	WETH9__factory,
+} from '../../build/types/ethers-v5';
 
 interface Fixture {
 	deployer: string;
@@ -11,6 +16,7 @@ interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: ETHtxAMM;
+	weth: WETH9;
 }
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
@@ -26,12 +32,18 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployerSigner,
 		);
 
+		const weth = WETH9__factory.connect(
+			(await deployments.get('WETH9')).address,
+			deployerSigner,
+		);
+
 		return {
 			deployer,
 			deployerSigner,
 			tester,
 			testerSigner,
 			contract,
+			weth,
 		};
 	},
 );
@@ -52,14 +64,20 @@ describe('ETHtxAMM Deployment', function () {
 	});
 
 	describe('receive', function () {
-		it('should revert', async function () {
-			const { contract, deployerSigner } = fixture;
+		it('should convert to WETH', async function () {
+			const { contract, deployerSigner, weth } = fixture;
+			const amount = parseEther('1');
+
 			await expect(
 				deployerSigner.sendTransaction({
 					to: contract.address,
-					value: parseEther('1'),
+					value: amount,
 				}),
-			).to.be.reverted;
+			)
+				.to.emit(weth, 'Deposit')
+				.withArgs(contract.address, amount);
+
+			expect(await weth.balanceOf(contract.address)).to.eq(amount);
 		});
 	});
 

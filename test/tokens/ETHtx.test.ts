@@ -44,7 +44,7 @@ const loadFixture = deployments.createFixture(
 			feeDenominator,
 		);
 
-		await deploy('MockETHtx', {
+		const result = await deploy('MockETHtx', {
 			from: deployer,
 			log: true,
 			proxy: {
@@ -54,8 +54,10 @@ const loadFixture = deployments.createFixture(
 			},
 			args: [feeLogic.address, deployer],
 		});
-		const contractAddr = (await deployments.get('MockETHtx_Proxy')).address;
-		const contract = MockETHtx__factory.connect(contractAddr, deployerSigner);
+		const contract = MockETHtx__factory.connect(
+			result.address,
+			deployerSigner,
+		);
 		const testerContract = contract.connect(testerSigner);
 
 		const testToken = await new MockERC20__factory(deployerSigner).deploy(

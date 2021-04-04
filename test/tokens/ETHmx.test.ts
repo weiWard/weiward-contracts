@@ -31,7 +31,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const result = await deploy('ETHmx', {
+		const result = await deploy('ETHmxTest', {
+			contract: 'ETHmx',
 			from: deployer,
 			log: true,
 			proxy: {

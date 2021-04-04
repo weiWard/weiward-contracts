@@ -99,17 +99,11 @@ interface Fixture {
 }
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
-		await deployments.fixture();
-
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
-
-		const contract = ETHtxAMM__factory.connect(
-			(await deployments.get('ETHtxAMM_Proxy')).address,
-			deployerSigner,
-		);
 
 		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
 			feeRecipient,
@@ -132,6 +126,25 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
 
+		const result = await deploy('ETHtxAMMTest', {
+			contract: 'ETHtxAMM',
+			from: deployer,
+			log: true,
+			proxy: {
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'DefaultProxyAdmin',
+			},
+			args: [
+				ethtx.address,
+				oracle.address,
+				weth.address,
+				targetCRatioNumerator,
+				targetCRatioDenominator,
+			],
+		});
+		const contract = ETHtxAMM__factory.connect(result.address, deployerSigner);
+
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			ethmx.address,
 			ethtx.address,
@@ -142,10 +155,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			roiDenominator,
 			0,
 		);
-
-		await contract.setEthtx(ethtx.address);
-		await contract.setGasOracle(oracle.address);
-		await contract.setWETH(weth.address);
 
 		await feeLogic.setExempt(contract.address, true);
 		await ethmx.setMinter(ethmxMinter.address);
