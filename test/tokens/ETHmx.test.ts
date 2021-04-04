@@ -25,12 +25,23 @@ interface Fixture {
 }
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const contract = await new ETHmx__factory(deployerSigner).deploy(deployer);
+		const result = await deploy('ETHmx', {
+			from: deployer,
+			log: true,
+			proxy: {
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'DefaultProxyAdmin',
+			},
+			args: [deployer],
+		});
+		const contract = ETHmx__factory.connect(result.address, deployerSigner);
 		const testerContract = contract.connect(testerSigner);
 
 		const testToken = await new MockERC20__factory(deployerSigner).deploy(
