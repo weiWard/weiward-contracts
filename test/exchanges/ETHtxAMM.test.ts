@@ -99,7 +99,8 @@ interface Fixture {
 }
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -123,15 +124,26 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			zeroAddress, // ETHmx minter
 		);
 
-		const contract = await new ETHtxAMM__factory(deployerSigner).deploy(
-			ethtx.address,
-			oracle.address,
-			weth.address,
-			targetCRatioNumerator,
-			targetCRatioDenominator,
-		);
-
 		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
+
+		const result = await deploy('ETHtxAMMTest', {
+			contract: 'ETHtxAMM',
+			from: deployer,
+			log: true,
+			proxy: {
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'DefaultProxyAdmin',
+			},
+			args: [
+				ethtx.address,
+				oracle.address,
+				weth.address,
+				targetCRatioNumerator,
+				targetCRatioDenominator,
+			],
+		});
+		const contract = ETHtxAMM__factory.connect(result.address, deployerSigner);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			ethmx.address,

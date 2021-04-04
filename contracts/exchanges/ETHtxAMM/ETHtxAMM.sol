@@ -2,48 +2,71 @@
 pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./interfaces/IETHtxAMM.sol";
-import "../tokens/interfaces/IETHtx.sol";
-import "../tokens/interfaces/IERC20TxFee.sol";
-import "../tokens/interfaces/IWETH.sol";
-import "../rewards/interfaces/IFeeLogic.sol";
-import "../oracles/interfaces/IGasPrice.sol";
+import "./ETHtxAMMData.sol";
+import "../interfaces/IETHtxAMM.sol";
+import "../../tokens/interfaces/IETHtx.sol";
+import "../../tokens/interfaces/IERC20TxFee.sol";
+import "../../tokens/interfaces/IWETH.sol";
+import "../../rewards/interfaces/IFeeLogic.sol";
+import "../../oracles/interfaces/IGasPrice.sol";
 
-contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
+contract ETHtxAMM is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	PausableUpgradeable,
+	ETHtxAMMData,
+	IETHtxAMM
+{
 	using Address for address payable;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint128;
 	using SafeMath for uint256;
-
-	/* Mutable Internal State */
-	address internal _gasOracle;
-	uint128 internal _targetCRatioNum;
-	uint128 internal _targetCRatioDen;
-
-	/* Immutable Private State */
-
-	address private immutable _ethtx;
-	address private immutable _weth;
 
 	/* Constructor */
 
 	constructor(
 		address ethtx_,
 		address gasOracle_,
-		address wethAddr_,
-		uint128 targetCRatioNumerator,
-		uint128 targetCRatioDenominator
-	) Ownable() {
+		address weth_,
+		uint128 targetCRatioNum_,
+		uint128 targetCRatioDen_
+	) {
+		init(ethtx_, gasOracle_, weth_, targetCRatioNum_, targetCRatioDen_);
+	}
+
+	/* Initializer */
+
+	function init(
+		address ethtx_,
+		address gasOracle_,
+		address weth_,
+		uint128 targetCRatioNum_,
+		uint128 targetCRatioDen_
+	) public virtual initializer {
+		__Context_init_unchained();
+		__Ownable_init_unchained();
+		__Pausable_init_unchained();
+
+		setEthtx(ethtx_);
 		setGasOracle(gasOracle_);
-		setTargetCRatio(targetCRatioNumerator, targetCRatioDenominator);
-		_ethtx = ethtx_;
-		_weth = wethAddr_;
+		setTargetCRatio(targetCRatioNum_, targetCRatioDen_);
+		setWETH(weth_);
+	}
+
+	/* Fallbacks */
+
+	receive() external payable {
+		// Only accept random ETH if we can convert to WETH
+		IWETH(weth()).deposit{ value: msg.value }();
 	}
 
 	/* Modifiers */
@@ -60,13 +83,6 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 			"ETHtxAMM: gas price is outdated"
 		);
 		_;
-	}
-
-	/* Fallbacks */
-
-	receive() external payable {
-		// Only accept random ETH if we can convert it to WETH
-		IWETH(weth()).deposit{ value: msg.value }();
 	}
 
 	/* External Mutators */
@@ -155,7 +171,7 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 		address token,
 		address to,
 		uint256 amount
-	) external override onlyOwner {
+	) external virtual override onlyOwner {
 		require(token != weth(), "ETHtxAMM: cannot recover WETH");
 		require(token != ethtx(), "ETHtxAMM: cannot recover ETHtx");
 
@@ -194,6 +210,12 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 		_redeem(_msgSender(), amountIn, amountOut);
 	}
 
+	function setEthtx(address account) public virtual override onlyOwner {
+		require(account != address(0), "ETHtxAMM: ETHtx zero address");
+		_ethtx = account;
+		emit ETHtxSet(_msgSender(), account);
+	}
+
 	function setGasOracle(address account) public virtual override onlyOwner {
 		require(account != address(0), "ETHtxAMM: gasOracle zero address");
 		_gasOracle = account;
@@ -211,6 +233,12 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 		_targetCRatioNum = numerator;
 		_targetCRatioDen = denominator;
 		emit TargetCRatioSet(_msgSender(), numerator, denominator);
+	}
+
+	function setWETH(address account) public virtual override onlyOwner {
+		require(account != address(0), "ETHtxAMM: WETH zero address");
+		_weth = account;
+		emit WETHSet(_msgSender(), account);
 	}
 
 	function unpause() external virtual override onlyOwner whenPaused {
@@ -275,7 +303,7 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 		return _ethtxToEth(gasPriceAtRedemption(), amountETHtxIn.sub(fee));
 	}
 
-	function ethtx() public view override returns (address) {
+	function ethtx() public view virtual override returns (address) {
 		return _ethtx;
 	}
 
@@ -317,11 +345,11 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 		return IERC20(ethtx()).totalSupply().sub(ethtxAvailable());
 	}
 
-	function feeLogic() public view override returns (address) {
+	function feeLogic() public view virtual override returns (address) {
 		return IERC20TxFee(ethtx()).feeLogic();
 	}
 
-	function gasOracle() public view override returns (address) {
+	function gasOracle() public view virtual override returns (address) {
 		return _gasOracle;
 	}
 
@@ -369,7 +397,7 @@ contract ETHtxAMM is Ownable, Pausable, IETHtxAMM {
 		denominator = _targetCRatioDen;
 	}
 
-	function weth() public view override returns (address) {
+	function weth() public view virtual override returns (address) {
 		return _weth;
 	}
 

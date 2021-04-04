@@ -32,7 +32,8 @@ interface Fixture {
 }
 
 const loadFixture = deployments.createFixture(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -43,9 +44,19 @@ const loadFixture = deployments.createFixture(
 			feeDenominator,
 		);
 
-		const contract = await new MockETHtx__factory(deployerSigner).deploy(
-			feeLogic.address,
-			deployer,
+		const result = await deploy('MockETHtx', {
+			from: deployer,
+			log: true,
+			proxy: {
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'DefaultProxyAdmin',
+			},
+			args: [feeLogic.address, deployer],
+		});
+		const contract = MockETHtx__factory.connect(
+			result.address,
+			deployerSigner,
 		);
 		const testerContract = contract.connect(testerSigner);
 

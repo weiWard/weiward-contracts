@@ -1,30 +1,38 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
-import "./ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
-import "./interfaces/IERC20TxFee.sol";
-import "../rewards/interfaces/IFeeLogic.sol";
+import "../ERC20/ERC20Upgradeable.sol";
+import "../interfaces/IERC20TxFee.sol";
+import "../../rewards/interfaces/IFeeLogic.sol";
 
-/**
- * @dev Adds a transfer fee to {ERC20} using the {IFeeLogic} interface.
- */
-contract ERC20TxFee is ERC20, IERC20TxFee {
+contract ERC20TxFeeUpgradeable is
+	Initializable,
+	ContextUpgradeable,
+	ERC20Upgradeable,
+	IERC20TxFee
+{
 	using SafeMath for uint256;
 
 	/* Mutable Internal State */
 
 	address internal _feeLogic;
 
-	/* Constructor */
+	// solhint-disable-next-line func-name-mixedcase
+	function __ERC20TxFee_init(address feeLogic_) internal initializer {
+		__ERC20_init();
+		__ERC20TxFee_init_unchained(feeLogic_);
+	}
 
-	constructor(
-		string memory name_,
-		string memory symbol_,
-		uint8 decimals_,
-		address feeLogic_
-	) ERC20(name_, symbol_, decimals_) {
+	// solhint-disable-next-line func-name-mixedcase
+	function __ERC20TxFee_init_unchained(address feeLogic_)
+		internal
+		initializer
+	{
 		require(feeLogic_ != address(0), "ERC20TxFee: feeLogic zero address");
+		__ERC20_init_unchained();
 		_feeLogic = feeLogic_;
 	}
 
@@ -80,4 +88,6 @@ contract ERC20TxFee is ERC20, IERC20TxFee {
 			feeHandler.notify(fee);
 		}
 	}
+
+	uint256[49] private __gap;
 }

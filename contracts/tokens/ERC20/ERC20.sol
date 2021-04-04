@@ -5,8 +5,8 @@
  *
  * Changes:
  * - Change _balances, _allowances, and _totalSupply from private to internal
- * - Change _decimals to immutable
- * - Add decimals to constructor and remove _setupDecimals
+ * - Replace name, symbol, and decimals state with virtual functions.
+ * - Make all functions virtual
  * - Reformat styling in line with this repository.
  */
 
@@ -51,44 +51,19 @@ contract ERC20 is Context, IERC20 {
 
 	uint256 internal _totalSupply;
 
-	/* Immutable Private State */
-
-	string private _name;
-	string private _symbol;
-	uint8 private immutable _decimals;
-
 	/**
-	 * @dev Sets the values for {name} and {symbol}, initializes {decimals} with
-	 * a default value of 18.
-	 *
-	 * To select a different value for {decimals}, use {_setupDecimals}.
-	 *
-	 * All three of these values are immutable: they can only be set once during
-	 * construction.
+	 * @dev Returns the name of the token. Overload it to change.
 	 */
-	constructor(
-		string memory name_,
-		string memory symbol_,
-		uint8 decimals_
-	) {
-		_name = name_;
-		_symbol = symbol_;
-		_decimals = decimals_;
-	}
-
-	/**
-	 * @dev Returns the name of the token.
-	 */
-	function name() public view returns (string memory) {
-		return _name;
+	function name() public view virtual returns (string memory) {
+		return "ERC20";
 	}
 
 	/**
 	 * @dev Returns the symbol of the token, usually a shorter version of the
-	 * name.
+	 * name. Overload it to change.
 	 */
-	function symbol() public view returns (string memory) {
-		return _symbol;
+	function symbol() public view virtual returns (string memory) {
+		return "ERC20";
 	}
 
 	/**
@@ -97,28 +72,34 @@ contract ERC20 is Context, IERC20 {
 	 * be displayed to a user as `5,05` (`505 / 10 ** 2`).
 	 *
 	 * Tokens usually opt for a value of 18, imitating the relationship between
-	 * Ether and Wei. This is the value {ERC20} uses, unless {_setupDecimals} is
-	 * called.
+	 * Ether and Wei. This is the value {ERC20} uses, unless this function is
+	 * overridden;
 	 *
 	 * NOTE: This information is only used for _display_ purposes: it in
 	 * no way affects any of the arithmetic of the contract, including
 	 * {IERC20-balanceOf} and {IERC20-transfer}.
 	 */
-	function decimals() public view returns (uint8) {
-		return _decimals;
+	function decimals() public view virtual returns (uint8) {
+		return 18;
 	}
 
 	/**
 	 * @dev See {IERC20-totalSupply}.
 	 */
-	function totalSupply() public view override returns (uint256) {
+	function totalSupply() public view virtual override returns (uint256) {
 		return _totalSupply;
 	}
 
 	/**
 	 * @dev See {IERC20-balanceOf}.
 	 */
-	function balanceOf(address account) public view override returns (uint256) {
+	function balanceOf(address account)
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _balances[account];
 	}
 
