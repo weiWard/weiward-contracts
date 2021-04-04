@@ -18,10 +18,7 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 
 	/* Constructor */
 
-	constructor(address minter_)
-		Ownable()
-		ERC20("ETHtx Minter Token", "ETHmx", 18)
-	{
+	constructor(address minter_) Ownable() {
 		setMinter(minter_);
 	}
 
@@ -73,5 +70,13 @@ contract ETHmx is Ownable, Pausable, ERC20, IETHmx {
 
 	function minter() public view override returns (address) {
 		return _minter;
+	}
+
+	function name() public view virtual override returns (string memory) {
+		return "ETHtx Minter Token";
+	}
+
+	function symbol() public view virtual override returns (string memory) {
+		return "ETHmx";
 	}
 }

@@ -20,7 +20,7 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 
 	constructor(address feeLogic_, address minter_)
 		Ownable()
-		ERC20TxFee("Ethereum Transaction", "ETHtx", 18, feeLogic_)
+		ERC20TxFee(feeLogic_)
 	{
 		setMinter(minter_);
 	}
@@ -36,6 +36,14 @@ contract ETHtx is Ownable, Pausable, ERC20TxFee, IETHtx {
 
 	function minter() public view override returns (address) {
 		return _minter;
+	}
+
+	function name() public view virtual override returns (string memory) {
+		return "Ethereum Transaction";
+	}
+
+	function symbol() public view virtual override returns (string memory) {
+		return "ETHtx";
 	}
 
 	/* External Mutators */

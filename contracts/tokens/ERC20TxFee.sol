@@ -18,12 +18,7 @@ contract ERC20TxFee is ERC20, IERC20TxFee {
 
 	/* Constructor */
 
-	constructor(
-		string memory name_,
-		string memory symbol_,
-		uint8 decimals_,
-		address feeLogic_
-	) ERC20(name_, symbol_, decimals_) {
+	constructor(address feeLogic_) {
 		require(feeLogic_ != address(0), "ERC20TxFee: feeLogic zero address");
 		_feeLogic = feeLogic_;
 	}
