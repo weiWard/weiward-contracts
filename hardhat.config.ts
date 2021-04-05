@@ -105,6 +105,7 @@ const config: HardhatUserConfig = {
 			'LPRewards',
 			'ProxyAdmin',
 			'TransparentUpgradeableProxy',
+			'ValuePerUNIV2',
 			'WETH9',
 		],
 	},
