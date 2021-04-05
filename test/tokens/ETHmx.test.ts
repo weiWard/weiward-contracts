@@ -40,7 +40,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 				proxyContract: 'OpenZeppelinTransparentProxy',
 				viaAdminContract: 'DefaultProxyAdmin',
 			},
-			args: [deployer],
+			args: [deployer, deployer],
 		});
 		const contract = ETHmx__factory.connect(result.address, deployerSigner);
 		const testerContract = contract.connect(testerSigner);

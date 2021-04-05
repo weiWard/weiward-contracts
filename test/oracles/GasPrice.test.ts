@@ -26,6 +26,7 @@ const loadFixture = deployments.createFixture(
 
 		// Deploy contract
 		const contract = await new MockGasPrice__factory(deployerSigner).deploy(
+			deployer,
 			initialUpdateThreshold,
 			initialGasPrice,
 		);

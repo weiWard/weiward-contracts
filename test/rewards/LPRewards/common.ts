@@ -131,6 +131,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		// Deploy contract
 		const contract = await new MockLPRewards__factory(deployerSigner).deploy(
+			deployer,
 			rewardsToken.address,
 		);
 		const testerContract = contract.connect(testerSigner);

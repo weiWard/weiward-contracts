@@ -49,6 +49,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	/* Constructor */
 
 	constructor(
+		address owner_,
 		address ethmxAddr_,
 		address wethAddr_,
 		uint256 accrualUpdateInterval_
@@ -57,6 +58,9 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		wethAddr = wethAddr_;
 		_arptSnapshots.push(0);
 		setAccrualUpdateInterval(accrualUpdateInterval_);
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	/* Public Views */

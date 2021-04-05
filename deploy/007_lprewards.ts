@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
 import { getDeployedWETH } from '../utils/weth';
+import { salt } from '../utils/create2';
 
 const contractName = 'LPRewards';
 
@@ -20,7 +21,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deploy(contractName, {
 		from: deployer,
 		log: true,
-		args: [wethAddr],
+		args: [deployer, wethAddr],
+		deterministicDeployment: salt,
 	});
 };
 

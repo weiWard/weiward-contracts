@@ -35,6 +35,7 @@ contract ETHmxMinter is Ownable, Pausable, IETHmxMinter {
 	/* Constructor */
 
 	constructor(
+		address owner_,
 		address ethmx_,
 		address ethtx_,
 		address ethtxAMM_,
@@ -51,6 +52,9 @@ contract ETHmxMinter is Ownable, Pausable, IETHmxMinter {
 		_earlyThreshold = earlyThreshold_;
 		_ethmx = ethmx_;
 		_weth = wethAddr_;
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	function mint() external payable override whenNotPaused {

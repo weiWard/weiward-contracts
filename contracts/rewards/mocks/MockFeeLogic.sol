@@ -7,10 +7,11 @@ contract MockFeeLogic is FeeLogic {
 	event Notified(uint256 amount);
 
 	constructor(
+		address owner_,
 		address recipient_,
 		uint128 feeRateNumerator,
 		uint128 feeRateDenominator
-	) FeeLogic(recipient_, feeRateNumerator, feeRateDenominator) {
+	) FeeLogic(owner_, recipient_, feeRateNumerator, feeRateDenominator) {
 		return;
 	}
 

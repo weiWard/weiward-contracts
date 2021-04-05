@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
 import { zeroAddress } from '../test/helpers/address';
+import { salt } from '../utils/create2';
 
 const contractName = 'ETHmx';
 
@@ -15,11 +16,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		from: deployer,
 		log: true,
 		proxy: {
+			owner: deployer,
 			methodName: 'init',
 			proxyContract: 'OpenZeppelinTransparentProxy',
 			viaAdminContract: 'DefaultProxyAdmin',
 		},
-		args: [zeroAddress],
+		args: [deployer, zeroAddress],
+		deterministicDeployment: salt,
 	});
 };
 

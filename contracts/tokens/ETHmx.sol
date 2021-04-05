@@ -27,19 +27,23 @@ contract ETHmx is
 
 	/* Constructor */
 
-	constructor(address minter_) {
-		init(minter_);
+	constructor(address owner_, address minter_) {
+		init(owner_, minter_);
 	}
 
 	/* Initializer */
 
-	function init(address minter_) public virtual initializer {
+	function init(address owner_, address minter_) public virtual initializer {
 		__Context_init_unchained();
 		__Ownable_init_unchained();
 		__Pausable_init_unchained();
 		__ERC20_init_unchained();
 
 		setMinter(minter_);
+
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	/* Modifiers */

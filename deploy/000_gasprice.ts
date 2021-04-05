@@ -2,6 +2,8 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { parseUnits } from 'ethers/lib/utils';
 
+import { salt } from '../utils/create2';
+
 const contractName = 'GasPrice';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -16,7 +18,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deploy(contractName, {
 		from: deployer,
 		log: true,
-		args: [updateThreshold, gasPrice],
+		args: [deployer, updateThreshold, gasPrice],
+		deterministicDeployment: salt,
 	});
 };
 

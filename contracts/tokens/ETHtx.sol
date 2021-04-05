@@ -27,23 +27,31 @@ contract ETHtx is
 
 	/* Constructor */
 
-	constructor(address feeLogic_, address minter_) {
-		init(feeLogic_, minter_);
+	constructor(
+		address owner_,
+		address feeLogic_,
+		address minter_
+	) {
+		init(owner_, feeLogic_, minter_);
 	}
 
 	/* Initializer */
 
-	function init(address feeLogic_, address minter_)
-		public
-		virtual
-		initializer
-	{
+	function init(
+		address owner_,
+		address feeLogic_,
+		address minter_
+	) public virtual initializer {
 		__Context_init_unchained();
 		__Ownable_init_unchained();
 		__Pausable_init_unchained();
 		__ERC20TxFee_init_unchained(feeLogic_);
 
 		setMinter(minter_);
+
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	/* Modifiers */

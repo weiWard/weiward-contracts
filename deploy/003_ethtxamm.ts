@@ -3,6 +3,7 @@ import { DeployFunction } from 'hardhat-deploy/types';
 
 import { getOrDeployWETH } from '../utils/weth';
 import { FeeLogic__factory } from '../build/types/ethers-v5';
+import { salt } from '../utils/create2';
 
 const contractName = 'ETHtxAMM';
 
@@ -28,17 +29,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		from: deployer,
 		log: true,
 		proxy: {
+			owner: deployer,
 			methodName: 'init',
 			proxyContract: 'OpenZeppelinTransparentProxy',
 			viaAdminContract: 'DefaultProxyAdmin',
 		},
 		args: [
+			deployer,
 			ethtx.address,
 			oracle.address,
 			wethAddr,
 			targetCRatioNum,
 			targetCRatioDen,
 		],
+		deterministicDeployment: salt,
 	});
 
 	const deployerSigner = ethers.provider.getSigner(deployer);

@@ -5,10 +5,11 @@ import "../ETHmxRewards.sol";
 
 contract MockETHmxRewards is ETHmxRewards {
 	constructor(
+		address owner_,
 		address ethmxAddr_,
 		address wethAddr_,
 		uint256 accrualUpdateInterval_
-	) ETHmxRewards(ethmxAddr_, wethAddr_, accrualUpdateInterval_) {
+	) ETHmxRewards(owner_, ethmxAddr_, wethAddr_, accrualUpdateInterval_) {
 		return;
 	}
 

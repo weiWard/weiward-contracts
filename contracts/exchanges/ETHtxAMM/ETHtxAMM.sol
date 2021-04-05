@@ -34,18 +34,27 @@ contract ETHtxAMM is
 	/* Constructor */
 
 	constructor(
+		address owner_,
 		address ethtx_,
 		address gasOracle_,
 		address weth_,
 		uint128 targetCRatioNum_,
 		uint128 targetCRatioDen_
 	) {
-		init(ethtx_, gasOracle_, weth_, targetCRatioNum_, targetCRatioDen_);
+		init(
+			owner_,
+			ethtx_,
+			gasOracle_,
+			weth_,
+			targetCRatioNum_,
+			targetCRatioDen_
+		);
 	}
 
 	/* Initializer */
 
 	function init(
+		address owner_,
 		address ethtx_,
 		address gasOracle_,
 		address weth_,
@@ -60,6 +69,10 @@ contract ETHtxAMM is
 		setGasOracle(gasOracle_);
 		setTargetCRatio(targetCRatioNum_, targetCRatioDen_);
 		setWETH(weth_);
+
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	/* Fallbacks */
