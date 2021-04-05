@@ -22,12 +22,16 @@ contract FeeLogic is Ownable, IFeeLogic {
 	/* Constructor */
 
 	constructor(
+		address owner_,
 		address recipient_,
 		uint128 feeRateNumerator,
 		uint128 feeRateDenominator
 	) Ownable() {
 		setRecipient(recipient_);
 		setFeeRate(feeRateNumerator, feeRateDenominator);
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	/* External Views */

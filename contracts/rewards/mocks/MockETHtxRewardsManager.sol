@@ -4,9 +4,11 @@ pragma solidity 0.7.6;
 import "../ETHtxRewardsManager.sol";
 
 contract MockETHtxRewardsManager is ETHtxRewardsManager {
-	constructor(address defaultRecipient_, address rewardsToken_)
-		ETHtxRewardsManager(defaultRecipient_, rewardsToken_)
-	{
+	constructor(
+		address owner_,
+		address defaultRecipient_,
+		address rewardsToken_
+	) ETHtxRewardsManager(owner_, defaultRecipient_, rewardsToken_) {
 		return;
 	}
 

@@ -21,10 +21,14 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 
 	/* Constructor */
 
-	constructor(address defaultRecipient_, address rewardsToken_)
-		RewardsManager(defaultRecipient_, rewardsToken_)
-	{
-		return;
+	constructor(
+		address owner_,
+		address defaultRecipient_,
+		address rewardsToken_
+	) RewardsManager(defaultRecipient_, rewardsToken_) {
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	/* External Mutators */

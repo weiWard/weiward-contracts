@@ -74,10 +74,11 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const contract = await new MockETHtxRewardsManager__factory(
 			deployerSigner,
-		).deploy(defaultRecipient, weth.address);
+		).deploy(deployer, defaultRecipient, weth.address);
 		const testerContract = contract.connect(testerSigner);
 
 		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
+			deployer,
 			contract.address,
 			feeNumerator,
 			feeDenominator,
@@ -85,16 +86,19 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		await feeLogic.setExempt(contract.address, true);
 
 		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
+			deployer,
 			oracleUpdateInterval,
 			defaultGasPrice,
 		);
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
+			deployer,
 			feeLogic.address,
 			zeroAddress, // ETHmx
 		);
 
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
+			deployer,
 			ethtx.address,
 			oracle.address,
 			weth.address,
@@ -103,9 +107,13 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		);
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
+			deployer,
+			zeroAddress,
+		);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
+			deployer,
 			ethmx.address,
 			ethtx.address,
 			ethtxAMM.address,
@@ -120,7 +128,12 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethmxRewards = await new MockETHmxRewards__factory(
 			deployerSigner,
-		).deploy(ethmx.address, weth.address, ethmxAccrualUpdateInterval);
+		).deploy(
+			deployer,
+			ethmx.address,
+			weth.address,
+			ethmxAccrualUpdateInterval,
+		);
 
 		const { pair: uniPool } = await uniswapPairFixture(deployer, ethtx, weth);
 		const valuePerUNIV2 = await new ValuePerUNIV2__factory(
@@ -128,6 +141,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		).deploy(uniPool.address, weth.address);
 
 		const lpRewards = await new MockLPRewards__factory(deployerSigner).deploy(
+			deployer,
 			weth.address,
 		);
 		await lpRewards.addToken(uniPool.address, valuePerUNIV2.address);

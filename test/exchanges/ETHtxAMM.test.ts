@@ -106,12 +106,14 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const testerSigner = waffle.provider.getSigner(tester);
 
 		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
+			deployer,
 			feeRecipient,
 			feeNumerator,
 			feeDenominator,
 		);
 
 		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
+			deployer,
 			oracleUpdateInterval,
 			defaultGasPrice,
 		);
@@ -120,11 +122,15 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const weth = await new WETH9__factory(deployerSigner).deploy();
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
+			deployer,
 			feeLogic.address,
 			zeroAddress, // ETHmx minter
 		);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
+			deployer,
+			zeroAddress,
+		);
 
 		const result = await deploy('ETHtxAMMTest', {
 			contract: 'ETHtxAMM',
@@ -136,6 +142,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 				viaAdminContract: 'DefaultProxyAdmin',
 			},
 			args: [
+				deployer,
 				ethtx.address,
 				oracle.address,
 				weth.address,
@@ -146,6 +153,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const contract = ETHtxAMM__factory.connect(result.address, deployerSigner);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
+			deployer,
 			ethmx.address,
 			ethtx.address,
 			contract.address,

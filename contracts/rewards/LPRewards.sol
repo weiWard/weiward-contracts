@@ -59,8 +59,11 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	/* Constructor */
 
-	constructor(address rewardsToken_) Ownable() {
+	constructor(address owner_, address rewardsToken_) Ownable() {
 		rewardsToken = rewardsToken_;
+		if (owner_ != owner()) {
+			transferOwnership(owner_);
+		}
 	}
 
 	/* Modifiers */

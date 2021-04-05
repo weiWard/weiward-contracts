@@ -4,9 +4,11 @@ pragma solidity 0.7.6;
 import "../GasPrice.sol";
 
 contract MockGasPrice is GasPrice {
-	constructor(uint256 _updateThreshold, uint256 _gasPrice)
-		GasPrice(_updateThreshold, _gasPrice)
-	{
+	constructor(
+		address admin,
+		uint256 _updateThreshold,
+		uint256 _gasPrice
+	) GasPrice(admin, _updateThreshold, _gasPrice) {
 		return;
 	}
 

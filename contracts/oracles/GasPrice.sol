@@ -18,8 +18,12 @@ contract GasPrice is AccessControl, IGasPrice {
 	uint256 public override updateThreshold;
 	uint256 public override updatedAt;
 
-	constructor(uint256 _updateThreshold, uint256 _gasPrice) {
-		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+	constructor(
+		address admin,
+		uint256 _updateThreshold,
+		uint256 _gasPrice
+	) {
+		_setupRole(DEFAULT_ADMIN_ROLE, admin);
 		_setUpdateThreshold(_updateThreshold);
 		_setGasPrice(_gasPrice);
 	}

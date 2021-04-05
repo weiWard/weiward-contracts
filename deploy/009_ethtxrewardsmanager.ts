@@ -6,6 +6,7 @@ import {
 	ETHtxRewardsManager__factory,
 	FeeLogic__factory,
 } from '../build/types/ethers-v5';
+import { salt } from '../utils/create2';
 
 const contractName = 'ETHtxRewardsManager';
 
@@ -31,7 +32,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const result = await deploy(contractName, {
 		from: deployer,
 		log: true,
-		args: [defaultRecipient, wethAddr],
+		args: [deployer, defaultRecipient, wethAddr],
+		deterministicDeployment: salt,
 	});
 
 	const deployerSigner = ethers.provider.getSigner(deployer);

@@ -5,6 +5,7 @@ import { getOrDeployWETH } from '../utils/weth';
 import { getOrDeploySushiPair } from '../utils/sushi';
 import { zeroAddress } from '../test/helpers/address';
 import { LPRewards__factory } from '../build/types/ethers-v5';
+import { salt } from '../utils/create2';
 
 const contractName = 'ValuePerSushi';
 
@@ -44,6 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		from: deployer,
 		log: true,
 		args: [pairAddr, wethAddr],
+		deterministicDeployment: salt,
 	});
 
 	const lpRewards = LPRewards__factory.connect(lpRewardsAddr, deployerSigner);

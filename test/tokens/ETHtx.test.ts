@@ -39,6 +39,7 @@ const loadFixture = deployments.createFixture(
 		const testerSigner = waffle.provider.getSigner(tester);
 
 		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
+			deployer,
 			feeRecipient,
 			feeNumerator,
 			feeDenominator,
@@ -52,7 +53,7 @@ const loadFixture = deployments.createFixture(
 				proxyContract: 'OpenZeppelinTransparentProxy',
 				viaAdminContract: 'DefaultProxyAdmin',
 			},
-			args: [feeLogic.address, deployer],
+			args: [deployer, feeLogic.address, deployer],
 		});
 		const contract = MockETHtx__factory.connect(
 			result.address,

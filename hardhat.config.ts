@@ -1,29 +1,12 @@
 import { HardhatUserConfig } from 'hardhat/config';
-import dotenv from 'dotenv';
-import { HDAccountsUserConfig } from 'hardhat/types';
+import 'dotenv/config';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-deploy';
 import 'hardhat-abi-exporter';
 
-dotenv.config();
-
-// Use the ganache mnemonic to generate hardhat accounts. We can then verify
-// deterministic deployments across both networks.
-const insecure_mnemonic =
-	'test test test test test test test test test test test junk';
-const debugAccounts: HDAccountsUserConfig = { mnemonic: insecure_mnemonic };
-
-// Read environment to setup accounts for deploying
-const mnemonic = process.env.MNEMONIC ?? insecure_mnemonic;
-const accounts: HDAccountsUserConfig = { mnemonic };
-const deployer = process.env.DEPLOYER_ACCOUNT_INDEX
-	? parseInt(process.env.DEPLOYER_ACCOUNT_INDEX, 10)
-	: 0;
-const tester = process.env.TESTER_ACCOUNT_INDEX
-	? parseInt(process.env.TESTER_ACCOUNT_INDEX, 10)
-	: 1;
+import { node_url, accounts, debugAccounts } from './utils/network';
 
 const config: HardhatUserConfig = {
 	defaultNetwork: 'hardhat',
@@ -34,34 +17,34 @@ const config: HardhatUserConfig = {
 			saveDeployments: false,
 		},
 		localhost: {
-			url: 'http://127.0.0.1:8545',
+			url: node_url('localhost'),
 			accounts: debugAccounts,
 			live: false,
 		},
 		ganache: {
-			url: 'http://127.0.0.1:7545',
+			url: node_url('ganache'),
 			accounts: debugAccounts,
 			live: false,
 		},
 		goerli: {
-			url: `https://goerli.infura.io/v3/${process.env.INFURA_TOKEN}`,
-			accounts,
+			url: node_url('goerli'),
+			accounts: accounts('goerli'),
 		},
 		kovan: {
-			url: `https://kovan.infura.io/v3/${process.env.INFURA_TOKEN}`,
-			accounts,
+			url: node_url('kovan'),
+			accounts: accounts('kovan'),
 		},
 		rinkeby: {
-			url: `https://rinkeby.infura.io/v3/${process.env.INFURA_TOKEN}`,
-			accounts,
+			url: node_url('rinkeby'),
+			accounts: accounts('rinkeby'),
 		},
 		ropsten: {
-			url: `https://ropsten.infura.io/v3/${process.env.INFURA_TOKEN}`,
-			accounts,
+			url: node_url('ropsten'),
+			accounts: accounts('ropsten'),
 		},
 		mainnet: {
-			url: `https://mainnet.infura.io/v3/${process.env.INFURA_TOKEN}`,
-			accounts,
+			url: node_url('mainnet'),
+			accounts: accounts('mainnet'),
 		},
 	},
 	solidity: {
@@ -85,9 +68,9 @@ const config: HardhatUserConfig = {
 	// hardhat-deploy
 	namedAccounts: {
 		// deployer uses first account by default
-		deployer,
+		deployer: 0,
 		// tests use this account when the deployer is undesirable
-		tester,
+		tester: 1,
 	},
 	abiExporter: {
 		path: './build/abi',

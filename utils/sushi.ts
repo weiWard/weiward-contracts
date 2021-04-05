@@ -4,12 +4,13 @@ import { Contract } from '@ethersproject/contracts';
 import UniswapV2Factory from '@sushiswap/core/build/contracts/UniswapV2Factory.json';
 
 import { zeroAddress } from '../test/helpers/address';
+import { salt } from './create2';
 
 const sushiFactoryAddresses = new Map([
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
 	['3', undefined], // ropsten
-	['1', '0x0'], // mainnet
+	['1', zeroAddress], // mainnet
 ]);
 
 const sushiPairAddresses = new Map([
@@ -47,6 +48,7 @@ export async function getOrDeploySushiFactory(
 				from: deployer,
 				log: true,
 				args: [deployer],
+				deterministicDeployment: salt,
 			});
 			address = result.address;
 			break;

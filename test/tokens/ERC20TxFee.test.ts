@@ -40,6 +40,7 @@ const loadFixture = deployments.createFixture(
 		const testerSigner = waffle.provider.getSigner(tester);
 
 		const feeLogic = await new MockFeeLogic__factory(deployerSigner).deploy(
+			deployer,
 			feeRecipient,
 			feeNumerator,
 			feeDenominator,

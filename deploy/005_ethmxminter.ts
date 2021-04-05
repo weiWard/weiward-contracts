@@ -4,6 +4,7 @@ import { parseEther, parseUnits } from 'ethers/lib/utils';
 
 import { getDeployedWETH } from '../utils/weth';
 import { ETHmx__factory, ETHtx__factory } from '../build/types/ethers-v5';
+import { salt } from '../utils/create2';
 
 const contractName = 'ETHmxMinter';
 
@@ -31,6 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		from: deployer,
 		log: true,
 		args: [
+			deployer,
 			ethmxAddr,
 			ethtxAddr,
 			ethtxAMMAddr,
@@ -40,6 +42,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			roiDen,
 			earlyThreshold,
 		],
+		deterministicDeployment: salt,
 	});
 
 	const deployerSigner = ethers.provider.getSigner(deployer);

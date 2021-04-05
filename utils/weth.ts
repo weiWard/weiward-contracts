@@ -1,5 +1,7 @@
 import { DeploymentsExtension } from 'hardhat-deploy/dist/types';
 
+import { salt } from './create2';
+
 export const wethAddresses = new Map([
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
@@ -29,6 +31,7 @@ export async function getOrDeployWETH(
 			const result = await deploy('WETH9', {
 				from: deployer,
 				log: true,
+				deterministicDeployment: salt,
 			});
 			wethAddr = result.address;
 			break;

@@ -56,6 +56,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const testerSigner = waffle.provider.getSigner(tester);
 
 		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
+			deployer,
 			feeRecipient,
 			75,
 			1000,
@@ -68,11 +69,13 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const weth = await new WETH9__factory(deployerSigner).deploy();
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
+			deployer,
 			feeLogic.address,
 			zeroAddress, // ethmx address
 		);
 
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
+			deployer,
 			ethtx.address,
 			oracle.address,
 			weth.address,
@@ -81,9 +84,13 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		);
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(zeroAddress);
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
+			deployer,
+			zeroAddress,
+		);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
+			deployer,
 			ethmx.address,
 			ethtx.address,
 			ethtxAMM.address,
@@ -98,7 +105,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const contract = await new MockETHmxRewards__factory(
 			deployerSigner,
-		).deploy(ethmx.address, weth.address, accrualUpdateInterval);
+		).deploy(deployer, ethmx.address, weth.address, accrualUpdateInterval);
 		const testerContract = contract.connect(testerSigner);
 
 		return {
