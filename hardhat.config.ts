@@ -1,27 +1,12 @@
 import { HardhatUserConfig } from 'hardhat/config';
-import dotenv from 'dotenv';
-import { HDAccountsUserConfig } from 'hardhat/types';
+import 'dotenv/config';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-deploy';
 import 'hardhat-abi-exporter';
 
-dotenv.config();
-
-// Use the ganache mnemonic to generate hardhat accounts. We can then verify
-// deterministic deployments across both networks.
-const insecure_mnemonic =
-	'test test test test test test test test test test test junk';
-const debugAccounts: HDAccountsUserConfig = { mnemonic: insecure_mnemonic };
-
-// Read environment to setup accounts for deploying
-const deployerKey = process.env.DEPLOYER_KEY ? process.env.DEPLOYER_KEY : '';
-const accounts = [deployerKey];
-
-function nodeUrl(networkName: string): string {
-	return `https://${networkName}.infura.io/v3/${process.env.INFURA_TOKEN}`;
-}
+import { node_url, accounts, debugAccounts } from './utils/network';
 
 const config: HardhatUserConfig = {
 	defaultNetwork: 'hardhat',
@@ -32,34 +17,34 @@ const config: HardhatUserConfig = {
 			saveDeployments: false,
 		},
 		localhost: {
-			url: 'http://127.0.0.1:8545',
+			url: node_url('localhost'),
 			accounts: debugAccounts,
 			live: false,
 		},
 		ganache: {
-			url: 'http://127.0.0.1:7545',
+			url: node_url('ganache'),
 			accounts: debugAccounts,
 			live: false,
 		},
 		goerli: {
-			url: nodeUrl('goerli'),
-			accounts,
+			url: node_url('goerli'),
+			accounts: accounts('goerli'),
 		},
 		kovan: {
-			url: nodeUrl('kovan'),
-			accounts,
+			url: node_url('kovan'),
+			accounts: accounts('kovan'),
 		},
 		rinkeby: {
-			url: nodeUrl('rinkeby'),
-			accounts,
+			url: node_url('rinkeby'),
+			accounts: accounts('rinkeby'),
 		},
 		ropsten: {
-			url: nodeUrl('ropsten'),
-			accounts,
+			url: node_url('ropsten'),
+			accounts: accounts('ropsten'),
 		},
 		mainnet: {
-			url: nodeUrl('mainnet'),
-			accounts,
+			url: node_url('mainnet'),
+			accounts: accounts('mainnet'),
 		},
 	},
 	solidity: {
