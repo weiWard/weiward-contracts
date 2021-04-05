@@ -16,14 +16,12 @@ const insecure_mnemonic =
 const debugAccounts: HDAccountsUserConfig = { mnemonic: insecure_mnemonic };
 
 // Read environment to setup accounts for deploying
-const mnemonic = process.env.MNEMONIC ?? insecure_mnemonic;
-const accounts: HDAccountsUserConfig = { mnemonic };
-const deployer = process.env.DEPLOYER_ACCOUNT_INDEX
-	? parseInt(process.env.DEPLOYER_ACCOUNT_INDEX, 10)
-	: 0;
-const tester = process.env.TESTER_ACCOUNT_INDEX
-	? parseInt(process.env.TESTER_ACCOUNT_INDEX, 10)
-	: 1;
+const deployerKey = process.env.DEPLOYER_KEY ? process.env.DEPLOYER_KEY : '';
+const accounts = [deployerKey];
+
+function nodeUrl(networkName: string): string {
+	return `https://${networkName}.infura.io/v3/${process.env.INFURA_TOKEN}`;
+}
 
 const config: HardhatUserConfig = {
 	defaultNetwork: 'hardhat',
@@ -44,23 +42,23 @@ const config: HardhatUserConfig = {
 			live: false,
 		},
 		goerli: {
-			url: `https://goerli.infura.io/v3/${process.env.INFURA_TOKEN}`,
+			url: nodeUrl('goerli'),
 			accounts,
 		},
 		kovan: {
-			url: `https://kovan.infura.io/v3/${process.env.INFURA_TOKEN}`,
+			url: nodeUrl('kovan'),
 			accounts,
 		},
 		rinkeby: {
-			url: `https://rinkeby.infura.io/v3/${process.env.INFURA_TOKEN}`,
+			url: nodeUrl('rinkeby'),
 			accounts,
 		},
 		ropsten: {
-			url: `https://ropsten.infura.io/v3/${process.env.INFURA_TOKEN}`,
+			url: nodeUrl('ropsten'),
 			accounts,
 		},
 		mainnet: {
-			url: `https://mainnet.infura.io/v3/${process.env.INFURA_TOKEN}`,
+			url: nodeUrl('mainnet'),
 			accounts,
 		},
 	},
@@ -85,9 +83,9 @@ const config: HardhatUserConfig = {
 	// hardhat-deploy
 	namedAccounts: {
 		// deployer uses first account by default
-		deployer,
+		deployer: 0,
 		// tests use this account when the deployer is undesirable
-		tester,
+		tester: 1,
 	},
 	abiExporter: {
 		path: './build/abi',
