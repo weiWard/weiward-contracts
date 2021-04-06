@@ -27,8 +27,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		args: [deployer, ethmx.address, wethAddr, accrualUpdateInterval],
 		deterministicDeployment: salt,
 	});
+
+	// Never execute twice
+	return true;
 };
 
 export default func;
 func.tags = [contractName];
+func.id = contractName;
 func.dependencies = ['ETHmx'];

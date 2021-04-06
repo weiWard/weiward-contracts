@@ -40,6 +40,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		throw new Error('Sushi pair address is zero address for current network');
 	}
 
+	// eslint-disable-next-line no-console
+	console.log(`SLP ETHtx-WETH: ${pairAddr}`);
+
 	const result = await deploy(contractName, {
 		contract: 'ValuePerUNIV2',
 		from: deployer,
@@ -48,10 +51,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		deterministicDeployment: salt,
 	});
 
-	const lpRewards = LPRewards__factory.connect(lpRewardsAddr, deployerSigner);
-	await lpRewards.addToken(pairAddr, result.address);
+	if (result.newlyDeployed) {
+		const lpRewards = LPRewards__factory.connect(
+			lpRewardsAddr,
+			deployerSigner,
+		);
+		await lpRewards.addToken(pairAddr, result.address);
+	}
+
+	// Never execute twice
+	return true;
 };
 
 export default func;
 func.tags = [contractName];
+func.id = contractName;
 func.dependencies = ['ETHtx', 'LPRewards'];

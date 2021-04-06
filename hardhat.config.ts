@@ -12,6 +12,7 @@ const config: HardhatUserConfig = {
 	defaultNetwork: 'hardhat',
 	networks: {
 		hardhat: {
+			chainId: 1337, // compatibility with metamask
 			accounts: debugAccounts,
 			live: false, // default for localhost & hardhat
 			saveDeployments: false,
@@ -71,12 +72,20 @@ const config: HardhatUserConfig = {
 		deployer: 0,
 		// tests use this account when the deployer is undesirable
 		tester: 1,
+		// Gas oracle service
+		gasOracle: {
+			// mainnet
+			1: '',
+			// ropsten
+			3: '0x97D46CE03376a059C3Fb84c6c297080166b06E0b',
+		},
 	},
 	abiExporter: {
 		path: './build/abi',
 		clear: true,
 		flat: true,
 		only: [
+			'ERC20',
 			'ETHtx',
 			'ETHtxAMM',
 			'ETHtxRewardsManager',

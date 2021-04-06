@@ -36,24 +36,30 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		deterministicDeployment: salt,
 	});
 
-	const deployerSigner = ethers.provider.getSigner(deployer);
+	if (result.newlyDeployed) {
+		const deployerSigner = ethers.provider.getSigner(deployer);
 
-	const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
-	await feeLogic.setRecipient(result.address);
-	await feeLogic.setExempt(result.address, true);
+		const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
+		await feeLogic.setRecipient(result.address);
+		await feeLogic.setExempt(result.address, true);
 
-	const ethtxRewardsMgr = ETHtxRewardsManager__factory.connect(
-		result.address,
-		deployerSigner,
-	);
-	await ethtxRewardsMgr.setEthmxRewardsAddress(ethmxRewardsAddr);
-	await ethtxRewardsMgr.setEthtxAddress(ethtxAddr);
-	await ethtxRewardsMgr.setEthtxAMMAddress(ethtxAMMAddr);
-	await ethtxRewardsMgr.setLPRewardsAddress(lpRewardsAddr);
+		const ethtxRewardsMgr = ETHtxRewardsManager__factory.connect(
+			result.address,
+			deployerSigner,
+		);
+		await ethtxRewardsMgr.setEthmxRewardsAddress(ethmxRewardsAddr);
+		await ethtxRewardsMgr.setEthtxAddress(ethtxAddr);
+		await ethtxRewardsMgr.setEthtxAMMAddress(ethtxAMMAddr);
+		await ethtxRewardsMgr.setLPRewardsAddress(lpRewardsAddr);
+	}
+
+	// Never execute twice
+	return true;
 };
 
 export default func;
 func.tags = [contractName];
+func.id = contractName;
 func.dependencies = [
 	'ETHmxRewards',
 	'ETHtx',

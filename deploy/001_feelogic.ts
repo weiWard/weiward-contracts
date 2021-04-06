@@ -22,7 +22,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		args: [deployer, feeRecipient, feeNum, feeDen],
 		deterministicDeployment: salt,
 	});
+
+	// Never execute twice
+	return true;
 };
 
 export default func;
 func.tags = [contractName];
+func.id = contractName;

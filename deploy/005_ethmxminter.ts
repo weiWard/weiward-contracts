@@ -45,15 +45,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		deterministicDeployment: salt,
 	});
 
-	const deployerSigner = ethers.provider.getSigner(deployer);
+	if (result.newlyDeployed) {
+		const deployerSigner = ethers.provider.getSigner(deployer);
 
-	const ethmx = ETHmx__factory.connect(ethmxAddr, deployerSigner);
-	await ethmx.setMinter(result.address);
+		const ethmx = ETHmx__factory.connect(ethmxAddr, deployerSigner);
+		await ethmx.setMinter(result.address);
 
-	const ethtx = ETHtx__factory.connect(ethtxAddr, deployerSigner);
-	await ethtx.setMinter(result.address);
+		const ethtx = ETHtx__factory.connect(ethtxAddr, deployerSigner);
+		await ethtx.setMinter(result.address);
+	}
+
+	// Never execute twice
+	return true;
 };
 
 export default func;
 func.tags = [contractName];
+func.id = contractName;
 func.dependencies = ['ETHmx', 'ETHtx', 'ETHtxAMM'];

@@ -45,11 +45,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		deterministicDeployment: salt,
 	});
 
-	const deployerSigner = ethers.provider.getSigner(deployer);
-	const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
-	await feeLogic.setExempt(result.address, true);
+	if (result.newlyDeployed) {
+		const deployerSigner = ethers.provider.getSigner(deployer);
+		const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
+		await feeLogic.setExempt(result.address, true);
+	}
+
+	// Never execute twice
+	return true;
 };
 
 export default func;
 func.tags = [contractName];
+func.id = contractName;
 func.dependencies = ['ETHtx', 'FeeLogic', 'GasPrice'];
