@@ -9,8 +9,8 @@ import { salt } from './create2';
 const sushiFactoryAddresses = new Map([
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
-	['3', undefined], // ropsten
-	['1', zeroAddress], // mainnet
+	['3', '0xc35DADB65012eC5796536bD9864eD8773aBc74C4'], // ropsten
+	['1', '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac'], // mainnet
 ]);
 
 const sushiPairAddresses = new Map([
@@ -33,8 +33,6 @@ export async function getOrDeploySushiFactory(
 		case '42':
 		// rinkeby
 		case '4':
-		// ropsten
-		case '3':
 		// ganache
 		case '1337':
 		// hardhat

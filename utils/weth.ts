@@ -5,7 +5,7 @@ import { salt } from './create2';
 export const wethAddresses = new Map([
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
-	['3', undefined], // ropsten
+	['3', '0xc778417E063141139Fce010982780140Aa0cD5Ab'], // ropsten
 	['1', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'], // mainnet
 ]);
 
@@ -21,8 +21,6 @@ export async function getOrDeployWETH(
 		case '42':
 		// rinkeby
 		case '4':
-		// ropsten
-		case '3':
 		// ganache
 		case '1337':
 		// hardhat
@@ -56,8 +54,6 @@ export async function getDeployedWETH(
 		case '42':
 		// rinkeby
 		case '4':
-		// ropsten
-		case '3':
 		// ganache
 		case '1337':
 		// hardhat
