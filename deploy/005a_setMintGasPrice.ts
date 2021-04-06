@@ -32,5 +32,5 @@ func.tags = ['setMintGasPrice'];
 func.id = 'setMintGasPrice';
 func.dependencies = ['ETHmxMinter'];
 func.skip = async function (): Promise<boolean> {
-	return false;
+	return true;
 };

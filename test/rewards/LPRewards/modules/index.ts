@@ -11,6 +11,7 @@ export { default as redeemAllRewardsFrom } from './redeemAllRewardsFrom';
 export { default as redeemReward } from './redeemReward';
 export { default as redeemRewardFrom } from './redeemRewardFrom';
 export { default as removeToken } from './removeToken';
+export { default as setRewardsToken } from './setRewardsToken';
 export { default as sharesFor } from './sharesFor';
 export { default as sharesPerToken } from './sharesPerToken';
 export { default as stake } from './stake';

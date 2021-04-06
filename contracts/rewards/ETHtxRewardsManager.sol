@@ -24,8 +24,16 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 	constructor(
 		address owner_,
 		address defaultRecipient_,
-		address rewardsToken_
+		address rewardsToken_,
+		address ethmxRewards_,
+		address ethtx_,
+		address ethtxAMM_,
+		address lpRewards_
 	) RewardsManager(defaultRecipient_, rewardsToken_) {
+		setEthmxRewardsAddress(ethmxRewards_);
+		setEthtxAddress(ethtx_);
+		setEthtxAMMAddress(ethtxAMM_);
+		setLPRewardsAddress(lpRewards_);
 		if (owner_ != owner()) {
 			transferOwnership(owner_);
 		}
@@ -137,6 +145,6 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 		Shares storage s = _shares[account];
 		uint256 amount = totalRewards.mul(s.active).div(totalShares_);
 
-		IERC20(rewardsToken).safeTransfer(account, amount);
+		IERC20(_rewardsToken).safeTransfer(account, amount);
 	}
 }

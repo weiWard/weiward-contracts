@@ -685,6 +685,28 @@ describe(contractName, function () {
 		});
 	});
 
+	describe('setRewardsToken', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			await expect(
+				testerContract.setRewardsToken(zeroAddress),
+			).to.be.revertedWith('caller is not the owner');
+		});
+
+		it('should set rewardsToken', async function () {
+			const { contract } = fixture;
+			await contract.setRewardsToken(zeroAddress);
+			expect(await contract.rewardsToken()).to.eq(zeroAddress);
+		});
+
+		it('should emit RewardsTokenSet event', async function () {
+			const { contract, deployer } = fixture;
+			await expect(contract.setRewardsToken(zeroAddress))
+				.to.emit(contract, 'RewardsTokenSet')
+				.withArgs(deployer, zeroAddress);
+		});
+	});
+
 	describe('setShares', function () {
 		it('can only be called by owner', async function () {
 			const { testerContract, tester } = fixture;

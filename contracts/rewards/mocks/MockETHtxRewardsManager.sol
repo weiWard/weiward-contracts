@@ -7,8 +7,22 @@ contract MockETHtxRewardsManager is ETHtxRewardsManager {
 	constructor(
 		address owner_,
 		address defaultRecipient_,
-		address rewardsToken_
-	) ETHtxRewardsManager(owner_, defaultRecipient_, rewardsToken_) {
+		address rewardsToken_,
+		address ethmxRewards_,
+		address ethtx_,
+		address ethtxAMM_,
+		address lpRewards_
+	)
+		ETHtxRewardsManager(
+			owner_,
+			defaultRecipient_,
+			rewardsToken_,
+			ethmxRewards_,
+			ethtx_,
+			ethtxAMM_,
+			lpRewards_
+		)
+	{
 		return;
 	}
 
