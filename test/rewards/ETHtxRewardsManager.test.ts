@@ -45,9 +45,9 @@ const roiDenominator = 1;
 const targetCRatioNumerator = 2;
 const targetCRatioDenominator = 1;
 const oracleUpdateInterval = 3600;
-const ethmxRewardsShares = 45;
-const lpRewardsShares = 20;
 const defaultShares = 10;
+const ethmxRewardsShares = 45 + defaultShares;
+const lpRewardsShares = 20;
 const totalShares = ethmxRewardsShares + lpRewardsShares + defaultShares;
 
 interface Fixture {
@@ -72,18 +72,12 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const weth = await new WETH9__factory(deployerSigner).deploy();
 
-		const contract = await new MockETHtxRewardsManager__factory(
-			deployerSigner,
-		).deploy(deployer, defaultRecipient, weth.address);
-		const testerContract = contract.connect(testerSigner);
-
 		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
 			deployer,
-			contract.address,
+			defaultRecipient,
 			feeNumerator,
 			feeDenominator,
 		);
-		await feeLogic.setExempt(contract.address, true);
 
 		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
 			deployer,
@@ -146,10 +140,21 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		);
 		await lpRewards.addToken(uniPool.address, valuePerUNIV2.address);
 
-		await contract.setEthmxRewardsAddress(ethmxRewards.address);
-		await contract.setEthtxAMMAddress(ethtxAMM.address);
-		await contract.setEthtxAddress(ethtx.address);
-		await contract.setLPRewardsAddress(lpRewards.address);
+		const contract = await new MockETHtxRewardsManager__factory(
+			deployerSigner,
+		).deploy(
+			deployer,
+			defaultRecipient,
+			weth.address,
+			ethmxRewards.address,
+			ethtx.address,
+			ethtxAMM.address,
+			lpRewards.address,
+		);
+		const testerContract = contract.connect(testerSigner);
+
+		await feeLogic.setRecipient(contract.address);
+		await feeLogic.setExempt(contract.address, true);
 
 		await contract.setShares(defaultRecipient, defaultShares, true);
 		await contract.setShares(ethmxRewards.address, ethmxRewardsShares, true);

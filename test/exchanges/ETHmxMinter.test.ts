@@ -578,6 +578,56 @@ describe(contractName, function () {
 		});
 	});
 
+	describe('setEarlyThreshold', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			const value = 1;
+			await expect(testerContract.setEarlyThreshold(value)).to.be.revertedWith(
+				'caller is not the owner',
+			);
+		});
+
+		it('should set earlyThreshold', async function () {
+			const { contract } = fixture;
+			const value = 1;
+			await contract.setEarlyThreshold(value);
+			expect(await contract.earlyThreshold()).to.eq(value);
+		});
+
+		it('should emit EarlyThresholdSet event', async function () {
+			const { contract, deployer } = fixture;
+			const value = 1;
+			await expect(contract.setEarlyThreshold(value))
+				.to.emit(contract, 'EarlyThresholdSet')
+				.withArgs(deployer, value);
+		});
+	});
+
+	describe('setEthmxAddress', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			const address = zeroPadAddress('0x1');
+			await expect(testerContract.setEthmxAddress(address)).to.be.revertedWith(
+				'caller is not the owner',
+			);
+		});
+
+		it('should set ETHmx address', async function () {
+			const { contract } = fixture;
+			const address = zeroPadAddress('0x1');
+			await contract.setEthmxAddress(address);
+			expect(await contract.ethmx()).to.eq(address);
+		});
+
+		it('should emit EthmxAddressSet event', async function () {
+			const { contract, deployer } = fixture;
+			const address = zeroPadAddress('0x1');
+			await expect(contract.setEthmxAddress(address))
+				.to.emit(contract, 'EthmxAddressSet')
+				.withArgs(deployer, address);
+		});
+	});
+
 	describe('setEthtxAddress', function () {
 		it('should set ETHtx address', async function () {
 			const { contract } = fixture;
@@ -685,6 +735,31 @@ describe(contractName, function () {
 			await expect(testerContract.setRoi(roiNum, roiDen)).to.be.revertedWith(
 				'caller is not the owner',
 			);
+		});
+	});
+
+	describe('setWethAddress', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+			const address = zeroPadAddress('0x1');
+			await expect(testerContract.setWethAddress(address)).to.be.revertedWith(
+				'caller is not the owner',
+			);
+		});
+
+		it('should set WETH address', async function () {
+			const { contract } = fixture;
+			const address = zeroPadAddress('0x1');
+			await contract.setWethAddress(address);
+			expect(await contract.weth()).to.eq(address);
+		});
+
+		it('should emit WethAddressSet event', async function () {
+			const { contract, deployer } = fixture;
+			const address = zeroPadAddress('0x1');
+			await expect(contract.setWethAddress(address))
+				.to.emit(contract, 'WethAddressSet')
+				.withArgs(deployer, address);
 		});
 	});
 

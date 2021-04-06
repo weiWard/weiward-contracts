@@ -14,12 +14,10 @@ export default function run(): void {
 
 		expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
 
-		expect(await contract.ethmxAddr(), 'ETHmx address mismatch').to.eq(
+		expect(await contract.ethmx(), 'ETHmx address mismatch').to.eq(
 			ethmx.address,
 		);
-		expect(await contract.wethAddr(), 'WETH address mismatch').to.eq(
-			weth.address,
-		);
+		expect(await contract.weth(), 'WETH address mismatch').to.eq(weth.address);
 		expect(
 			await contract.accrualUpdateInterval(),
 			'accrualUpdateInterval mismatch',

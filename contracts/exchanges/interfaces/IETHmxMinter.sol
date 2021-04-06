@@ -48,6 +48,10 @@ interface IETHmxMinter {
 		uint256 amount
 	) external;
 
+	function setEarlyThreshold(uint256 value) external;
+
+	function setEthmxAddress(address addr) external;
+
 	function setEthtxAddress(address addr) external;
 
 	function setEthtxAMMAddress(address addr) external;
@@ -56,10 +60,14 @@ interface IETHmxMinter {
 
 	function setRoi(uint128 numerator, uint128 denominator) external;
 
+	function setWethAddress(address addr) external;
+
 	function unpause() external;
 
 	/* Events */
 
+	event EarlyThresholdSet(address indexed author, uint256 value);
+	event EthmxAddressSet(address indexed author, address indexed addr);
 	event EthtxAddressSet(address indexed author, address indexed addr);
 	event EthtxAMMAddressSet(address indexed author, address indexed addr);
 	event MintGasPriceSet(address indexed author, uint256 value);
@@ -70,4 +78,5 @@ interface IETHmxMinter {
 		uint256 amount
 	);
 	event RoiSet(address indexed author, uint128 numerator, uint128 denominator);
+	event WethAddressSet(address indexed author, address indexed addr);
 }

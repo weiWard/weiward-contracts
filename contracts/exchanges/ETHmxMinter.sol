@@ -19,18 +19,15 @@ contract ETHmxMinter is Ownable, Pausable, IETHmxMinter {
 
 	/* Mutable Internal State */
 
+	uint256 internal _earlyThreshold;
+	address internal _ethmx;
 	address internal _ethtx;
 	address internal _ethtxAMM;
 	uint256 internal _mintGasPrice;
 	uint256 internal _totalGiven;
 	uint128 internal _roiNum;
 	uint128 internal _roiDen;
-
-	/* Immutable Private State */
-
-	uint256 private immutable _earlyThreshold;
-	address private immutable _ethmx;
-	address private immutable _weth;
+	address internal _weth;
 
 	/* Constructor */
 
@@ -45,13 +42,13 @@ contract ETHmxMinter is Ownable, Pausable, IETHmxMinter {
 		uint128 roiDenominator,
 		uint256 earlyThreshold_
 	) Ownable() {
+		setEarlyThreshold(earlyThreshold_);
+		setEthmxAddress(ethmx_);
 		setEthtxAddress(ethtx_);
 		setEthtxAMMAddress(ethtxAMM_);
 		setMintGasPrice(mintGasPrice_);
 		setRoi(roiNumerator, roiDenominator);
-		_earlyThreshold = earlyThreshold_;
-		_ethmx = ethmx_;
-		_weth = wethAddr_;
+		setWethAddress(wethAddr_);
 		if (owner_ != owner()) {
 			transferOwnership(owner_);
 		}
@@ -107,6 +104,16 @@ contract ETHmxMinter is Ownable, Pausable, IETHmxMinter {
 		emit Recovered(_msgSender(), token, to, amount);
 	}
 
+	function setEarlyThreshold(uint256 value) public override onlyOwner {
+		_earlyThreshold = value;
+		emit EarlyThresholdSet(_msgSender(), value);
+	}
+
+	function setEthmxAddress(address addr) public override onlyOwner {
+		_ethmx = addr;
+		emit EthmxAddressSet(_msgSender(), addr);
+	}
+
 	function setEthtxAddress(address addr) public override onlyOwner {
 		_ethtx = addr;
 		emit EthtxAddressSet(_msgSender(), addr);
@@ -115,6 +122,11 @@ contract ETHmxMinter is Ownable, Pausable, IETHmxMinter {
 	function setEthtxAMMAddress(address addr) public override onlyOwner {
 		_ethtxAMM = addr;
 		emit EthtxAMMAddressSet(_msgSender(), addr);
+	}
+
+	function setWethAddress(address addr) public override onlyOwner {
+		_weth = addr;
+		emit WethAddressSet(_msgSender(), addr);
 	}
 
 	function setMintGasPrice(uint256 value) public override onlyOwner {

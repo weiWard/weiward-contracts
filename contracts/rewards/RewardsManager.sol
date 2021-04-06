@@ -24,12 +24,9 @@ contract RewardsManager is Ownable, IRewardsManager {
 		uint128 total;
 	}
 
-	/* Immutable Public State */
-
-	address public immutable override rewardsToken;
-
 	/* Mutable Internal State */
 
+	address internal _rewardsToken;
 	address internal _defaultRecipient;
 	uint256 internal _totalRewardsRedeemed;
 	EnumerableSet.AddressSet internal _recipients;
@@ -38,7 +35,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 	/* Constructor */
 
 	constructor(address defaultRecipient_, address rewardsToken_) Ownable() {
-		rewardsToken = rewardsToken_;
+		setRewardsToken(rewardsToken_);
 		setDefaultRecipient(defaultRecipient_);
 	}
 
@@ -46,6 +43,10 @@ contract RewardsManager is Ownable, IRewardsManager {
 
 	function defaultRecipient() external view override returns (address) {
 		return _defaultRecipient;
+	}
+
+	function rewardsToken() public view override returns (address) {
+		return _rewardsToken;
 	}
 
 	function sharesFor(address account)
@@ -125,7 +126,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 		uint256 amount
 	) external override onlyOwner {
 		require(
-			token != rewardsToken,
+			token != _rewardsToken,
 			"RewardsManager: cannot recover rewards token"
 		);
 		IERC20(token).safeTransfer(to, amount);
@@ -185,6 +186,11 @@ contract RewardsManager is Ownable, IRewardsManager {
 		emit DefaultRecipientSet(_msgSender(), account);
 	}
 
+	function setRewardsToken(address token) public override onlyOwner {
+		_rewardsToken = token;
+		emit RewardsTokenSet(_msgSender(), token);
+	}
+
 	function setShares(
 		address account,
 		uint128 value,
@@ -237,7 +243,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 	/* Internal Views */
 
 	function _currentRewardsBalance() internal view returns (uint256) {
-		return IERC20(rewardsToken).balanceOf(address(this));
+		return IERC20(_rewardsToken).balanceOf(address(this));
 	}
 
 	/* Internal Mutators */

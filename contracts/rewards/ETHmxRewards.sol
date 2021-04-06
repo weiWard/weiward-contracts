@@ -22,12 +22,10 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Immutable Public State */
-
-	address public immutable override ethmxAddr;
-	address public immutable override wethAddr;
-
 	/* Mutable Internal State */
+
+	address internal _ethmx;
+	address internal _weth;
 
 	uint256[] internal _arptSnapshots;
 	mapping(address => uint256) internal _arptLastIdx;
@@ -50,12 +48,12 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	constructor(
 		address owner_,
-		address ethmxAddr_,
-		address wethAddr_,
+		address ethmx_,
+		address weth_,
 		uint256 accrualUpdateInterval_
 	) Ownable() {
-		ethmxAddr = ethmxAddr_;
-		wethAddr = wethAddr_;
+		setEthmx(ethmx_);
+		setWeth(weth_);
 		_arptSnapshots.push(0);
 		setAccrualUpdateInterval(accrualUpdateInterval_);
 		if (owner_ != owner()) {
@@ -80,6 +78,10 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		returns (uint256)
 	{
 		return _arptSnapshots[_arptLastIdx[account]];
+	}
+
+	function ethmx() public view override returns (address) {
+		return _ethmx;
 	}
 
 	function lastAccrualUpdate() external view override returns (uint256) {
@@ -175,6 +177,10 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		return _rewardsFor[address(0)];
 	}
 
+	function weth() public view override returns (address) {
+		return _weth;
+	}
+
 	/* Public Mutators */
 
 	function exit() public override {
@@ -197,7 +203,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 			"ETHmxRewards: recovery amount greater than unredeemable"
 		);
 		_rewardsFor[address(0)] -= amount;
-		IERC20(wethAddr).safeTransfer(to, amount);
+		IERC20(weth()).safeTransfer(to, amount);
 		emit RecoveredUnredeemableRewards(_msgSender(), to, amount);
 	}
 
@@ -206,15 +212,15 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		override
 		onlyOwner
 	{
-		uint256 unstaked =
-			IERC20(ethmxAddr).balanceOf(address(this)).sub(_totalStaked);
+		IERC20 ethmxHandle = IERC20(ethmx());
+		uint256 unstaked = ethmxHandle.balanceOf(address(this)).sub(_totalStaked);
 
 		require(
 			amount <= unstaked,
 			"ETHmxRewards: recovery amount greater than unstaked"
 		);
 
-		IERC20(ethmxAddr).safeTransfer(to, amount);
+		ethmxHandle.safeTransfer(to, amount);
 		emit RecoveredUnstaked(_msgSender(), to, amount);
 	}
 
@@ -223,8 +229,8 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		address to,
 		uint256 amount
 	) public override onlyOwner {
-		require(token != ethmxAddr, "ETHmxRewards: cannot recover ETHmx");
-		require(token != wethAddr, "ETHmxRewards: cannot recover WETH");
+		require(token != ethmx(), "ETHmxRewards: cannot recover ETHmx");
+		require(token != weth(), "ETHmxRewards: cannot recover WETH");
 		IERC20(token).safeTransfer(to, amount);
 		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
@@ -255,6 +261,16 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit AccrualUpdateIntervalSet(_msgSender(), interval);
 	}
 
+	function setEthmx(address account) public override onlyOwner {
+		_ethmx = account;
+		emit ETHmxSet(_msgSender(), account);
+	}
+
+	function setWeth(address account) public override onlyOwner {
+		_weth = account;
+		emit WETHSet(_msgSender(), account);
+	}
+
 	function stake(uint256 amount) public override whenNotPaused {
 		require(amount != 0, "ETHmxRewards: cannot stake zero");
 
@@ -264,7 +280,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		_stakedFor[account] = _stakedFor[account].add(amount);
 		_totalStaked = _totalStaked.add(amount);
 
-		IERC20(ethmxAddr).safeTransferFrom(account, address(this), amount);
+		IERC20(ethmx()).safeTransferFrom(account, address(this), amount);
 		emit Staked(account, amount);
 	}
 
@@ -321,14 +337,14 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	/* Internal Views */
 
 	function _currentRewardsBalance() internal view returns (uint256) {
-		return IERC20(wethAddr).balanceOf(address(this));
+		return IERC20(weth()).balanceOf(address(this));
 	}
 
 	/* Internal Mutators */
 
 	function _burnETHmx(uint256 amount) internal {
 		_totalStaked = _totalStaked.sub(amount);
-		IETHmx(ethmxAddr).burn(amount);
+		IETHmx(ethmx()).burn(amount);
 	}
 
 	function _redeemReward(address account, uint256 amount) internal {
@@ -337,7 +353,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		// Overflow is OK
 		_totalRewardsRedeemed += amount;
 
-		IERC20(wethAddr).safeTransfer(account, amount);
+		IERC20(weth()).safeTransfer(account, amount);
 
 		emit RewardPaid(account, amount);
 	}
@@ -351,7 +367,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		_stakedFor[account] -= amount;
 		_totalStaked = _totalStaked.sub(amount);
 
-		IERC20(ethmxAddr).safeTransfer(account, amount);
+		IERC20(ethmx()).safeTransfer(account, amount);
 		emit Unstaked(account, amount);
 	}
 

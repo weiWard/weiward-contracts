@@ -21,7 +21,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const ethtxAMMAddr = (await deployments.get('ETHtxAMM')).address;
 	const feeLogicAddr = (await deployments.get('FeeLogic')).address;
 	const lpRewardsAddr = (await deployments.get('LPRewards')).address;
+
 	const defaultRecipient = ethmxRewardsAddr;
+	const defaultShares = 10;
+	const ethmxRewardsShares = 45 + defaultShares;
+	const lpRewardsShares = 20;
 
 	const chainId = await getChainId();
 	const wethAddr = await getDeployedWETH(deployments, chainId);
@@ -32,7 +36,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const result = await deploy(contractName, {
 		from: deployer,
 		log: true,
-		args: [deployer, defaultRecipient, wethAddr],
+		args: [
+			deployer,
+			defaultRecipient,
+			wethAddr,
+			ethmxRewardsAddr,
+			ethtxAddr,
+			ethtxAMMAddr,
+			lpRewardsAddr,
+		],
 		deterministicDeployment: salt,
 	});
 
@@ -47,10 +59,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			result.address,
 			deployerSigner,
 		);
-		await ethtxRewardsMgr.setEthmxRewardsAddress(ethmxRewardsAddr);
-		await ethtxRewardsMgr.setEthtxAddress(ethtxAddr);
-		await ethtxRewardsMgr.setEthtxAMMAddress(ethtxAMMAddr);
-		await ethtxRewardsMgr.setLPRewardsAddress(lpRewardsAddr);
+
+		if (defaultRecipient !== ethmxRewardsAddr) {
+			await ethtxRewardsMgr.setShares(defaultRecipient, defaultShares, true);
+		}
+		await ethtxRewardsMgr.setShares(
+			ethmxRewardsAddr,
+			ethmxRewardsShares,
+			true,
+		);
+		await ethtxRewardsMgr.setShares(lpRewardsAddr, lpRewardsShares, true);
 	}
 
 	// Never execute twice

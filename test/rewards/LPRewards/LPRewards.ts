@@ -23,6 +23,7 @@ describe('LPRewards', function () {
 	addTest('redeemReward', modules.redeemReward);
 	addTest('redeemRewardFrom', modules.redeemRewardFrom);
 	addTest('removeToken', modules.removeToken);
+	addTest('setRewardsToken', modules.setRewardsToken);
 	addTest('sharesFor', modules.sharesFor);
 	addTest('sharesPerToken', modules.sharesPerToken);
 	addTest('stake', modules.stake);

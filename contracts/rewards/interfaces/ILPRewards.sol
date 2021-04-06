@@ -117,6 +117,8 @@ interface ILPRewards {
 
 	function removeToken(address token) external;
 
+	function setRewardsToken(address token) external;
+
 	function stake(address token, uint256 amount) external;
 
 	function unpause() external;
@@ -152,6 +154,7 @@ interface ILPRewards {
 		address indexed token,
 		uint256 amount
 	);
+	event RewardsTokenSet(address indexed author, address indexed token);
 	event Staked(address indexed account, address indexed token, uint256 amount);
 	event TokenAdded(
 		address indexed author,

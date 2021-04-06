@@ -6,6 +6,8 @@ interface IRewardsManager {
 
 	function defaultRecipient() external view returns (address);
 
+	function rewardsToken() external view returns (address);
+
 	function sharesFor(address account)
 		external
 		view
@@ -16,8 +18,6 @@ interface IRewardsManager {
 	function totalRewardsRedeemed() external view returns (uint256);
 
 	function totalShares() external view returns (uint256);
-
-	function rewardsToken() external view returns (address);
 
 	/* Mutators */
 
@@ -41,6 +41,8 @@ interface IRewardsManager {
 
 	function setDefaultRecipient(address account) external;
 
+	function setRewardsToken(address token) external;
+
 	function setShares(
 		address account,
 		uint128 value,
@@ -56,6 +58,7 @@ interface IRewardsManager {
 		address indexed to,
 		uint256 amount
 	);
+	event RewardsTokenSet(address indexed author, address indexed token);
 	event SharesActivated(address indexed author, address indexed account);
 	event SharesAdded(
 		address indexed author,

@@ -40,16 +40,13 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		EnumerableMap.AddressToUintMap staked;
 	}
 
-	/* Immutable Public State */
-
-	address public immutable override rewardsToken;
-
 	/* Immutable Internal State */
 
 	uint256 internal constant _MULTIPLIER = 1e36;
 
 	/* Mutable Internal State */
 
+	address internal _rewardsToken;
 	uint256 internal _lastTotalRewardsAccrued;
 	uint256 internal _totalRewardsRedeemed;
 	uint256 internal _unredeemableRewards;
@@ -60,7 +57,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	/* Constructor */
 
 	constructor(address owner_, address rewardsToken_) Ownable() {
-		rewardsToken = rewardsToken_;
+		setRewardsToken(rewardsToken_);
 		if (owner_ != owner()) {
 			transferOwnership(owner_);
 		}
@@ -162,6 +159,10 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		returns (uint256)
 	{
 		return _tokenData[token].rewards;
+	}
+
+	function rewardsToken() public view override returns (address) {
+		return _rewardsToken;
 	}
 
 	function sharesFor(address account, address token)
@@ -343,7 +344,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 			"LPRewards: recovery amount > unredeemable"
 		);
 		_unredeemableRewards -= amount;
-		IERC20(rewardsToken).safeTransfer(to, amount);
+		IERC20(_rewardsToken).safeTransfer(to, amount);
 		emit RecoveredUnredeemableRewards(_msgSender(), to, amount);
 	}
 
@@ -352,7 +353,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		address to,
 		uint256 amount
 	) external override onlyOwner {
-		require(token != rewardsToken, "LPRewards: cannot recover rewardsToken");
+		require(token != _rewardsToken, "LPRewards: cannot recover rewardsToken");
 
 		uint256 unstaked =
 			IERC20(token).balanceOf(address(this)).sub(totalStaked(token));
@@ -390,7 +391,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 		_totalRewardsRedeemed += redemption;
 
-		IERC20(rewardsToken).safeTransfer(account, redemption);
+		IERC20(_rewardsToken).safeTransfer(account, redemption);
 	}
 
 	function redeemAllRewardsFrom(address token) public override {
@@ -445,7 +446,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 		_totalRewardsRedeemed += amount;
 
-		IERC20(rewardsToken).safeTransfer(account, amount);
+		IERC20(_rewardsToken).safeTransfer(account, amount);
 	}
 
 	function redeemRewardFrom(address token, uint256 amount) external override {
@@ -470,6 +471,11 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		// users unstaking and redeeming.
 		_tokenData[token].valueImpl = address(0);
 		emit TokenRemoved(_msgSender(), token);
+	}
+
+	function setRewardsToken(address token) public override onlyOwner {
+		_rewardsToken = token;
+		emit RewardsTokenSet(_msgSender(), token);
 	}
 
 	function stake(address token, uint256 amount)
@@ -610,7 +616,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	}
 
 	function _currentRewardsBalance() internal view returns (uint256) {
-		return IERC20(rewardsToken).balanceOf(address(this));
+		return IERC20(_rewardsToken).balanceOf(address(this));
 	}
 
 	function _pendingRewardsFor(
@@ -670,7 +676,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 		_totalRewardsRedeemed += amount;
 
-		IERC20(rewardsToken).safeTransfer(account, amount);
+		IERC20(_rewardsToken).safeTransfer(account, amount);
 		emit RewardPaid(account, token, amount);
 	}
 

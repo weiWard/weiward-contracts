@@ -20,6 +20,8 @@ describe('ETHmxRewards', function () {
 	addTest('redeemAllRewards', modules.redeemAllRewards);
 	addTest('redeemReward', modules.redeemReward);
 	addTest('setAccrualUpdateInterval', modules.setAccrualUpdateInterval);
+	addTest('setEthmx', modules.setEthmx);
+	addTest('setWeth', modules.setWeth);
 	addTest('stake', modules.stake);
 	addTest('totalRewardsAccrued', modules.totalRewardsAccrued);
 	addTest('unpause', modules.unpause);

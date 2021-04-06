@@ -8,6 +8,8 @@ export { default as recoverUnsupportedERC20 } from './recoverUnsupportedERC20';
 export { default as redeemAllRewards } from './redeemAllRewards';
 export { default as redeemReward } from './redeemReward';
 export { default as setAccrualUpdateInterval } from './setAccrualUpdateInterval';
+export { default as setEthmx } from './setEthmx';
+export { default as setWeth } from './setWeth';
 export { default as stake } from './stake';
 export { default as totalRewardsAccrued } from './totalRewardsAccrued';
 export { default as unpause } from './unpause';
