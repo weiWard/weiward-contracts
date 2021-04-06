@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"sourceMap": true,
 		"module": "commonjs",
-		"target": "es2018",
+		"target": "es2019",
 		"strict": true,
 		"strictNullChecks": true,
 		"allowSyntheticDefaultImports": true,

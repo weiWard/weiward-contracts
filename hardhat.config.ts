@@ -1,12 +1,50 @@
-import { HardhatUserConfig } from 'hardhat/config';
+import { HardhatUserConfig, task } from 'hardhat/config';
 import 'dotenv/config';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-deploy';
 import 'hardhat-abi-exporter';
+import { Deployment } from 'hardhat-deploy/dist/types';
+import * as fs from 'fs';
 
 import { node_url, accounts, debugAccounts } from './utils/network';
+
+/* eslint-disable no-console */
+task(
+	'list-deployments',
+	'List all deployed contracts on a network',
+	async (_args, hre) => {
+		console.log(`All deployments on ${hre.network.name}`);
+		for (const [name, deployment] of Object.entries(
+			await hre.deployments.all(),
+		)) {
+			console.log(`${name}: ${deployment.address}`);
+		}
+	},
+);
+
+task(
+	'export-addresses',
+	'Export deployment addresses to JSON file',
+	async (_args, hre) => {
+		const path = './build/addresses.json';
+		const addresses: Record<string, unknown> = fs.existsSync(path)
+			? JSON.parse(fs.readFileSync(path).toString())
+			: {};
+		const networkAddresses = Object.entries(await hre.deployments.all()).map(
+			([name, deployRecord]: [string, Deployment]) => {
+				return [name, deployRecord.address];
+			},
+		);
+		addresses[hre.network.name] = Object.fromEntries(networkAddresses);
+		const stringRepresentation = JSON.stringify(addresses, null, 2);
+		console.log(addresses);
+
+		fs.writeFileSync('./build/addresses.json', stringRepresentation);
+	},
+);
+/* eslint-enable no-console */
 
 const config: HardhatUserConfig = {
 	defaultNetwork: 'hardhat',
