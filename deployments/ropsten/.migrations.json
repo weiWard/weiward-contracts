@@ -1,0 +1,13 @@
+{
+  "GasPrice": 1617683150,
+  "FeeLogic": 1617683151,
+  "ETHtx": 1617683152,
+  "ETHtxAMM": 1617683153,
+  "ETHmx": 1617683154,
+  "ETHmxMinter": 1617683155,
+  "setMintGasPrice": 1617683156,
+  "ETHmxRewards": 1617683157,
+  "LPRewards": 1617683157,
+  "ValuePerSushi": 1617683159,
+  "ETHtxRewardsManager": 1617683160
+}

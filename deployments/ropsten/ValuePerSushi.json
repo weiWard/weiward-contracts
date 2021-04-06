@@ -1,0 +1,116 @@
+{
+  "address": "0x6100e6980971d90F4fdDc8E6B5FbBDCEF7cdDBE1",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_valueToken",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "feeOn",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "token",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "valuePerToken",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "numerator",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "denominator",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "valueToken",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x419b002b1b4c1b823ae4439ac148c05389bb060cbb1717c84933bf9b2d155db0",
+  "receipt": {
+    "to": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    "from": "0x5757Dd711EaE80e181E07CdbCe43359Ac1048394",
+    "contractAddress": null,
+    "transactionIndex": 1,
+    "gasUsed": "413784",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x1c5b6721c019127f0d428c4cb02fffdf37ac32f43e9377db0f132ec6dfaba56c",
+    "transactionHash": "0x419b002b1b4c1b823ae4439ac148c05389bb060cbb1717c84933bf9b2d155db0",
+    "logs": [],
+    "blockNumber": 9985399,
+    "cumulativeGasUsed": "434784",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x45Bae7685276a63D733388d0A18A4a025e2fe670",
+    "0x706f8Bf6ff5352F61F3e6D554232BeD01d679938"
+  ],
+  "solcInputHash": "d866fd3a9c665c3159ffcb94310e6171",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_valueToken\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"feeOn\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"token\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"valuePerToken\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"numerator\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"denominator\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"valueToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/rewards/ValuePerUNIV2.sol\":\"ValuePerUNIV2\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/math/SafeMath.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.7.0;\\n\\n/**\\n * @dev Wrappers over Solidity's arithmetic operations with added overflow\\n * checks.\\n *\\n * Arithmetic operations in Solidity wrap on overflow. This can easily result\\n * in bugs, because programmers usually assume that an overflow raises an\\n * error, which is the standard behavior in high level programming languages.\\n * `SafeMath` restores this intuition by reverting the transaction when an\\n * operation overflows.\\n *\\n * Using this library instead of the unchecked operations eliminates an entire\\n * class of bugs, so it's recommended to use it always.\\n */\\nlibrary SafeMath {\\n    /**\\n     * @dev Returns the addition of two unsigned integers, reverting on\\n     * overflow.\\n     *\\n     * Counterpart to Solidity's `+` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Addition cannot overflow.\\n     */\\n    function add(uint256 a, uint256 b) internal pure returns (uint256) {\\n        uint256 c = a + b;\\n        require(c >= a, \\\"SafeMath: addition overflow\\\");\\n\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the subtraction of two unsigned integers, reverting on\\n     * overflow (when the result is negative).\\n     *\\n     * Counterpart to Solidity's `-` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Subtraction cannot overflow.\\n     */\\n    function sub(uint256 a, uint256 b) internal pure returns (uint256) {\\n        return sub(a, b, \\\"SafeMath: subtraction overflow\\\");\\n    }\\n\\n    /**\\n     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on\\n     * overflow (when the result is negative).\\n     *\\n     * Counterpart to Solidity's `-` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Subtraction cannot overflow.\\n     */\\n    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b <= a, errorMessage);\\n        uint256 c = a - b;\\n\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the multiplication of two unsigned integers, reverting on\\n     * overflow.\\n     *\\n     * Counterpart to Solidity's `*` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Multiplication cannot overflow.\\n     */\\n    function mul(uint256 a, uint256 b) internal pure returns (uint256) {\\n        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the\\n        // benefit is lost if 'b' is also tested.\\n        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522\\n        if (a == 0) {\\n            return 0;\\n        }\\n\\n        uint256 c = a * b;\\n        require(c / a == b, \\\"SafeMath: multiplication overflow\\\");\\n\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the integer division of two unsigned integers. Reverts on\\n     * division by zero. The result is rounded towards zero.\\n     *\\n     * Counterpart to Solidity's `/` operator. Note: this function uses a\\n     * `revert` opcode (which leaves remaining gas untouched) while Solidity\\n     * uses an invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function div(uint256 a, uint256 b) internal pure returns (uint256) {\\n        return div(a, b, \\\"SafeMath: division by zero\\\");\\n    }\\n\\n    /**\\n     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on\\n     * division by zero. The result is rounded towards zero.\\n     *\\n     * Counterpart to Solidity's `/` operator. Note: this function uses a\\n     * `revert` opcode (which leaves remaining gas untouched) while Solidity\\n     * uses an invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b > 0, errorMessage);\\n        uint256 c = a / b;\\n        // assert(a == b * c + a % b); // There is no case in which this doesn't hold\\n\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),\\n     * Reverts when dividing by zero.\\n     *\\n     * Counterpart to Solidity's `%` operator. This function uses a `revert`\\n     * opcode (which leaves remaining gas untouched) while Solidity uses an\\n     * invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function mod(uint256 a, uint256 b) internal pure returns (uint256) {\\n        return mod(a, b, \\\"SafeMath: modulo by zero\\\");\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),\\n     * Reverts with custom message when dividing by zero.\\n     *\\n     * Counterpart to Solidity's `%` operator. This function uses a `revert`\\n     * opcode (which leaves remaining gas untouched) while Solidity uses an\\n     * invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b != 0, errorMessage);\\n        return a % b;\\n    }\\n}\\n\",\"keccak256\":\"0xba96bc371ba999f452985a98717cca1e4c4abb598dc038a9a9c3db08129b1ba4\",\"license\":\"MIT\"},\"contracts/libraries/Sqrt.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity 0.7.6;\\n\\n/**\\n * Babylonian square root, courtesy of dapp-bin, RJ Catalona (https://github.com/VoR0220), and Uniswap.\\n * dapp-bin PR: https://github.com/ethereum/dapp-bin/pull/50/files\\n * RJ Catalona's branch of dapp-bin: https://github.com/VoR0220/dapp-bin/blob/VoR0220-patch-1/library/math.sol\\n * Uniswap: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/libraries/Math.sol\\n */\\n\\nlibrary Sqrt {\\n\\t// babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method)\\n\\tfunction sqrt(uint256 y) internal pure returns (uint256 z) {\\n\\t\\tif (y > 3) {\\n\\t\\t\\tz = y;\\n\\t\\t\\tuint256 x = y / 2 + 1;\\n\\t\\t\\twhile (x < z) {\\n\\t\\t\\t\\tz = x;\\n\\t\\t\\t\\tx = (y / x + x) / 2;\\n\\t\\t\\t}\\n\\t\\t} else if (y != 0) {\\n\\t\\t\\tz = 1;\\n\\t\\t}\\n\\t}\\n}\\n\",\"keccak256\":\"0xd3fe38bab21896e6bf11c37b58ce5b32ed8ba8d645130ebf8d439261594f313b\",\"license\":\"MIT\"},\"contracts/rewards/ValuePerUNIV2.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity 0.7.6;\\n\\nimport \\\"@openzeppelin/contracts/math/SafeMath.sol\\\";\\n\\nimport \\\"./interfaces/IValuePerToken.sol\\\";\\nimport \\\"../libraries/Sqrt.sol\\\";\\n\\ninterface IUniswapV2Factory {\\n\\tfunction feeTo() external view returns (address);\\n}\\n\\ninterface IUniswapV2Pair {\\n\\tfunction factory() external view returns (address);\\n\\n\\tfunction getReserves()\\n\\t\\texternal\\n\\t\\tview\\n\\t\\treturns (\\n\\t\\t\\tuint112 reserve0,\\n\\t\\t\\tuint112 reserve1,\\n\\t\\t\\tuint32 blockTimestampLast\\n\\t\\t);\\n\\n\\tfunction kLast() external view returns (uint256);\\n\\n\\tfunction token0() external view returns (address);\\n\\n\\tfunction token1() external view returns (address);\\n\\n\\tfunction totalSupply() external view returns (uint256);\\n}\\n\\ncontract ValuePerUNIV2 is IValuePerToken {\\n\\tusing SafeMath for uint256;\\n\\n\\t/* Immutable Public State */\\n\\n\\taddress public immutable override token;\\n\\taddress public immutable valueToken;\\n\\n\\t/* Constructor */\\n\\n\\tconstructor(address _token, address _valueToken) {\\n\\t\\tIUniswapV2Pair tokenHandle = IUniswapV2Pair(_token);\\n\\t\\taddress token0 = tokenHandle.token0();\\n\\t\\taddress token1 = tokenHandle.token1();\\n\\n\\t\\trequire(\\n\\t\\t\\t_valueToken == token0 || _valueToken == token1,\\n\\t\\t\\t\\\"ValuePerUNIV2: pool lacks token\\\"\\n\\t\\t);\\n\\n\\t\\ttoken = _token;\\n\\t\\tvalueToken = _valueToken;\\n\\t}\\n\\n\\t/* External Views */\\n\\n\\tfunction valuePerToken()\\n\\t\\texternal\\n\\t\\tview\\n\\t\\toverride\\n\\t\\treturns (uint256 numerator, uint256 denominator)\\n\\t{\\n\\t\\tIUniswapV2Pair tokenHandle = IUniswapV2Pair(token);\\n\\t\\tuint256 totalSupply = tokenHandle.totalSupply();\\n\\t\\t(uint112 reserve0, uint112 reserve1, ) = tokenHandle.getReserves();\\n\\n\\t\\t// Adjust totalSupply when feeOn\\n\\t\\t// Minted fee liquidity is equivalent to 1/6th of the growth in sqrt(k)\\n\\t\\tif (feeOn()) {\\n\\t\\t\\tuint256 kLast = tokenHandle.kLast();\\n\\t\\t\\tif (kLast > 0) {\\n\\t\\t\\t\\tuint256 rootK = Sqrt.sqrt(uint256(reserve0).mul(reserve1));\\n\\t\\t\\t\\tuint256 rootKLast = Sqrt.sqrt(kLast);\\n\\t\\t\\t\\tif (rootK > rootKLast) {\\n\\t\\t\\t\\t\\tuint256 n = totalSupply.mul(rootK - rootKLast);\\n\\t\\t\\t\\t\\tuint256 d = rootK.mul(5).add(rootKLast);\\n\\t\\t\\t\\t\\tuint256 feeLiquidity = n / d;\\n\\t\\t\\t\\t\\ttotalSupply = totalSupply.add(feeLiquidity);\\n\\t\\t\\t\\t}\\n\\t\\t\\t}\\n\\t\\t}\\n\\n\\t\\taddress token0 = tokenHandle.token0();\\n\\n\\t\\t// Use correct reserve\\n\\t\\tnumerator = valueToken == token0 ? reserve0 : reserve1;\\n\\t\\tdenominator = totalSupply;\\n\\t}\\n\\n\\t/* Public Views */\\n\\n\\tfunction feeOn() public view returns (bool) {\\n\\t\\taddress factory = IUniswapV2Pair(token).factory();\\n\\t\\taddress feeTo = IUniswapV2Factory(factory).feeTo();\\n\\t\\treturn feeTo != address(0);\\n\\t}\\n}\\n\",\"keccak256\":\"0xa2c21863f0f8c5d003956706180619f2c681e7eb7b124e55145b55bcf7344fb7\",\"license\":\"MIT\"},\"contracts/rewards/interfaces/IValuePerToken.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity 0.7.6;\\n\\ninterface IValuePerToken {\\n\\t/* Views */\\n\\n\\tfunction token() external view returns (address);\\n\\n\\tfunction valuePerToken()\\n\\t\\texternal\\n\\t\\tview\\n\\t\\treturns (uint256 numerator, uint256 denominator);\\n}\\n\",\"keccak256\":\"0x9d105b9dddc426754ae48c16344bb456a796d22ee50db7765df990bdc39c7a15\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x60c060405234801561001057600080fd5b5060405161082e38038061082e8339818101604052604081101561003357600080fd5b50805160209182015160408051630dfe168160e01b815290519293919284926000926001600160a01b03851692630dfe168192600480840193919291829003018186803b15801561008357600080fd5b505afa158015610097573d6000803e3d6000fd5b505050506040513d60208110156100ad57600080fd5b50516040805163d21220a760e01b815290519192506000916001600160a01b0385169163d21220a7916004808301926020929190829003018186803b1580156100f557600080fd5b505afa158015610109573d6000803e3d6000fd5b505050506040513d602081101561011f57600080fd5b505190506001600160a01b03848116908316148061014e5750806001600160a01b0316846001600160a01b0316145b61019f576040805162461bcd60e51b815260206004820152601f60248201527f56616c7565506572554e4956323a20706f6f6c206c61636b7320746f6b656e00604482015290519081900360640190fd5b5050506001600160601b0319606092831b8116608052911b1660a05260805160601c60a05160601c61063c6101f26000398061043f528061049152508060bf52806101cc52806104b5525061063c6000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c80634f335d0a14610051578063a8fa8e521461006d578063effff82f1461008e578063fc0c546a146100b2575b600080fd5b6100596100ba565b604080519115158252519081900360200190f35b6100756101c5565b6040805192835260208301919091528051918290030190f35b61009661048f565b604080516001600160a01b039092168252519081900360200190f35b6100966104b3565b6000807f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663c45a01556040518163ffffffff1660e01b815260040160206040518083038186803b15801561011657600080fd5b505afa15801561012a573d6000803e3d6000fd5b505050506040513d602081101561014057600080fd5b505160408051622fcfcb60e31b815290519192506000916001600160a01b0384169163017e7e58916004808301926020929190829003018186803b15801561018757600080fd5b505afa15801561019b573d6000803e3d6000fd5b505050506040513d60208110156101b157600080fd5b50516001600160a01b031615159250505090565b60008060007f000000000000000000000000000000000000000000000000000000000000000090506000816001600160a01b03166318160ddd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561022857600080fd5b505afa15801561023c573d6000803e3d6000fd5b505050506040513d602081101561025257600080fd5b505160408051630240bc6b60e21b8152905191925060009182916001600160a01b03861691630902f1ac91600480820192606092909190829003018186803b15801561029d57600080fd5b505afa1580156102b1573d6000803e3d6000fd5b505050506040513d60608110156102c757600080fd5b50805160209091015190925090506102dd6100ba565b156103d4576000846001600160a01b0316637464fc3d6040518163ffffffff1660e01b815260040160206040518083038186803b15801561031d57600080fd5b505afa158015610331573d6000803e3d6000fd5b505050506040513d602081101561034757600080fd5b5051905080156103d257600061037161036c6001600160701b038681169086166104d7565b610539565b9050600061037e83610539565b9050808211156103cf576000610396878385036104d7565b905060006103af836103a98660056104d7565b9061058b565b905060008183816103bc57fe5b0490506103c9898261058b565b98505050505b50505b505b6000846001600160a01b0316630dfe16816040518163ffffffff1660e01b815260040160206040518083038186803b15801561040f57600080fd5b505afa158015610423573d6000803e3d6000fd5b505050506040513d602081101561043957600080fd5b505190507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03908116908216146104775781610479565b825b6001600160701b03169793965092945050505050565b7f000000000000000000000000000000000000000000000000000000000000000081565b7f000000000000000000000000000000000000000000000000000000000000000081565b6000826104e657506000610533565b828202828482816104f357fe5b04146105305760405162461bcd60e51b81526004018080602001828103825260218152602001806105e66021913960400191505060405180910390fd5b90505b92915050565b6000600382111561057c575080600160028204015b818110156105765780915060028182858161056557fe5b04018161056e57fe5b04905061054e565b50610586565b8115610586575060015b919050565b600082820183811015610530576040805162461bcd60e51b815260206004820152601b60248201527f536166654d6174683a206164646974696f6e206f766572666c6f770000000000604482015290519081900360640190fdfe536166654d6174683a206d756c7469706c69636174696f6e206f766572666c6f77a264697066735822122095a762e53f3007685b8a40c3b81f07c64608584b52062ddcf29d42632b8ca12964736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061004c5760003560e01c80634f335d0a14610051578063a8fa8e521461006d578063effff82f1461008e578063fc0c546a146100b2575b600080fd5b6100596100ba565b604080519115158252519081900360200190f35b6100756101c5565b6040805192835260208301919091528051918290030190f35b61009661048f565b604080516001600160a01b039092168252519081900360200190f35b6100966104b3565b6000807f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663c45a01556040518163ffffffff1660e01b815260040160206040518083038186803b15801561011657600080fd5b505afa15801561012a573d6000803e3d6000fd5b505050506040513d602081101561014057600080fd5b505160408051622fcfcb60e31b815290519192506000916001600160a01b0384169163017e7e58916004808301926020929190829003018186803b15801561018757600080fd5b505afa15801561019b573d6000803e3d6000fd5b505050506040513d60208110156101b157600080fd5b50516001600160a01b031615159250505090565b60008060007f000000000000000000000000000000000000000000000000000000000000000090506000816001600160a01b03166318160ddd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561022857600080fd5b505afa15801561023c573d6000803e3d6000fd5b505050506040513d602081101561025257600080fd5b505160408051630240bc6b60e21b8152905191925060009182916001600160a01b03861691630902f1ac91600480820192606092909190829003018186803b15801561029d57600080fd5b505afa1580156102b1573d6000803e3d6000fd5b505050506040513d60608110156102c757600080fd5b50805160209091015190925090506102dd6100ba565b156103d4576000846001600160a01b0316637464fc3d6040518163ffffffff1660e01b815260040160206040518083038186803b15801561031d57600080fd5b505afa158015610331573d6000803e3d6000fd5b505050506040513d602081101561034757600080fd5b5051905080156103d257600061037161036c6001600160701b038681169086166104d7565b610539565b9050600061037e83610539565b9050808211156103cf576000610396878385036104d7565b905060006103af836103a98660056104d7565b9061058b565b905060008183816103bc57fe5b0490506103c9898261058b565b98505050505b50505b505b6000846001600160a01b0316630dfe16816040518163ffffffff1660e01b815260040160206040518083038186803b15801561040f57600080fd5b505afa158015610423573d6000803e3d6000fd5b505050506040513d602081101561043957600080fd5b505190507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03908116908216146104775781610479565b825b6001600160701b03169793965092945050505050565b7f000000000000000000000000000000000000000000000000000000000000000081565b7f000000000000000000000000000000000000000000000000000000000000000081565b6000826104e657506000610533565b828202828482816104f357fe5b04146105305760405162461bcd60e51b81526004018080602001828103825260218152602001806105e66021913960400191505060405180910390fd5b90505b92915050565b6000600382111561057c575080600160028204015b818110156105765780915060028182858161056557fe5b04018161056e57fe5b04905061054e565b50610586565b8115610586575060015b919050565b600082820183811015610530576040805162461bcd60e51b815260206004820152601b60248201527f536166654d6174683a206164646974696f6e206f766572666c6f770000000000604482015290519081900360640190fdfe536166654d6174683a206d756c7469706c69636174696f6e206f766572666c6f77a264697066735822122095a762e53f3007685b8a40c3b81f07c64608584b52062ddcf29d42632b8ca12964736f6c63430007060033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
