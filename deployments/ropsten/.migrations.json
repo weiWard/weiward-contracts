@@ -4,10 +4,11 @@
   "ETHtx": 1617683152,
   "ETHtxAMM": 1617683153,
   "ETHmx": 1617683154,
-  "ETHmxMinter": 1617683155,
   "setMintGasPrice": 1617683156,
-  "ETHmxRewards": 1617683157,
-  "LPRewards": 1617683157,
-  "ValuePerSushi": 1617683159,
-  "ETHtxRewardsManager": 1617683160
+  "ProxyAdmin": 1617767500,
+  "ETHmxMinter": 1617767510,
+  "ETHmxRewards": 1617767560,
+  "LPRewards": 1617767596,
+  "ValuePerSushi": 1617767808,
+  "ETHtxRewardsManager": 1617767830
 }

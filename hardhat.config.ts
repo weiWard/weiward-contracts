@@ -56,11 +56,11 @@ const config: HardhatUserConfig = {
 			chainId: 1337, // compatibility with metamask
 			accounts: hardhatAccounts(),
 			live: false, // default for localhost & hardhat
-			saveDeployments: false,
-			// forking: {
-			// 	url: ALCHEMY_URI,
-			// 	blockNumber: 9991554,
-			// },
+			forking: {
+				url: ALCHEMY_URI,
+				blockNumber: 9992184,
+				enabled: false,
+			},
 		},
 		localhost: {
 			url: node_url('localhost'),

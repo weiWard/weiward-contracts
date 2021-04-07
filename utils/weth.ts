@@ -3,6 +3,7 @@ import { DeploymentsExtension } from 'hardhat-deploy/dist/types';
 import { salt } from './create2';
 
 export const wethAddresses = new Map([
+	// ['1337', '0xc778417E063141139Fce010982780140Aa0cD5Ab'],
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
 	['3', '0xc778417E063141139Fce010982780140Aa0cD5Ab'], // ropsten

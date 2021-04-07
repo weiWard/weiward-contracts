@@ -53,5 +53,5 @@ export default func;
 func.tags = ['setWETH'];
 func.dependencies = [];
 func.skip = async function (): Promise<boolean> {
-	return false;
+	return true;
 };

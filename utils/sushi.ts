@@ -7,6 +7,7 @@ import { zeroAddress } from '../test/helpers/address';
 import { salt } from './create2';
 
 const sushiFactoryAddresses = new Map([
+	// ['1337', '0xc35DADB65012eC5796536bD9864eD8773aBc74C4'],
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
 	['3', '0xc35DADB65012eC5796536bD9864eD8773aBc74C4'], // ropsten
@@ -16,7 +17,7 @@ const sushiFactoryAddresses = new Map([
 const sushiPairAddresses = new Map([
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
-	['3', undefined], // ropsten
+	['3', '0x9aa4715368c48F38F46D7626C647a2d60C26f54F'], // ropsten
 	['1', undefined], // mainnet
 ]);
 

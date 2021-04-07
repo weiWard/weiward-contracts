@@ -5,6 +5,7 @@
 /coverage
 deployments/ganache/
 deployments/localhost/
+deployments/hardhat/
 
 # production
 /public/js
