@@ -48,8 +48,6 @@ contract ETHtx is
 		__ERC20TxFee_init_unchained(feeLogic_);
 
 		setMinter(minter_);
-		// Add in update
-		// emit FeeLogicSet(_msgSender(), feeLogic_);
 
 		if (owner_ != owner()) {
 			transferOwnership(owner_);

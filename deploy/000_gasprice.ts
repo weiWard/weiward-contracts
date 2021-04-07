@@ -11,7 +11,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts, ethers } = hre;
 	const { deploy } = deployments;
 
-	const { deployer, gasOracle } = await getNamedAccounts();
+	const { deployer, gasOracleService } = await getNamedAccounts();
 
 	const updateThreshold = 32400; // 9 hours
 	const gasPrice = parseUnits('200', 9);
@@ -23,12 +23,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		deterministicDeployment: salt,
 	});
 
-	if (result.newlyDeployed && gasOracle && gasOracle !== '') {
+	if (result.newlyDeployed && gasOracleService && gasOracleService !== '') {
 		const oracleRole = solidityKeccak256(['string'], ['ORACLE_ROLE']);
 		const deployerSigner = ethers.provider.getSigner(deployer);
 
 		const oracle = GasPrice__factory.connect(result.address, deployerSigner);
-		await oracle.grantRole(oracleRole, gasOracle);
+		await oracle.grantRole(oracleRole, gasOracleService);
 	}
 
 	// Never execute twice (due to create2)

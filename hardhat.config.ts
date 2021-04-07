@@ -8,7 +8,10 @@ import 'hardhat-abi-exporter';
 import { Deployment } from 'hardhat-deploy/dist/types';
 import * as fs from 'fs';
 
-import { node_url, accounts, debugAccounts } from './utils/network';
+import { node_url, accounts, hardhatAccounts } from './utils/network';
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ALCHEMY_URI = process.env.ALCHEMY_URI ? process.env.ALCHEMY_URI : '';
 
 /* eslint-disable no-console */
 task(
@@ -51,18 +54,22 @@ const config: HardhatUserConfig = {
 	networks: {
 		hardhat: {
 			chainId: 1337, // compatibility with metamask
-			accounts: debugAccounts,
+			accounts: hardhatAccounts(),
 			live: false, // default for localhost & hardhat
 			saveDeployments: false,
+			// forking: {
+			// 	url: ALCHEMY_URI,
+			// 	blockNumber: 9991554,
+			// },
 		},
 		localhost: {
 			url: node_url('localhost'),
-			accounts: debugAccounts,
+			accounts: accounts('localhost'),
 			live: false,
 		},
 		ganache: {
 			url: node_url('ganache'),
-			accounts: debugAccounts,
+			accounts: accounts('ganache'),
 			live: false,
 		},
 		goerli: {
@@ -111,7 +118,7 @@ const config: HardhatUserConfig = {
 		// tests use this account when the deployer is undesirable
 		tester: 1,
 		// Gas oracle service
-		gasOracle: {
+		gasOracleService: {
 			// mainnet
 			1: '',
 			// ropsten

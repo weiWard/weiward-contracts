@@ -1,5 +1,10 @@
 import 'dotenv/config';
-import { HDAccountsUserConfig } from 'hardhat/types';
+import {
+	HardhatNetworkAccountsUserConfig,
+	HardhatNetworkAccountUserConfig,
+} from 'hardhat/types';
+import { Wallet } from '@ethersproject/wallet';
+import { parseEther } from '@ethersproject/units';
 
 export function node_url(networkName: string): string {
 	// Check for specific uri
@@ -35,6 +40,14 @@ export function node_url(networkName: string): string {
 }
 
 export function getDeployerKey(networkName: string): string {
+	// Hardhat default index 0 address key
+	const hardhatZero =
+		'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
+	if (networkName === 'debug') {
+		return hardhatZero;
+	}
+
 	// Check for specific key
 	{
 		const privKey = process.env['DEPLOYER_KEY_' + networkName.toUpperCase()];
@@ -46,19 +59,42 @@ export function getDeployerKey(networkName: string): string {
 	// Get generic key
 	const privKey = process.env.DEPLOYER_KEY;
 	if (!privKey || privKey === '') {
-		// Hardhat default 0 address key
-		return 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+		return hardhatZero;
 	}
 
 	return privKey;
 }
 
 export function accounts(networkName: string): string[] {
-	return [getDeployerKey(networkName)];
+	return [
+		getDeployerKey(networkName),
+		// Hardhat default index 1 address key
+		'59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+	];
+}
+
+export function hardhatAccounts(): HardhatNetworkAccountsUserConfig {
+	const defaultBalance = parseEther('10000').toString();
+	const debugAccounts = new Array<HardhatNetworkAccountUserConfig>(10);
+
+	debugAccounts[0] = {
+		privateKey: getDeployerKey('hardhat'),
+		balance: defaultBalance,
+	};
+
+	for (let i = 1; i < debugAccounts.length; i++) {
+		const wallet = Wallet.fromMnemonic(
+			insecure_mnemonic,
+			"m/44'/60'/0'/0/" + i,
+		);
+		debugAccounts[i] = {
+			privateKey: wallet.privateKey,
+			balance: defaultBalance,
+		};
+	}
+
+	return debugAccounts;
 }
 
 export const insecure_mnemonic =
 	'test test test test test test test test test test test junk';
-export const debugAccounts: HDAccountsUserConfig = {
-	mnemonic: insecure_mnemonic,
-};

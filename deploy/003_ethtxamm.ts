@@ -32,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			owner: deployer,
 			methodName: 'init',
 			proxyContract: 'OpenZeppelinTransparentProxy',
-			viaAdminContract: 'DefaultProxyAdmin',
+			viaAdminContract: 'ProxyAdmin',
 		},
 		args: [
 			deployer,
@@ -58,4 +58,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default func;
 func.tags = [contractName];
 func.id = contractName;
-func.dependencies = ['ETHtx', 'FeeLogic', 'GasPrice'];
+func.dependencies = ['ProxyAdmin', 'ETHtx', 'FeeLogic', 'GasPrice'];

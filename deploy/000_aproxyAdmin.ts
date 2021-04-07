@@ -1,10 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
-import { zeroAddress } from '../test/helpers/address';
 import { salt } from '../utils/create2';
 
-const contractName = 'ETHmx';
+const contractName = 'ProxyAdmin';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts } = hre;
@@ -15,13 +14,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deploy(contractName, {
 		from: deployer,
 		log: true,
-		proxy: {
-			owner: deployer,
-			methodName: 'init',
-			proxyContract: 'OpenZeppelinTransparentProxy',
-			viaAdminContract: 'ProxyAdmin',
-		},
-		args: [deployer, zeroAddress],
+		args: [deployer],
 		deterministicDeployment: salt,
 	});
 
@@ -32,4 +25,3 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default func;
 func.tags = [contractName];
 func.id = contractName;
-func.dependencies = ['ProxyAdmin'];
