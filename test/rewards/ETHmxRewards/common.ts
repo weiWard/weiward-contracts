@@ -91,15 +91,17 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,
-			ethmx.address,
-			ethtx.address,
-			ethtxAMM.address,
-			weth.address,
+		);
+		await ethmxMinter.postInit({
+			ethmx: ethmx.address,
+			ethtx: ethtx.address,
+			ethtxAMM: ethtxAMM.address,
+			weth: weth.address,
 			mintGasPrice,
 			roiNumerator,
 			roiDenominator,
-			0,
-		);
+			earlyThreshold: 0,
+		});
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.setMinter(ethmxMinter.address);
 

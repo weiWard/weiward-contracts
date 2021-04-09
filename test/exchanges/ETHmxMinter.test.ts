@@ -125,15 +125,17 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const contract = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,
-			ethmx.address,
-			ethtx.address,
-			ethtxAMM.address,
-			weth.address,
+		);
+		await contract.postInit({
+			ethmx: ethmx.address,
+			ethtx: ethtx.address,
+			ethtxAMM: ethtxAMM.address,
+			weth: weth.address,
 			mintGasPrice,
 			roiNumerator,
 			roiDenominator,
 			earlyThreshold,
-		);
+		});
 
 		await ethtx.setMinter(contract.address);
 		await ethmx.setMinter(contract.address);
@@ -603,11 +605,11 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('setEthmxAddress', function () {
+	describe('setEthmx', function () {
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(testerContract.setEthmxAddress(address)).to.be.revertedWith(
+			await expect(testerContract.setEthmx(address)).to.be.revertedWith(
 				'caller is not the owner',
 			);
 		});
@@ -615,66 +617,66 @@ describe(contractName, function () {
 		it('should set ETHmx address', async function () {
 			const { contract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await contract.setEthmxAddress(address);
+			await contract.setEthmx(address);
 			expect(await contract.ethmx()).to.eq(address);
 		});
 
 		it('should emit EthmxAddressSet event', async function () {
 			const { contract, deployer } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(contract.setEthmxAddress(address))
-				.to.emit(contract, 'EthmxAddressSet')
+			await expect(contract.setEthmx(address))
+				.to.emit(contract, 'EthmxSet')
 				.withArgs(deployer, address);
 		});
 	});
 
-	describe('setEthtxAddress', function () {
+	describe('setEthtx', function () {
 		it('should set ETHtx address', async function () {
 			const { contract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await contract.setEthtxAddress(address);
+			await contract.setEthtx(address);
 			expect(await contract.ethtx()).to.eq(address);
 		});
 
 		it('should emit EthtxAddressSet event', async function () {
 			const { contract, deployer } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(contract.setEthtxAddress(address))
-				.to.emit(contract, 'EthtxAddressSet')
+			await expect(contract.setEthtx(address))
+				.to.emit(contract, 'EthtxSet')
 				.withArgs(deployer, address);
 		});
 
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(testerContract.setEthtxAddress(address)).to.be.revertedWith(
+			await expect(testerContract.setEthtx(address)).to.be.revertedWith(
 				'caller is not the owner',
 			);
 		});
 	});
 
-	describe('setEthtxAMMAddress', function () {
+	describe('setEthtxAMM', function () {
 		it('should set ETHtxAMM address', async function () {
 			const { contract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await contract.setEthtxAMMAddress(address);
+			await contract.setEthtxAMM(address);
 			expect(await contract.ethtxAMM()).to.eq(address);
 		});
 
 		it('should emit EthtxAMMAddressSet event', async function () {
 			const { contract, deployer } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(contract.setEthtxAMMAddress(address))
-				.to.emit(contract, 'EthtxAMMAddressSet')
+			await expect(contract.setEthtxAMM(address))
+				.to.emit(contract, 'EthtxAMMSet')
 				.withArgs(deployer, address);
 		});
 
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(
-				testerContract.setEthtxAMMAddress(address),
-			).to.be.revertedWith('caller is not the owner');
+			await expect(testerContract.setEthtxAMM(address)).to.be.revertedWith(
+				'caller is not the owner',
+			);
 		});
 	});
 
@@ -738,11 +740,11 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('setWethAddress', function () {
+	describe('setWeth', function () {
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(testerContract.setWethAddress(address)).to.be.revertedWith(
+			await expect(testerContract.setWeth(address)).to.be.revertedWith(
 				'caller is not the owner',
 			);
 		});
@@ -750,15 +752,15 @@ describe(contractName, function () {
 		it('should set WETH address', async function () {
 			const { contract } = fixture;
 			const address = zeroPadAddress('0x1');
-			await contract.setWethAddress(address);
+			await contract.setWeth(address);
 			expect(await contract.weth()).to.eq(address);
 		});
 
 		it('should emit WethAddressSet event', async function () {
 			const { contract, deployer } = fixture;
 			const address = zeroPadAddress('0x1');
-			await expect(contract.setWethAddress(address))
-				.to.emit(contract, 'WethAddressSet')
+			await expect(contract.setWeth(address))
+				.to.emit(contract, 'WethSet')
 				.withArgs(deployer, address);
 		});
 	});
