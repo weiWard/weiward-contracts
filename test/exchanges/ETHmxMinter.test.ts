@@ -338,9 +338,8 @@ describe(contractName, function () {
 
 			const amountEthtx = parseETHtx('10000');
 			const amountEth = await ethtxAMM.ethForEthtx(amountEthtx);
-			const expected = ethmxFromEthRaw(amountEth);
 
-			expect(await contract.ethmxFromEthtx(amountEthtx)).to.eq(expected);
+			expect(await contract.ethmxFromEthtx(amountEthtx)).to.eq(amountEth);
 		});
 	});
 

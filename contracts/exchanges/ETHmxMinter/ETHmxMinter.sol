@@ -230,7 +230,7 @@ contract ETHmxMinter is
 		returns (uint256)
 	{
 		uint256 amountETHIn = IETHtxAMM(ethtxAMM()).ethForEthtx(amountETHtxIn);
-		return _ethmxFromEth(amountETHIn);
+		return amountETHIn;
 	}
 
 	function ethtx() public view virtual override returns (address) {
