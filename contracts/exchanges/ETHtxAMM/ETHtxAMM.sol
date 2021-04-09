@@ -133,7 +133,8 @@ contract ETHtxAMM is
 		priceIsFresh
 	{
 		address account = _msgSender();
-		uint256 amountIn = ethForEthtx(amountOut);
+		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
+		uint256 amountIn = ethForEthtx(amountOut).add(1);
 		require(amountIn <= msg.value, "ETHtxAMM: amountIn exceeds max");
 		_buy(account, amountIn, amountOut, false);
 		// refund leftover ETH
@@ -147,7 +148,8 @@ contract ETHtxAMM is
 		uint256 amountOut,
 		uint256 deadline
 	) external virtual override ensure(deadline) priceIsFresh {
-		uint256 amountIn = ethForEthtx(amountOut);
+		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
+		uint256 amountIn = ethForEthtx(amountOut).add(1);
 		require(amountIn <= amountInMax, "ETHtxAMM: amountIn exceeds max");
 		_buy(_msgSender(), amountIn, amountOut, true);
 	}
@@ -298,8 +300,7 @@ contract ETHtxAMM is
 		override
 		returns (uint256)
 	{
-		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
-		return _ethtxToEth(gasPrice(), amountETHtxOut).add(1);
+		return _ethtxToEth(gasPrice(), amountETHtxOut);
 	}
 
 	function ethFromEthtxAtRedemption(uint256 amountETHtxIn)

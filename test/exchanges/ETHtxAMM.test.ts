@@ -137,6 +137,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			from: deployer,
 			log: true,
 			proxy: {
+				owner: deployer,
 				methodName: 'init',
 				proxyContract: 'OpenZeppelinTransparentProxy',
 				viaAdminContract: 'DefaultProxyAdmin',
@@ -274,12 +275,12 @@ describe(contractName, function () {
 
 			const [num, den] = await contract.cRatio();
 			expect(num, 'cRatio numerator mismatch').to.eq(ethSupply);
-			expect(den, 'cRatio denominator mismatch').to.eq(ethOutstanding);
+			expect(den, 'cRatio denominator mismatch').to.eq(ethOutstanding.sub(1));
 		});
 	});
 
 	describe('cRatioBelowTarget', function () {
-		it.skip('should be false when denominator is zero', async function () {
+		it('should be false when denominator is zero', async function () {
 			const { contract } = fixture;
 			// Currently can never be zero.
 			expect(await contract.cRatioBelowTarget()).to.be.false;
@@ -288,9 +289,7 @@ describe(contractName, function () {
 		it('should be false when cRatio > targetCRatio', async function () {
 			const { contract, ethtx, tester } = fixture;
 			const ethtxOutstanding = ethToEthtx(defaultGasPrice, parseEther('10'));
-			const ethOutstanding = ethtxToEth(defaultGasPrice, ethtxOutstanding).add(
-				1,
-			);
+			const ethOutstanding = ethtxToEth(defaultGasPrice, ethtxOutstanding);
 			const ethSupply = targetETH(ethOutstanding).add(1);
 
 			await addWETH(fixture, ethSupply);
@@ -302,9 +301,7 @@ describe(contractName, function () {
 		it('should be false when cRatio == targetCRatio', async function () {
 			const { contract, ethtx, tester } = fixture;
 			const ethtxOutstanding = ethToEthtx(defaultGasPrice, parseEther('10'));
-			const ethOutstanding = ethtxToEth(defaultGasPrice, ethtxOutstanding).add(
-				1,
-			);
+			const ethOutstanding = ethtxToEth(defaultGasPrice, ethtxOutstanding);
 			const ethSupply = targetETH(ethOutstanding);
 
 			await addWETH(fixture, ethSupply);
@@ -316,9 +313,7 @@ describe(contractName, function () {
 		it('should be true when cRatio < targetCRatio', async function () {
 			const { contract, ethtx, tester } = fixture;
 			const ethtxOutstanding = ethToEthtx(defaultGasPrice, parseEther('10'));
-			const ethOutstanding = ethtxToEth(defaultGasPrice, ethtxOutstanding).add(
-				1,
-			);
+			const ethOutstanding = ethtxToEth(defaultGasPrice, ethtxOutstanding);
 			const ethSupply = targetETH(ethOutstanding).sub(1);
 
 			await addWETH(fixture, ethSupply);
@@ -332,7 +327,7 @@ describe(contractName, function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 			const amountETHtx = parseETHtx('100');
-			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx).add(1);
+			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx);
 			expect(await contract.ethForEthtx(amountETHtx)).to.eq(amountETH);
 		});
 
@@ -344,7 +339,7 @@ describe(contractName, function () {
 			await oracle.setGasPrice(gasPrice);
 
 			const amountETHtx = parseETHtx('100');
-			const amountETH = ethtxToEth(gasPrice, amountETHtx).add(1);
+			const amountETH = ethtxToEth(gasPrice, amountETHtx);
 			expect(await contract.ethForEthtx(amountETHtx)).to.eq(amountETH);
 		});
 	});
@@ -927,7 +922,7 @@ describe(contractName, function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) + 3600;
 			const amountETHtx = parseETHtx('100');
-			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx.sub(1));
+			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx.sub(1)).add(1);
 			await expect(
 				contract.buyExactWithWETH(amountETH, amountETHtx, deadline),
 			).to.be.revertedWith('amountIn exceeds max');
