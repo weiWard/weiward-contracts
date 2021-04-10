@@ -317,6 +317,19 @@ contract ETHtxAMM is
 		return _ethtxToEth(gasPriceAtRedemption(), amountETHtxIn.sub(fee));
 	}
 
+	function ethNeeded() external view virtual override returns (uint256) {
+		(uint256 ethSupply_, uint256 ethOut) = cRatio();
+		(uint128 targetNum, uint128 targetDen) = targetCRatio();
+
+		uint256 target = ethOut.mul(targetNum).div(targetDen);
+
+		if (ethSupply_ > target) {
+			return 0;
+		}
+
+		return target - ethSupply_;
+	}
+
 	function ethtx() public view virtual override returns (address) {
 		return _ethtx;
 	}

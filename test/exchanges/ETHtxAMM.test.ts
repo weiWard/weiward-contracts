@@ -241,6 +241,8 @@ describe(contractName, function () {
 				await contract.ethtxOutstanding(),
 				'ethtxOutstanding mismatch',
 			).to.eq(0);
+
+			expect(await contract.ethNeeded(), 'ethNeeded mismatch').to.eq(0);
 		});
 	});
 
@@ -395,6 +397,61 @@ describe(contractName, function () {
 			expect(await contract.ethFromEthtxAtRedemption(amountETHtx)).to.eq(
 				amountETH,
 			);
+		});
+	});
+
+	describe('ethNeeded', function () {
+		it('should be zero when ETH outstanding == 0', async function () {
+			const { contract } = fixture;
+
+			await addWETH(fixture, 1);
+
+			expect(await contract.ethNeeded()).to.eq(0);
+		});
+
+		it('should be zero when ETH supply > outstanding', async function () {
+			const { contract, ethtx, tester } = fixture;
+
+			const supply = parseEther('10');
+			await addWETH(fixture, supply);
+			const oustanding = targetETHtx(supply).sub(1);
+			await ethtx.mockMint(tester, oustanding);
+
+			expect(await contract.ethNeeded()).to.eq(0);
+		});
+
+		it('should be zero when ETH supply == outstanding', async function () {
+			const { contract, ethtx, tester } = fixture;
+
+			const supply = parseEther('10');
+			await addWETH(fixture, supply);
+			const oustanding = targetETHtx(supply);
+			await ethtx.mockMint(tester, oustanding);
+
+			expect(await contract.ethNeeded()).to.eq(0);
+		});
+
+		it('should be correct when ETH supply < outstanding', async function () {
+			const { contract, ethtx, tester } = fixture;
+
+			const supply = parseEther('10');
+			await addWETH(fixture, supply);
+			const oustanding = targetETHtx(supply).add(1);
+			await ethtx.mockMint(tester, oustanding);
+
+			const needed = targetETH(ethtxToEth(defaultGasPrice, oustanding)).sub(
+				supply,
+			);
+			expect(await contract.ethNeeded()).to.eq(needed);
+		});
+
+		it('should be correct when outstanding == 1 weiETHtx', async function () {
+			const { contract, ethtx, tester } = fixture;
+
+			await ethtx.mockMint(tester, 1);
+			const expected = targetETH(ethtxToEth(defaultGasPrice, One));
+
+			expect(await contract.ethNeeded()).to.eq(expected);
 		});
 	});
 

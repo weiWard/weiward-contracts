@@ -18,6 +18,8 @@ interface IETHtxAMM {
 		view
 		returns (uint256);
 
+	function ethNeeded() external view returns (uint256);
+
 	function ethtx() external view returns (address);
 
 	function ethtxFromEth(uint256 amountETHIn) external view returns (uint256);
