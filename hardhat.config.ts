@@ -118,6 +118,8 @@ const config: HardhatUserConfig = {
 		deployer: 0,
 		// tests use this account when the deployer is undesirable
 		tester: 1,
+		// Run scripts from this user
+		user: 2,
 		// Gas oracle service
 		gasOracleService: {
 			// mainnet
