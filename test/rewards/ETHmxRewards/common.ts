@@ -21,7 +21,7 @@ import {
 	ETHtxAMM__factory,
 } from '../../../build/types/ethers-v5';
 
-export const mintGasPrice = parseGwei('1800');
+export const mintGasPrice = parseGwei('1000');
 export const roiNumerator = 5;
 export const roiDenominator = 1;
 export const feeRecipient = zeroPadAddress('0x1');

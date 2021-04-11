@@ -36,7 +36,7 @@ const contractName = 'ETHtxRewardsManager';
 
 const defaultRecipient = zeroPadAddress('0x1');
 const defaultGasPrice = parseGwei('200');
-const mintGasPrice = parseGwei('1800');
+const mintGasPrice = parseGwei('1000');
 const ethmxAccrualUpdateInterval = 3600; // 1 hour
 const feeNumerator = 75;
 const feeDenominator = 1000;

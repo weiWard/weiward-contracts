@@ -14,13 +14,17 @@ export default function run(): void {
 
 	beforeEach(async function () {
 		fixture = await loadFixture();
-		const { contract, deployer, tester, testerSigner, weth } = fixture;
+		const { contract, testerSigner } = fixture;
 
 		await stake(fixture, stakeAmount);
 		await stake(fixture, stakeAmount, testerSigner);
 
 		await addRewards(fixture, rewardsAmount);
 		await contract.updateAccrual();
+	});
+
+	it('initial rewards should be correct', async function () {
+		const { contract, deployer, tester, weth } = fixture;
 
 		expect(
 			await weth.balanceOf(contract.address),

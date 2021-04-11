@@ -25,7 +25,7 @@ import {
 
 const contractName = 'ETHmxMinter';
 
-const mintGasPrice = parseGwei('1800');
+const mintGasPrice = parseGwei('1000');
 const roiNumerator = 5;
 const roiDenominator = 1;
 const feeRecipient = zeroPadAddress('0x1');
