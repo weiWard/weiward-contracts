@@ -340,6 +340,11 @@ contract ETHtxAMM is
 		return IERC20(weth()).balanceOf(address(this));
 	}
 
+	function ethSupplyTarget() external view virtual override returns (uint256) {
+		(uint128 targetNum, uint128 targetDen) = targetCRatio();
+		return ethForEthtx(ethtxOutstanding()).mul(targetNum).div(targetDen);
+	}
+
 	function ethtxAvailable() public view virtual override returns (uint256) {
 		return IERC20(ethtx()).balanceOf(address(this));
 	}

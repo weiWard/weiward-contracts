@@ -536,6 +536,25 @@ describe(contractName, function () {
 		});
 	});
 
+	describe('ethSupplyTarget', function () {
+		it('should reflect cRatio and targetCRatio', async function () {
+			const { contract, ethtx, tester } = fixture;
+			const ethSupply = parseEther('10');
+			const ethtxOutstanding = parseETHtx('1000');
+
+			await addWETH(fixture, ethSupply);
+			await ethtx.mockMint(tester, ethtxOutstanding);
+
+			const [, cRatioDen] = await contract.cRatio();
+
+			const expected = cRatioDen
+				.mul(targetCRatioNumerator)
+				.div(targetCRatioDenominator);
+
+			expect(await contract.ethSupplyTarget()).to.eq(expected);
+		});
+	});
+
 	describe('ethtxAvailable', function () {
 		it('should reflect contract ETHtx balance', async function () {
 			const { contract, ethtx } = fixture;

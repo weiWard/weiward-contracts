@@ -31,6 +31,8 @@ interface IETHtxAMM {
 
 	function ethSupply() external view returns (uint256);
 
+	function ethSupplyTarget() external view returns (uint256);
+
 	function ethtxAvailable() external view returns (uint256);
 
 	function ethtxOutstanding() external view returns (uint256);
