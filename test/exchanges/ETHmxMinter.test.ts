@@ -404,6 +404,13 @@ describe(contractName, function () {
 			});
 		});
 
+		it('should revert when sent is zero', async function () {
+			const { contract } = fixture;
+			await expect(contract.mint({ value: 0 })).to.be.revertedWith(
+				'cannot mint with zero amount',
+			);
+		});
+
 		it('should revert when paused', async function () {
 			const { contract } = fixture;
 			await contract.pause();
@@ -548,6 +555,13 @@ describe(contractName, function () {
 			);
 		});
 
+		it('should revert when amount is zero', async function () {
+			const { contract } = fixture;
+			await expect(contract.mintWithETHtx(0)).to.be.revertedWith(
+				'cannot mint with zero amount',
+			);
+		});
+
 		it('should revert when paused', async function () {
 			const { contract } = fixture;
 			await contract.pause();
@@ -589,6 +603,13 @@ describe(contractName, function () {
 				const { contract } = fixture;
 				expect(await contract.totalGiven()).to.eq(amount);
 			});
+		});
+
+		it('should revert when amount is zero', async function () {
+			const { contract } = fixture;
+			await expect(contract.mintWithWETH(0)).to.be.revertedWith(
+				'cannot mint with zero amount',
+			);
 		});
 
 		it('should revert when paused', async function () {

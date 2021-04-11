@@ -82,6 +82,7 @@ contract ETHmxMinter is
 
 	function mint() external payable override whenNotPaused {
 		uint256 amountIn = msg.value;
+		require(amountIn != 0, "ETHmxMinter: cannot mint with zero amount");
 
 		IWETH(weth()).deposit{ value: amountIn }();
 		IERC20(weth()).safeTransfer(ethtxAMM(), amountIn);
@@ -98,6 +99,8 @@ contract ETHmxMinter is
 		override
 		whenNotPaused
 	{
+		require(amount != 0, "ETHmxMinter: cannot mint with zero amount");
+
 		IETHtxAMM ammHandle = IETHtxAMM(ethtxAMM());
 		uint256 amountETHIn = ammHandle.ethForEthtx(amount);
 		require(
@@ -117,6 +120,7 @@ contract ETHmxMinter is
 		override
 		whenNotPaused
 	{
+		require(amount != 0, "ETHmxMinter: cannot mint with zero amount");
 		address account = _msgSender();
 
 		IERC20(weth()).safeTransferFrom(account, ethtxAMM(), amount);
