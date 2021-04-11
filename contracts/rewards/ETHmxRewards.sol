@@ -242,6 +242,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	}
 
 	function redeemReward(uint256 amount) public override {
+		require(amount != 0, "ETHmxRewards: cannot redeem zero");
 		address account = _msgSender();
 		// Update reward first (since it only goes up)
 		_updateRewardFor(account);

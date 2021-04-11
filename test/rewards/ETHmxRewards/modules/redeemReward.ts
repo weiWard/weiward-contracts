@@ -136,6 +136,13 @@ export default function run(): void {
 			.withArgs(deployer, redeemed);
 	});
 
+	it('should revert when amount == 0', async function () {
+		const { contract } = fixture;
+		await expect(contract.redeemReward(0)).to.be.revertedWith(
+			'cannot redeem zero',
+		);
+	});
+
 	it('should revert when amount > reward', async function () {
 		const { contract } = fixture;
 		await expect(
