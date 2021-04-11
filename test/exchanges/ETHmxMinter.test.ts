@@ -448,7 +448,89 @@ describe(contractName, function () {
 			);
 		});
 
-		it('should revert with enough collateral', async function () {
+		it('should mint zero when amount is 238', async function () {
+			const { contract, deployer, ethmx } = fixture;
+
+			await expect(contract.mintWithETHtx(238))
+				.to.emit(ethmx, 'Transfer')
+				.withArgs(zeroAddress, deployer, 0);
+		});
+
+		it('should mint 1 when amount is 239', async function () {
+			const { contract, deployer, ethmx } = fixture;
+
+			await expect(contract.mintWithETHtx(239))
+				.to.emit(ethmx, 'Transfer')
+				.withArgs(zeroAddress, deployer, 1);
+		});
+
+		it('should succeed when amount meets needed collateral', async function () {
+			const { contract, deployer, deployerSigner, ethmx, ethtxAMM } = fixture;
+
+			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
+			const amountETH = (await ethtxAMM.ethForEthtx(amount))
+				.mul(targetNum)
+				.div(targetDen)
+				.sub(1);
+
+			await deployerSigner.sendTransaction({
+				to: ethtxAMM.address,
+				value: amountETH,
+			});
+
+			// const amountETHmx = await contract.ethmxFromEthtx(1);
+			await expect(contract.mintWithETHtx(239))
+				.to.emit(ethmx, 'Transfer')
+				.withArgs(zeroAddress, deployer, 1);
+		});
+
+		it('should succeed when amount meets needed collateral plus 237', async function () {
+			const { contract, deployer, deployerSigner, ethmx, ethtxAMM } = fixture;
+
+			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
+			const amountETH = (await ethtxAMM.ethForEthtx(amount))
+				.mul(targetNum)
+				.div(targetDen)
+				.sub(1);
+
+			await deployerSigner.sendTransaction({
+				to: ethtxAMM.address,
+				value: amountETH,
+			});
+
+			// const amountETHmx = await contract.ethmxFromEthtx(1);
+			await expect(contract.mintWithETHtx(239 + 237))
+				.to.emit(ethmx, 'Transfer')
+				.withArgs(zeroAddress, deployer, 1);
+		});
+
+		it('should revert when amount exceeds needed collateral', async function () {
+			const { contract, deployerSigner, ethtxAMM } = fixture;
+
+			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
+			const amountETH = (await ethtxAMM.ethForEthtx(amount))
+				.mul(targetNum)
+				.div(targetDen)
+				.sub(1);
+
+			await deployerSigner.sendTransaction({
+				to: ethtxAMM.address,
+				value: amountETH,
+			});
+
+			// const needed = await ethtxAMM.ethNeeded();
+			// console.log(`needed: ${needed.toString()}`);
+			// const neededInEthtx = await ethtxAMM.ethtxFromEth(needed);
+			// console.log(`neededInEthtx: ${neededInEthtx.toString()}`);
+			// const neededBackInETh = await ethtxAMM.ethForEthtx(neededInEthtx);
+			// console.log(`neededBackInETh: ${neededBackInETh.toString()}`);
+
+			await expect(contract.mintWithETHtx(239 + 238)).to.be.revertedWith(
+				'ETHtx value burnt exceeds ETH needed',
+			);
+		});
+
+		it('should revert when collateral is not needed', async function () {
 			const { contract, deployerSigner, ethtxAMM } = fixture;
 
 			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
@@ -461,8 +543,8 @@ describe(contractName, function () {
 				value: amountETH,
 			});
 
-			await expect(contract.mintWithETHtx(amount)).to.be.revertedWith(
-				'can only burn ETHtx if undercollateralized',
+			await expect(contract.mintWithETHtx(239)).to.be.revertedWith(
+				'ETHtx value burnt exceeds ETH needed',
 			);
 		});
 

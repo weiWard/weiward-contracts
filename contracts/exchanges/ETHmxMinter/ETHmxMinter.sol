@@ -98,17 +98,17 @@ contract ETHmxMinter is
 		override
 		whenNotPaused
 	{
+		IETHtxAMM ammHandle = IETHtxAMM(ethtxAMM());
+		uint256 amountETHIn = ammHandle.ethForEthtx(amount);
 		require(
-			IETHtxAMM(ethtxAMM()).cRatioBelowTarget(),
-			"ETHmxMinter: can only burn ETHtx if undercollateralized"
+			ammHandle.ethNeeded() >= amountETHIn,
+			"ETHmxMinter: ETHtx value burnt exceeds ETH needed"
 		);
 
 		address account = _msgSender();
-
 		IETHtx(ethtx()).burn(account, amount);
 
-		uint256 amountOut = ethmxFromEthtx(amount);
-		_mint(account, amountOut);
+		_mint(account, amountETHIn);
 	}
 
 	function mintWithWETH(uint256 amount)
