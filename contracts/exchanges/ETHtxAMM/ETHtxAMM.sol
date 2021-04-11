@@ -100,30 +100,16 @@ contract ETHtxAMM is
 
 	/* External Mutators */
 
-	function buy(uint256 deadline)
-		external
-		payable
-		virtual
-		override
-		ensure(deadline)
-		priceIsFresh
-	{
-		uint256 amountIn = msg.value;
-		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethtxFromEth(amountIn);
-		_buy(_msgSender(), amountIn, amountOut, false);
+	function buy(uint256 deadline) external payable virtual override {
+		_buyCommon(msg.value, deadline, false);
 	}
 
 	function buyWithWETH(uint256 amountIn, uint256 deadline)
 		external
 		virtual
 		override
-		ensure(deadline)
-		priceIsFresh
 	{
-		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethtxFromEth(amountIn);
-		_buy(_msgSender(), amountIn, amountOut, true);
+		_buyCommon(amountIn, deadline, true);
 	}
 
 	function buyExact(uint256 amountOut, uint256 deadline)
@@ -131,18 +117,12 @@ contract ETHtxAMM is
 		payable
 		virtual
 		override
-		ensure(deadline)
-		priceIsFresh
 	{
-		require(msg.value != 0, "ETHtxAMM: cannot swap zero");
-		address account = _msgSender();
-		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
-		uint256 amountIn = ethForEthtx(amountOut).add(1);
-		require(amountIn <= msg.value, "ETHtxAMM: amountIn exceeds max");
-		_buy(account, amountIn, amountOut, false);
+		uint256 amountInMax = msg.value;
+		uint256 amountIn = _buyExact(amountInMax, amountOut, deadline, false);
 		// refund leftover ETH
-		if (msg.value != amountIn) {
-			payable(account).sendValue(msg.value - amountIn);
+		if (amountInMax != amountIn) {
+			payable(_msgSender()).sendValue(amountInMax - amountIn);
 		}
 	}
 
@@ -150,12 +130,8 @@ contract ETHtxAMM is
 		uint256 amountInMax,
 		uint256 amountOut,
 		uint256 deadline
-	) external virtual override ensure(deadline) priceIsFresh {
-		require(amountInMax != 0, "ETHtxAMM: cannot swap zero");
-		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
-		uint256 amountIn = ethForEthtx(amountOut).add(1);
-		require(amountIn <= amountInMax, "ETHtxAMM: amountIn exceeds max");
-		_buy(_msgSender(), amountIn, amountOut, true);
+	) external virtual override {
+		_buyExact(amountInMax, amountOut, deadline, true);
 	}
 
 	function buyWithExactETH(uint256 amountOutMin, uint256 deadline)
@@ -163,25 +139,16 @@ contract ETHtxAMM is
 		payable
 		virtual
 		override
-		ensure(deadline)
-		priceIsFresh
 	{
-		uint256 amountIn = msg.value;
-		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethtxFromEth(amountIn);
-		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
-		_buy(_msgSender(), amountIn, amountOut, false);
+		_buyWithExact(msg.value, amountOutMin, deadline, false);
 	}
 
 	function buyWithExactWETH(
 		uint256 amountIn,
 		uint256 amountOutMin,
 		uint256 deadline
-	) external virtual override ensure(deadline) priceIsFresh {
-		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethtxFromEth(amountIn);
-		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
-		_buy(_msgSender(), amountIn, amountOut, true);
+	) external virtual override {
+		_buyWithExact(amountIn, amountOutMin, deadline, true);
 	}
 
 	function pause() external virtual override onlyOwner whenNotPaused {
@@ -461,6 +428,41 @@ contract ETHtxAMM is
 	}
 
 	/* Internal Mutators */
+
+	function _buyCommon(
+		uint256 amountIn,
+		uint256 deadline,
+		bool useWETH
+	) internal virtual ensure(deadline) priceIsFresh {
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
+		uint256 amountOut = ethtxFromEth(amountIn);
+		_buy(_msgSender(), amountIn, amountOut, useWETH);
+	}
+
+	function _buyExact(
+		uint256 amountInMax,
+		uint256 amountOut,
+		uint256 deadline,
+		bool useWETH
+	) internal virtual ensure(deadline) priceIsFresh returns (uint256 amountIn) {
+		require(amountInMax != 0, "ETHtxAMM: cannot swap zero");
+		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
+		amountIn = ethForEthtx(amountOut).add(1);
+		require(amountIn <= amountInMax, "ETHtxAMM: amountIn exceeds max");
+		_buy(_msgSender(), amountIn, amountOut, useWETH);
+	}
+
+	function _buyWithExact(
+		uint256 amountIn,
+		uint256 amountOutMin,
+		uint256 deadline,
+		bool useWETH
+	) internal virtual ensure(deadline) priceIsFresh {
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
+		uint256 amountOut = ethtxFromEth(amountIn);
+		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
+		_buy(_msgSender(), amountIn, amountOut, useWETH);
+	}
 
 	function _buy(
 		address account,
