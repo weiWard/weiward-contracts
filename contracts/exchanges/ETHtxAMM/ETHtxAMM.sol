@@ -109,6 +109,7 @@ contract ETHtxAMM is
 		priceIsFresh
 	{
 		uint256 amountIn = msg.value;
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
 		uint256 amountOut = ethtxFromEth(amountIn);
 		_buy(_msgSender(), amountIn, amountOut, false);
 	}
@@ -120,6 +121,7 @@ contract ETHtxAMM is
 		ensure(deadline)
 		priceIsFresh
 	{
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
 		uint256 amountOut = ethtxFromEth(amountIn);
 		_buy(_msgSender(), amountIn, amountOut, true);
 	}
@@ -132,13 +134,14 @@ contract ETHtxAMM is
 		ensure(deadline)
 		priceIsFresh
 	{
+		require(msg.value != 0, "ETHtxAMM: cannot swap zero");
 		address account = _msgSender();
 		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
 		uint256 amountIn = ethForEthtx(amountOut).add(1);
 		require(amountIn <= msg.value, "ETHtxAMM: amountIn exceeds max");
 		_buy(account, amountIn, amountOut, false);
 		// refund leftover ETH
-		if (msg.value > amountIn) {
+		if (msg.value != amountIn) {
 			payable(account).sendValue(msg.value - amountIn);
 		}
 	}
@@ -148,6 +151,7 @@ contract ETHtxAMM is
 		uint256 amountOut,
 		uint256 deadline
 	) external virtual override ensure(deadline) priceIsFresh {
+		require(amountInMax != 0, "ETHtxAMM: cannot swap zero");
 		// Add 1 to account for rounding (can't buy ETHtx for 0 wei)
 		uint256 amountIn = ethForEthtx(amountOut).add(1);
 		require(amountIn <= amountInMax, "ETHtxAMM: amountIn exceeds max");
@@ -163,6 +167,7 @@ contract ETHtxAMM is
 		priceIsFresh
 	{
 		uint256 amountIn = msg.value;
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
 		uint256 amountOut = ethtxFromEth(amountIn);
 		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
 		_buy(_msgSender(), amountIn, amountOut, false);
@@ -173,6 +178,7 @@ contract ETHtxAMM is
 		uint256 amountOutMin,
 		uint256 deadline
 	) external virtual override ensure(deadline) priceIsFresh {
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
 		uint256 amountOut = ethtxFromEth(amountIn);
 		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
 		_buy(_msgSender(), amountIn, amountOut, true);
@@ -201,6 +207,7 @@ contract ETHtxAMM is
 		ensure(deadline)
 		priceIsFresh
 	{
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
 		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
 		_redeem(_msgSender(), amountIn, amountOut);
 	}
@@ -210,6 +217,7 @@ contract ETHtxAMM is
 		uint256 amountOut,
 		uint256 deadline
 	) external virtual override ensure(deadline) priceIsFresh {
+		require(amountInMax != 0, "ETHtxAMM: cannot swap zero");
 		uint256 amountIn = ethtxForEthAtRedemption(amountOut);
 		require(amountIn <= amountInMax, "ETHtxAMM: amountIn exceeds max");
 		_redeem(_msgSender(), amountIn, amountOut);
@@ -220,6 +228,7 @@ contract ETHtxAMM is
 		uint256 amountOutMin,
 		uint256 deadline
 	) external virtual override ensure(deadline) priceIsFresh {
+		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
 		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
 		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
 		_redeem(_msgSender(), amountIn, amountOut);
