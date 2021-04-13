@@ -58,23 +58,39 @@ interface IETHtxAMM {
 
 	/* Mutators */
 
-	function buy(uint256 deadline) external payable;
+	function swapEthForEthtx(uint256 deadline) external payable;
 
-	function buyWithWETH(uint256 amountIn, uint256 deadline) external;
+	function swapWethForEthtx(uint256 amountIn, uint256 deadline) external;
 
-	function buyExact(uint256 amountOut, uint256 deadline) external payable;
+	function swapEthForExactEthtx(uint256 amountOut, uint256 deadline)
+		external
+		payable;
 
-	function buyExactWithWETH(
+	function swapWethForExactEthtx(
 		uint256 amountInMax,
 		uint256 amountOut,
 		uint256 deadline
 	) external;
 
-	function buyWithExactETH(uint256 amountOutMin, uint256 deadline)
+	function swapExactEthForEthtx(uint256 amountOutMin, uint256 deadline)
 		external
 		payable;
 
-	function buyWithExactWETH(
+	function swapExactWethForEthtx(
+		uint256 amountIn,
+		uint256 amountOutMin,
+		uint256 deadline
+	) external;
+
+	function swapEthtxForWeth(uint256 amountIn, uint256 deadline) external;
+
+	function swapEthtxForExactWeth(
+		uint256 amountInMax,
+		uint256 amountOut,
+		uint256 deadline
+	) external;
+
+	function swapExactEthtxForWeth(
 		uint256 amountIn,
 		uint256 amountOutMin,
 		uint256 deadline
@@ -86,20 +102,6 @@ interface IETHtxAMM {
 		address token,
 		address to,
 		uint256 amount
-	) external;
-
-	function redeem(uint256 amountIn, uint256 deadline) external;
-
-	function redeemExact(
-		uint256 amountInMax,
-		uint256 amountOut,
-		uint256 deadline
-	) external;
-
-	function redeemWithExact(
-		uint256 amountIn,
-		uint256 amountOutMin,
-		uint256 deadline
 	) external;
 
 	function setEthtx(address account) external;
