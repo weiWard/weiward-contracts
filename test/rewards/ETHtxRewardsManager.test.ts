@@ -36,7 +36,7 @@ const contractName = 'ETHtxRewardsManager';
 
 const defaultRecipient = zeroPadAddress('0x1');
 const defaultGasPrice = parseGwei('200');
-const mintGasPrice = parseGwei('1800');
+const mintGasPrice = parseGwei('1000');
 const ethmxAccrualUpdateInterval = 3600; // 1 hour
 const feeNumerator = 75;
 const feeDenominator = 1000;
@@ -108,15 +108,21 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,
-			ethmx.address,
-			ethtx.address,
-			ethtxAMM.address,
-			weth.address,
+		);
+		await ethmxMinter.postInit({
+			ethmx: ethmx.address,
+			ethtx: ethtx.address,
+			ethtxAMM: ethtxAMM.address,
+			weth: weth.address,
 			mintGasPrice,
 			roiNumerator,
 			roiDenominator,
-			0,
-		);
+			earlyThreshold: 0,
+			lpShareNumerator: 25,
+			lpShareDenominator: 100,
+			lps: [],
+			lpRecipient: zeroAddress,
+		});
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.setMinter(ethmxMinter.address);
 

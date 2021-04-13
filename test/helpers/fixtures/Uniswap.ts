@@ -4,6 +4,8 @@ import type { ContractJSON } from 'ethereum-waffle/dist/esm/ContractJSON';
 import UniswapV2Factory from '@uniswap/v2-core/build/UniswapV2Factory.json';
 import UniswapV2Pair from '@uniswap/v2-core/build/UniswapV2Pair.json';
 
+import { MockUniswapV2Router02__factory } from '../../../build/types/ethers-v5';
+
 export interface FactoryFixture {
 	factory: Contract;
 }
@@ -71,4 +73,27 @@ export async function uniswapPairFixture(
 		UniswapV2Factory,
 		UniswapV2Pair,
 	);
+}
+
+export interface RouterFixture extends FactoryFixture {
+	router: Contract;
+}
+
+export async function uniswapRouterFixture(
+	deployerAddress: string,
+	wethAddress: string,
+): Promise<RouterFixture> {
+	const deployerSigner = waffle.provider.getSigner(deployerAddress);
+
+	const factory = await waffle.deployContract(
+		deployerSigner,
+		UniswapV2Factory,
+		[deployerAddress],
+	);
+
+	const router = await new MockUniswapV2Router02__factory(
+		deployerSigner,
+	).deploy(factory.address, wethAddress);
+
+	return { factory, router };
 }

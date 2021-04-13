@@ -56,6 +56,7 @@ const config: HardhatUserConfig = {
 			chainId: 1337, // compatibility with metamask
 			accounts: hardhatAccounts(),
 			live: false, // default for localhost & hardhat
+			saveDeployments: false,
 			forking: {
 				url: ALCHEMY_URI,
 				blockNumber: 9992184,
@@ -94,13 +95,37 @@ const config: HardhatUserConfig = {
 		},
 	},
 	solidity: {
-		version: '0.7.6',
-		settings: {
-			optimizer: {
-				enabled: true,
-				runs: 200,
+		compilers: [
+			{
+				version: '0.7.6',
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 200,
+					},
+				},
 			},
-		},
+			{
+				version: '0.6.12',
+				settings: {
+					evmVersion: 'istanbul',
+					optimizer: {
+						enabled: true,
+						runs: 200,
+					},
+				},
+			},
+			{
+				version: '0.6.6',
+				settings: {
+					evmVersion: 'istanbul',
+					optimizer: {
+						enabled: true,
+						runs: 999999,
+					},
+				},
+			},
+		],
 	},
 	paths: {
 		sources: './contracts',
@@ -117,6 +142,8 @@ const config: HardhatUserConfig = {
 		deployer: 0,
 		// tests use this account when the deployer is undesirable
 		tester: 1,
+		// Run scripts from this user
+		user: 2,
 		// Gas oracle service
 		gasOracleService: {
 			// mainnet

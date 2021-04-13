@@ -65,11 +65,38 @@ export function getDeployerKey(networkName: string): string {
 	return privKey;
 }
 
+export function getUserKey(networkName: string): string {
+	// Hardhat default index 2 address key
+	const hardhatTwo =
+		'5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a';
+
+	if (networkName === 'debug') {
+		return hardhatTwo;
+	}
+
+	// Check for specific key
+	{
+		const privKey = process.env['USER_KEY_' + networkName.toUpperCase()];
+		if (privKey && privKey !== '') {
+			return privKey;
+		}
+	}
+
+	// Get generic key
+	const privKey = process.env.USER_KEY;
+	if (!privKey || privKey === '') {
+		return hardhatTwo;
+	}
+
+	return privKey;
+}
+
 export function accounts(networkName: string): string[] {
 	return [
 		getDeployerKey(networkName),
 		// Hardhat default index 1 address key
 		'59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+		getUserKey(networkName),
 	];
 }
 
