@@ -165,6 +165,10 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			roiNumerator,
 			roiDenominator,
 			earlyThreshold: 0,
+			lpShareNumerator: 25,
+			lpShareDenominator: 100,
+			lps: [],
+			lpRecipient: zeroAddress,
 		});
 
 		await feeLogic.setExempt(contract.address, true);

@@ -38,6 +38,7 @@
     ]
   },
   "devDependencies": {
+    "@ethereum-waffle/compiler": "^3.3.1",
     "@ethersproject/abi": "^5.0.9",
     "@ethersproject/bignumber": "^5.0.12",
     "@ethersproject/bytes": "^5.0.8",
@@ -61,7 +62,9 @@
     "@types/sinonjs__fake-timers": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^4.11.0",
     "@typescript-eslint/parser": "^4.11.0",
+    "@uniswap/lib": "^4.0.1-alpha",
     "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "chai": "^4.2.0",
     "dotenv": "^8.2.0",
     "eslint": "^7.16.0",

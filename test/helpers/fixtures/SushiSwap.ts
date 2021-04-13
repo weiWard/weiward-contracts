@@ -1,11 +1,14 @@
 import { Contract } from 'ethers';
 import { waffle } from 'hardhat';
-import UniswapV2Factory from '@sushiswap/core/build/contracts/UniswapV2Factory.json';
 import UniswapV2Pair from '@sushiswap/core/build/contracts/UniswapV2Pair.json';
+
+import SushiV2Factory from '../../../contracts/exchanges/mocks/SushiV2Factory.json';
+import { MockSushiV2Router02__factory } from '../../../build/types/ethers-v5';
 
 import {
 	FactoryFixture,
 	PairFixture,
+	RouterFixture,
 	uniswapPairFixtureImpl,
 } from './Uniswap';
 
@@ -14,7 +17,7 @@ export async function sushiswapFactoryFixture(
 ): Promise<FactoryFixture> {
 	const factory = await waffle.deployContract(
 		waffle.provider.getSigner(deployerAddress),
-		UniswapV2Factory,
+		SushiV2Factory,
 		[deployerAddress],
 	);
 	return { factory };
@@ -29,7 +32,25 @@ export async function sushiswapPairFixture(
 		deployerAddress,
 		tokenA,
 		tokenB,
-		UniswapV2Factory,
+		SushiV2Factory,
 		UniswapV2Pair,
 	);
+}
+
+export async function sushiswapRouterFixture(
+	deployerAddress: string,
+	wethAddress: string,
+): Promise<RouterFixture> {
+	const deployerSigner = waffle.provider.getSigner(deployerAddress);
+
+	const factory = await waffle.deployContract(deployerSigner, SushiV2Factory, [
+		deployerAddress,
+	]);
+
+	const router = await new MockSushiV2Router02__factory(deployerSigner).deploy(
+		factory.address,
+		wethAddress,
+	);
+
+	return { factory, router };
 }

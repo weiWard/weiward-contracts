@@ -3,6 +3,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
@@ -17,6 +18,25 @@ import "../interfaces/IETHtxAMM.sol";
 import "../../tokens/interfaces/IWETH.sol";
 import "../../access/OwnableUpgradeable.sol";
 
+interface IPool {
+	function addLiquidity(
+		address tokenA,
+		address tokenB,
+		uint256 amountADesired,
+		uint256 amountBDesired,
+		uint256 amountAMin,
+		uint256 amountBMin,
+		address to,
+		uint256 deadline
+	)
+		external
+		returns (
+			uint256 amountA,
+			uint256 amountB,
+			uint256 liquidity
+		);
+}
+
 contract ETHmxMinter is
 	Initializable,
 	ContextUpgradeable,
@@ -25,6 +45,7 @@ contract ETHmxMinter is
 	ETHmxMinterData,
 	IETHmxMinter
 {
+	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
@@ -37,6 +58,10 @@ contract ETHmxMinter is
 		uint128 roiNumerator;
 		uint128 roiDenominator;
 		uint256 earlyThreshold;
+		uint128 lpShareNumerator;
+		uint128 lpShareDenominator;
+		address[] lps;
+		address lpRecipient;
 	}
 
 	/* Constructor */
@@ -78,16 +103,44 @@ contract ETHmxMinter is
 		_roiNum = _args.roiNumerator;
 		_roiDen = _args.roiDenominator;
 		emit RoiSet(sender, _args.roiNumerator, _args.roiDenominator);
+
+		_lpShareNum = _args.lpShareNumerator;
+		_lpShareDen = _args.lpShareDenominator;
+		emit LpShareSet(sender, _args.lpShareNumerator, _args.lpShareDenominator);
+
+		for (uint256 i = 0; i < _lps.length(); i++) {
+			address lp = _lps.at(i);
+			_lps.remove(lp);
+			emit LpRemoved(sender, lp);
+		}
+		for (uint256 i = 0; i < _args.lps.length; i++) {
+			address lp = _args.lps[i];
+			_lps.add(lp);
+			emit LpAdded(sender, lp);
+		}
+
+		_lpRecipient = _args.lpRecipient;
+		emit LpRecipientSet(sender, _args.lpRecipient);
 	}
 
-	function mint() external payable override whenNotPaused {
+	function addLp(address pool) external virtual override onlyOwner {
+		bool added = _lps.add(pool);
+		require(added, "ETHmxMinter: liquidity pool already added");
+		emit LpAdded(_msgSender(), pool);
+	}
+
+	function mint() external payable virtual override whenNotPaused {
 		uint256 amountIn = msg.value;
 		require(amountIn != 0, "ETHmxMinter: cannot mint with zero amount");
 
-		IWETH(weth()).deposit{ value: amountIn }();
-		IERC20(weth()).safeTransfer(ethtxAMM(), amountIn);
-		IETHtx(ethtx()).mint(ethtxAMM(), ethtxFromEth(amountIn));
+		// Convert to WETH
+		address weth_ = weth();
+		IWETH(weth_).deposit{ value: amountIn }();
 
+		// Mint ETHtx and send ETHtx-WETH pair.
+		_mintEthtx(amountIn);
+
+		// Mint ETHmx to sender.
 		uint256 amountOut = ethmxFromEth(amountIn);
 		_mint(_msgSender(), amountOut);
 		_totalGiven += amountIn;
@@ -123,8 +176,11 @@ contract ETHmxMinter is
 		require(amount != 0, "ETHmxMinter: cannot mint with zero amount");
 		address account = _msgSender();
 
-		IERC20(weth()).safeTransferFrom(account, ethtxAMM(), amount);
-		IETHtx(ethtx()).mint(ethtxAMM(), ethtxFromEth(amount));
+		// Need ownership for router
+		IERC20(weth()).safeTransferFrom(account, address(this), amount);
+
+		// Mint ETHtx and send ETHtx-WETH pair.
+		_mintEthtx(amount);
 
 		uint256 amountOut = ethmxFromEth(amount);
 		_mint(account, amountOut);
@@ -142,6 +198,12 @@ contract ETHmxMinter is
 	) external virtual override onlyOwner {
 		IERC20(token).safeTransfer(to, amount);
 		emit Recovered(_msgSender(), token, to, amount);
+	}
+
+	function removeLp(address pool) external virtual override onlyOwner {
+		bool removed = _lps.remove(pool);
+		require(removed, "ETHmxMinter: liquidity pool not present");
+		emit LpRemoved(_msgSender(), pool);
 	}
 
 	function setEarlyThreshold(uint256 value) public virtual override onlyOwner {
@@ -162,6 +224,29 @@ contract ETHmxMinter is
 	function setEthtxAMM(address addr) public virtual override onlyOwner {
 		_ethtxAMM = addr;
 		emit EthtxAMMSet(_msgSender(), addr);
+	}
+
+	function setLpRecipient(address account)
+		external
+		virtual
+		override
+		onlyOwner
+	{
+		_lpRecipient = account;
+		emit LpRecipientSet(_msgSender(), account);
+	}
+
+	function setLpShare(uint128 numerator, uint128 denominator)
+		external
+		virtual
+		override
+		onlyOwner
+	{
+		// Also guarantees that the denominator cannot be zero.
+		require(denominator > numerator, "ETHmxMinter: cannot set lpShare >= 1");
+		_lpShareNum = numerator;
+		_lpShareDen = denominator;
+		emit LpShareSet(_msgSender(), numerator, denominator);
 	}
 
 	function setMintGasPrice(uint256 value) public virtual override onlyOwner {
@@ -258,6 +343,41 @@ contract ETHmxMinter is
 		return numerator.div(denominator);
 	}
 
+	function numLiquidityPools()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
+		return _lps.length();
+	}
+
+	function liquidityPoolsAt(uint256 index)
+		external
+		view
+		virtual
+		override
+		returns (address)
+	{
+		return _lps.at(index);
+	}
+
+	function lpRecipient() public view virtual override returns (address) {
+		return _lpRecipient;
+	}
+
+	function lpShare()
+		public
+		view
+		virtual
+		override
+		returns (uint128 numerator, uint128 denominator)
+	{
+		numerator = _lpShareNum;
+		denominator = _lpShareDen;
+	}
+
 	function mintGasPrice() public view virtual override returns (uint256) {
 		return _mintGasPrice;
 	}
@@ -290,5 +410,65 @@ contract ETHmxMinter is
 
 	function _mint(address account, uint256 amount) internal virtual {
 		IETHmx(ethmx()).mintTo(account, amount);
+	}
+
+	function _mintEthtx(uint256 amountEthIn) internal virtual {
+		// Mint ETHtx.
+		uint256 ethtxToMint = ethtxFromEth(amountEthIn);
+		address ethtx_ = ethtx();
+		IETHtx(ethtx_).mint(address(this), ethtxToMint);
+
+		// Lock portion into liquidity in designated pools
+		(uint256 ethtxSentToLp, uint256 ethSentToLp) = _sendToLps(ethtxToMint);
+
+		// Send the rest to the AMM.
+		address ethtxAmm_ = ethtxAMM();
+		IERC20(weth()).safeTransfer(ethtxAmm_, amountEthIn.sub(ethSentToLp));
+		IERC20(ethtx_).safeTransfer(ethtxAmm_, ethtxToMint.sub(ethtxSentToLp));
+	}
+
+	function _sendToLps(uint256 ethtxTotal)
+		internal
+		virtual
+		returns (uint256 totalEthtxSent, uint256 totalEthSent)
+	{
+		uint256 numLps = _lps.length();
+		if (numLps == 0) {
+			return (0, 0);
+		}
+
+		(uint256 lpShareNum, uint256 lpShareDen) = lpShare();
+		if (lpShareNum == 0) {
+			return (0, 0);
+		}
+
+		uint256 ethtxToLp = ethtxTotal.mul(lpShareNum).div(lpShareDen).div(numLps);
+		uint256 ethToLp = IETHtxAMM(ethtxAMM()).ethForEthtx(ethtxToLp);
+		address ethtx_ = ethtx();
+		address weth_ = weth();
+		address to = lpRecipient();
+
+		for (uint256 i = 0; i < numLps; i++) {
+			address pool = _lps.at(i);
+
+			IERC20(ethtx_).safeIncreaseAllowance(pool, ethtxToLp);
+			IERC20(weth_).safeIncreaseAllowance(pool, ethToLp);
+
+			(uint256 ethtxSent, uint256 ethSent, ) =
+				IPool(pool).addLiquidity(
+					ethtx_,
+					weth_,
+					ethtxToLp,
+					ethToLp,
+					0,
+					0,
+					to,
+					// solhint-disable-next-line not-rely-on-time
+					block.timestamp
+				);
+
+			totalEthtxSent = totalEthtxSent.add(ethtxSent);
+			totalEthSent = totalEthSent.add(ethSent);
+		}
 	}
 }

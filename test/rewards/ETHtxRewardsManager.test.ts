@@ -118,6 +118,10 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			roiNumerator,
 			roiDenominator,
 			earlyThreshold: 0,
+			lpShareNumerator: 25,
+			lpShareDenominator: 100,
+			lps: [],
+			lpRecipient: zeroAddress,
 		});
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.setMinter(ethmxMinter.address);
