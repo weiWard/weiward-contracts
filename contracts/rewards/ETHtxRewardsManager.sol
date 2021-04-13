@@ -52,8 +52,7 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 		ethtxHandle.safeIncreaseAllowance(ethtxAMM_, amount);
 
 		// solhint-disable-next-line not-rely-on-time
-		uint256 deadline = block.timestamp + 3600;
-		IETHtxAMM(ethtxAMM_).redeem(amount, deadline);
+		IETHtxAMM(ethtxAMM_).swapEthtxForWeth(amount, block.timestamp);
 	}
 
 	function distributeRewards() external override returns (uint256) {
