@@ -72,7 +72,14 @@ export default function run(): void {
 	it('should update stakedBalanceOf', async function () {
 		const { contract, deployer } = fixture;
 		await stake(fixture, stakeAmount);
-		expect(await contract.stakedBalanceOf(deployer)).to.eq(stakeAmount);
+		expect(
+			await contract.lastStakedBalanceOf(deployer),
+			'lastStakedBalanceOf mismatch',
+		).to.eq(stakeAmount);
+		expect(
+			await contract.stakedBalanceOf(deployer),
+			'stakedBalanceOf mismatch',
+		).to.eq(stakeAmount);
 	});
 
 	it('should update totalStaked', async function () {

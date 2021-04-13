@@ -97,6 +97,15 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		return _rewardsFor[account];
 	}
 
+	function lastStakedBalanceOf(address account)
+		external
+		view
+		override
+		returns (uint256)
+	{
+		return _stakedFor[account];
+	}
+
 	function lastTotalRewardsAccrued() public view override returns (uint256) {
 		return _lastTotalRewardsAccrued;
 	}
@@ -152,12 +161,41 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	}
 
 	function stakedBalanceOf(address account)
-		public
+		external
 		view
 		override
 		returns (uint256)
 	{
-		return _stakedFor[account];
+		// Gas savings
+		uint256 staked = _stakedFor[account];
+		if (staked == 0) {
+			return 0;
+		}
+
+		uint256[] memory arptValues = _arptSnapshots;
+		uint256 length = arptValues.length;
+		uint256 arpt = arptValues[length - 1];
+		uint256 lastIdx = _arptLastIdx[account];
+		uint256 arptDelta = arpt - arptValues[lastIdx];
+
+		if (arptDelta == 0) {
+			return staked;
+		}
+
+		// Calculate reward and new stake
+		uint256 currentRewards = 0;
+		for (uint256 i = lastIdx + 1; i < length; i++) {
+			arptDelta = arptValues[i] - arptValues[i - 1];
+			if (arptDelta >= _MULTIPLIER) {
+				// This should handle any plausible overflow
+				staked = 0;
+				break;
+			}
+			currentRewards = staked.mul(arptDelta) / _MULTIPLIER;
+			staked -= currentRewards;
+		}
+
+		return staked;
 	}
 
 	function totalRewardsAccrued() public view override returns (uint256) {

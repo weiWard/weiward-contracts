@@ -22,6 +22,11 @@ interface IETHmxRewards {
 		view
 		returns (uint256);
 
+	function lastStakedBalanceOf(address account)
+		external
+		view
+		returns (uint256);
+
 	function lastTotalRewardsAccrued() external view returns (uint256);
 
 	function readyForUpdate() external view returns (bool);
