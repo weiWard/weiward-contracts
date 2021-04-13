@@ -79,7 +79,14 @@ export default function run(): void {
 		it('should update stakedBalanceOf', async function () {
 			const { contract, deployer } = fixture;
 			const expected = staked.sub(rewards);
-			expect(await contract.stakedBalanceOf(deployer)).to.eq(expected);
+			expect(
+				await contract.lastStakedBalanceOf(deployer),
+				'lastStakedBalanceOf mismatch',
+			).to.eq(expected);
+			expect(
+				await contract.stakedBalanceOf(deployer),
+				'stakedBalanceOf mismatch',
+			).to.eq(expected);
 		});
 
 		it('should update lastRewardsBalanceOf', async function () {
@@ -103,7 +110,14 @@ export default function run(): void {
 
 		it('should update stakedBalanceOf', async function () {
 			const { contract, deployer } = fixture;
-			expect(await contract.stakedBalanceOf(deployer)).to.eq(0);
+			expect(
+				await contract.lastStakedBalanceOf(deployer),
+				'lastStakedBalanceOf mismatch',
+			).to.eq(0);
+			expect(
+				await contract.stakedBalanceOf(deployer),
+				'stakedBalanceOf mismatch',
+			).to.eq(0);
 		});
 
 		it('should update lastRewardsBalanceOf', async function () {
@@ -125,8 +139,8 @@ export default function run(): void {
 		await contract.updateReward();
 
 		expect(
-			await contract.stakedBalanceOf(deployer),
-			'stakedBalanceOf mismatch',
+			await contract.lastStakedBalanceOf(deployer),
+			'lastStakedBalanceOf mismatch',
 		).to.eq(0);
 		expect(
 			await contract.lastRewardsBalanceOf(deployer),
@@ -188,15 +202,15 @@ export default function run(): void {
 				.and.lte(rewardsB);
 
 			expect(
-				await contract.stakedBalanceOf(deployer),
-				`checkpoint ${checkpoint}: deployer stakedBalanceOf mismatch`,
+				await contract.lastStakedBalanceOf(deployer),
+				`checkpoint ${checkpoint}: deployer lastStakedBalanceOf mismatch`,
 			)
 				.to.be.gte(stakeA.sub(error))
 				.and.lte(stakeA);
 
 			expect(
-				await contract.stakedBalanceOf(tester),
-				`checkpoint ${checkpoint}: tester stakedBalanceOf mismatch`,
+				await contract.lastStakedBalanceOf(tester),
+				`checkpoint ${checkpoint}: tester lastStakedBalanceOf mismatch`,
 			)
 				.to.be.gte(stakeB.sub(error))
 				.and.lte(stakeB);
