@@ -79,7 +79,7 @@ contract ETHmxMinter is
 	}
 
 	function postInit(Args memory _args) external virtual onlyOwner {
-		address sender = msg.sender;
+		address sender = _msgSender();
 
 		// Set early threshold
 		_earlyThreshold = _args.earlyThreshold;

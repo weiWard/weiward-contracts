@@ -93,12 +93,14 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
 			deployer,
-			ethtx.address,
-			oracle.address,
-			weth.address,
-			targetCRatioNumerator,
-			targetCRatioDenominator,
 		);
+		await ethtxAMM.postInit({
+			ethtx: ethtx.address,
+			gasOracle: oracle.address,
+			weth: weth.address,
+			targetCRatioNum: targetCRatioNumerator,
+			targetCRatioDen: targetCRatioDenominator,
+		});
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
 		const ethmx = await new ETHmx__factory(deployerSigner).deploy(

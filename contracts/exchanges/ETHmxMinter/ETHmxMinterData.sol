@@ -3,7 +3,7 @@ pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
-contract ETHmxMinterData {
+abstract contract ETHmxMinterData {
 	uint256 internal _earlyThreshold;
 	address internal _ethmx;
 	address internal _ethtx;

@@ -140,18 +140,18 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 				owner: deployer,
 				methodName: 'init',
 				proxyContract: 'OpenZeppelinTransparentProxy',
-				viaAdminContract: 'DefaultProxyAdmin',
+				viaAdminContract: 'ProxyAdmin',
 			},
-			args: [
-				deployer,
-				ethtx.address,
-				oracle.address,
-				weth.address,
-				targetCRatioNumerator,
-				targetCRatioDenominator,
-			],
+			args: [deployer],
 		});
 		const contract = ETHtxAMM__factory.connect(result.address, deployerSigner);
+		await contract.postInit({
+			ethtx: ethtx.address,
+			gasOracle: oracle.address,
+			weth: weth.address,
+			targetCRatioNum: targetCRatioNumerator,
+			targetCRatioDen: targetCRatioDenominator,
+		});
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,

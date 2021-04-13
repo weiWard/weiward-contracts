@@ -2,7 +2,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
 import { getOrDeployWETH } from '../utils/weth';
-import { FeeLogic__factory } from '../build/types/ethers-v5';
+import {
+	ETHtxAMM__factory,
+	FeeLogic__factory,
+} from '../build/types/ethers-v5';
 import { salt } from '../utils/create2';
 
 const contractName = 'ETHtxAMM';
@@ -34,19 +37,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			proxyContract: 'OpenZeppelinTransparentProxy',
 			viaAdminContract: 'ProxyAdmin',
 		},
-		args: [
-			deployer,
-			ethtx.address,
-			oracle.address,
-			wethAddr,
-			targetCRatioNum,
-			targetCRatioDen,
-		],
+		args: [deployer],
 		deterministicDeployment: salt,
 	});
 
 	if (result.newlyDeployed) {
 		const deployerSigner = ethers.provider.getSigner(deployer);
+
+		const ethtxAmm = ETHtxAMM__factory.connect(result.address, deployerSigner);
+		await ethtxAmm.postInit({
+			ethtx: ethtx.address,
+			gasOracle: oracle.address,
+			weth: wethAddr,
+			targetCRatioNum,
+			targetCRatioDen,
+		});
+
 		const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
 		await feeLogic.setExempt(result.address, true);
 	}
