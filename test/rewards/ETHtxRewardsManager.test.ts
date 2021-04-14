@@ -128,12 +128,12 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethmxRewards = await new MockETHmxRewards__factory(
 			deployerSigner,
-		).deploy(
-			deployer,
-			ethmx.address,
-			weth.address,
-			ethmxAccrualUpdateInterval,
-		);
+		).deploy(deployer);
+		await ethmxRewards.postInit({
+			ethmx: ethmx.address,
+			weth: weth.address,
+			accrualUpdateInterval: ethmxAccrualUpdateInterval,
+		});
 
 		const { pair: uniPool } = await uniswapPairFixture(deployer, ethtx, weth);
 		const valuePerUNIV2 = await new ValuePerUNIV2__factory(

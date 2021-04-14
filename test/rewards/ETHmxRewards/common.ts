@@ -111,7 +111,12 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const contract = await new MockETHmxRewards__factory(
 			deployerSigner,
-		).deploy(deployer, ethmx.address, weth.address, accrualUpdateInterval);
+		).deploy(deployer);
+		await contract.postInit({
+			ethmx: ethmx.address,
+			weth: weth.address,
+			accrualUpdateInterval,
+		});
 		const testerContract = contract.connect(testerSigner);
 
 		return {

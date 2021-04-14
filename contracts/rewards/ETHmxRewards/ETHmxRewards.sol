@@ -1,44 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import "@openzeppelin/contracts/utils/Arrays.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "../tokens/interfaces/IETHmx.sol";
-import "./interfaces/IETHmxRewards.sol";
+import "./ETHmxRewardsData.sol";
+import "../../tokens/interfaces/IETHmx.sol";
+import "../interfaces/IETHmxRewards.sol";
+import "../../access/OwnableUpgradeable.sol";
 
 // High accuracy in block.timestamp is not needed.
 // https://consensys.github.io/smart-contract-best-practices/recommendations/#the-15-second-rule
 /* solhint-disable not-rely-on-time */
 
-contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
-	using Arrays for uint256[];
-	using Counters for Counters.Counter;
+contract ETHmxRewards is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	PausableUpgradeable,
+	ETHmxRewardsData,
+	IETHmxRewards
+{
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Mutable Internal State */
-
-	address internal _ethmx;
-	address internal _weth;
-
-	uint256[] internal _arptSnapshots;
-	mapping(address => uint256) internal _arptLastIdx;
-
-	uint256 internal _lastAccrualUpdate;
-	uint256 internal _accrualUpdateInterval;
-
-	mapping(address => uint256) internal _rewardsFor;
-	uint256 internal _lastTotalRewardsAccrued;
-	uint256 internal _totalRewardsRedeemed;
-
-	mapping(address => uint256) internal _stakedFor;
-	uint256 internal _totalStaked;
+	struct Args {
+		address ethmx;
+		address weth;
+		uint256 accrualUpdateInterval;
+	}
 
 	/* Immutable Internal State */
 
@@ -46,19 +41,31 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	/* Constructor */
 
-	constructor(
-		address owner_,
-		address ethmx_,
-		address weth_,
-		uint256 accrualUpdateInterval_
-	) Ownable() {
-		setEthmx(ethmx_);
-		setWeth(weth_);
+	constructor(address owner_) {
+		init(owner_);
+	}
+
+	/* Initializer */
+
+	function init(address owner_) public virtual initializer {
+		__Context_init_unchained();
+		__Ownable_init_unchained(owner_);
+		__Pausable_init_unchained();
+
 		_arptSnapshots.push(0);
-		setAccrualUpdateInterval(accrualUpdateInterval_);
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
-		}
+	}
+
+	function postInit(Args memory _args) external virtual onlyOwner {
+		address sender = _msgSender();
+
+		_ethmx = _args.ethmx;
+		emit ETHmxSet(sender, _args.ethmx);
+
+		_weth = _args.weth;
+		emit WETHSet(sender, _args.weth);
+
+		_accrualUpdateInterval = _args.accrualUpdateInterval;
+		emit AccrualUpdateIntervalSet(sender, _args.accrualUpdateInterval);
 	}
 
 	/* Public Views */
