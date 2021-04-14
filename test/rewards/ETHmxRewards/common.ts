@@ -84,10 +84,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		});
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
-			deployer,
-			zeroAddress,
-		);
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,

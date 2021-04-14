@@ -125,10 +125,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployer,
 		);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
-			deployer,
-			zeroAddress,
-		);
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
 
 		const result = await deploy('ETHtxAMMTest', {
 			contract: 'ETHtxAMM',

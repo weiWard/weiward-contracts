@@ -38,11 +38,12 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			proxy: {
 				methodName: 'init',
 				proxyContract: 'OpenZeppelinTransparentProxy',
-				viaAdminContract: 'DefaultProxyAdmin',
+				viaAdminContract: 'ProxyAdmin',
 			},
-			args: [deployer, deployer],
+			args: [deployer],
 		});
 		const contract = ETHmx__factory.connect(result.address, deployerSigner);
+		await contract.setMinter(deployer);
 		const testerContract = contract.connect(testerSigner);
 
 		const testToken = await new MockERC20__factory(deployerSigner).deploy(
