@@ -214,7 +214,7 @@ contract RewardsManager is
 		address account,
 		uint128 value,
 		bool isActive
-	) external override onlyOwner {
+	) public override onlyOwner {
 		require(
 			account != address(0),
 			"RewardsManager: cannot set shares for zero address"
@@ -257,6 +257,24 @@ contract RewardsManager is
 			_recipients.remove(account);
 		}
 		emit SharesSet(_msgSender(), account, value, isActive);
+	}
+
+	function setSharesBatch(
+		address[] calldata accounts,
+		uint128[] calldata values,
+		bool[] calldata isActives
+	) public override onlyOwner {
+		uint256 length = accounts.length;
+		require(length != 0, "RewardsManager: no accounts specified");
+		require(length == values.length, "RewardsManager: values length mismatch");
+		require(
+			length == isActives.length,
+			"RewardsManager: isActives length mismatch"
+		);
+
+		for (uint256 i = 0; i < length; i++) {
+			setShares(accounts[i], values[i], isActives[i]);
+		}
 	}
 
 	/* Internal Views */

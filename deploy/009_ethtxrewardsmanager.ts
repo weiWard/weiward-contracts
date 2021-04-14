@@ -62,19 +62,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			lpRewards: lpRewardsAddr,
 		});
 
-		if (defaultRecipient !== ethmxRewardsAddr) {
-			await ethtxRewardsMgr.setShares(defaultRecipient, defaultShares, true);
-		}
-		await ethtxRewardsMgr.setShares(
-			ethmxRewardsAddr,
-			ethmxRewardsShares,
-			true,
-		);
-		await ethtxRewardsMgr.setShares(lpRewardsAddr, lpRewardsShares, true);
-
 		const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
 		await feeLogic.setRecipient(result.address);
 		await feeLogic.setExempt(result.address, true);
+
+		const sharesAccounts = [ethmxRewardsAddr, lpRewardsAddr];
+		const sharesValues = [ethmxRewardsShares, lpRewardsShares];
+		const sharesActive = [true, true];
+		if (defaultRecipient !== ethmxRewardsAddr) {
+			sharesAccounts.push(defaultRecipient);
+			sharesValues.push(defaultShares);
+			sharesActive.push(true);
+		}
+
+		await ethtxRewardsMgr.setSharesBatch(
+			sharesAccounts,
+			sharesValues,
+			sharesActive,
+		);
 	}
 
 	// Never execute twice

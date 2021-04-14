@@ -162,9 +162,15 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		await feeLogic.setRecipient(contract.address);
 		await feeLogic.setExempt(contract.address, true);
 
-		await contract.setShares(defaultRecipient, defaultShares, true);
-		await contract.setShares(ethmxRewards.address, ethmxRewardsShares, true);
-		await contract.setShares(lpRewards.address, lpRewardsShares, true);
+		const sharesAccounts = [
+			defaultRecipient,
+			ethmxRewards.address,
+			lpRewards.address,
+		];
+		const sharesValues = [defaultShares, ethmxRewardsShares, lpRewardsShares];
+		const sharesActive = [true, true, true];
+
+		await contract.setSharesBatch(sharesAccounts, sharesValues, sharesActive);
 
 		return {
 			deployer,

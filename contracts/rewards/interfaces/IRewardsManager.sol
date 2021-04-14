@@ -49,6 +49,12 @@ interface IRewardsManager {
 		bool isActive
 	) external;
 
+	function setSharesBatch(
+		address[] calldata accounts,
+		uint128[] calldata values,
+		bool[] calldata isActives
+	) external;
+
 	/* Events */
 
 	event DefaultRecipientSet(address indexed author, address indexed account);
