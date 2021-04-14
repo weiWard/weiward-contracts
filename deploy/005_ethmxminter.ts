@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 
-import { getDeployedWETH } from '../utils/weth';
+import { getOrDeployWETH } from '../utils/weth';
 import { getOrDeploySushiRouter } from '../utils/sushi';
 import {
 	ETHmx__factory,
@@ -33,7 +33,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const lpShareDenominator = 100;
 
 	const chainId = await getChainId();
-	const wethAddr = await getDeployedWETH(deployments, chainId);
+	const wethAddr = await getOrDeployWETH(deployer, deployments, chainId);
 	if (!wethAddr) {
 		throw new Error('WETH address undefined for current network');
 	}

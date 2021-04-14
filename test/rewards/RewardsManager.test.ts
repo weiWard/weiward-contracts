@@ -46,7 +46,11 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const contract = await new MockRewardsManager__factory(
 			deployerSigner,
-		).deploy(defaultRecipient, rewardsToken.address);
+		).deploy(deployer);
+		await contract.postInit({
+			defaultRecipient,
+			rewardsToken: rewardsToken.address,
+		});
 		const testerContract = contract.connect(testerSigner);
 
 		return {

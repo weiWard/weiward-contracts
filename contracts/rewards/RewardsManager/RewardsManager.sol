@@ -1,42 +1,61 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./interfaces/IRewardsManager.sol";
+import "./RewardsManagerData.sol";
+import "../interfaces/IRewardsManager.sol";
+import "../../access/OwnableUpgradeable.sol";
 
-contract RewardsManager is Ownable, IRewardsManager {
+contract RewardsManager is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	RewardsManagerData,
+	IRewardsManager
+{
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeCast for uint256;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 	using SafeMath for uint128;
 
-	/* Types */
-
-	struct Shares {
-		uint128 active;
-		uint128 total;
+	struct RewardsManagerArgs {
+		address defaultRecipient;
+		address rewardsToken;
 	}
-
-	/* Mutable Internal State */
-
-	address internal _rewardsToken;
-	address internal _defaultRecipient;
-	uint256 internal _totalRewardsRedeemed;
-	EnumerableSet.AddressSet internal _recipients;
-	mapping(address => Shares) internal _shares;
 
 	/* Constructor */
 
-	constructor(address defaultRecipient_, address rewardsToken_) Ownable() {
-		setRewardsToken(rewardsToken_);
-		setDefaultRecipient(defaultRecipient_);
+	constructor(address owner_) {
+		init(owner_);
+	}
+
+	/* Initializers */
+
+	function init(address owner_) public virtual initializer {
+		__Context_init_unchained();
+		__Ownable_init_unchained(owner_);
+	}
+
+	function postInit(RewardsManagerArgs memory _args)
+		external
+		virtual
+		onlyOwner
+	{
+		address sender = _msgSender();
+
+		_rewardsToken = _args.rewardsToken;
+		emit RewardsTokenSet(sender, _args.rewardsToken);
+
+		setDefaultRecipient(_args.defaultRecipient);
 	}
 
 	/* External Views */

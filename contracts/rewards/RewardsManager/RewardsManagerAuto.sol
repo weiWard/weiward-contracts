@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./interfaces/IRewardsManagerAuto.sol";
+import "../interfaces/IRewardsManagerAuto.sol";
 
 contract RewardsManagerAuto is ReentrancyGuard, Ownable, IRewardsManagerAuto {
 	using SafeCast for uint256;

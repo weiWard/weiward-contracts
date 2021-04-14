@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
-import { getDeployedWETH } from '../utils/weth';
+import { getOrDeployWETH } from '../utils/weth';
 import {
 	ETHtxRewardsManager__factory,
 	FeeLogic__factory,
@@ -28,7 +28,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const lpRewardsShares = 20;
 
 	const chainId = await getChainId();
-	const wethAddr = await getDeployedWETH(deployments, chainId);
+	const wethAddr = await getOrDeployWETH(deployer, deployments, chainId);
 	if (!wethAddr) {
 		throw new Error('WETH address undefined for current network');
 	}
@@ -36,29 +36,31 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const result = await deploy(contractName, {
 		from: deployer,
 		log: true,
-		args: [
-			deployer,
-			defaultRecipient,
-			wethAddr,
-			ethmxRewardsAddr,
-			ethtxAddr,
-			ethtxAMMAddr,
-			lpRewardsAddr,
-		],
+		proxy: {
+			owner: deployer,
+			methodName: 'init',
+			proxyContract: 'OpenZeppelinTransparentProxy',
+			viaAdminContract: 'ProxyAdmin',
+		},
+		args: [deployer],
 		deterministicDeployment: salt,
 	});
 
 	if (result.newlyDeployed) {
 		const deployerSigner = ethers.provider.getSigner(deployer);
 
-		const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
-		await feeLogic.setRecipient(result.address);
-		await feeLogic.setExempt(result.address, true);
-
 		const ethtxRewardsMgr = ETHtxRewardsManager__factory.connect(
 			result.address,
 			deployerSigner,
 		);
+		await ethtxRewardsMgr.ethtxRewardsManagerPostInit({
+			defaultRecipient,
+			rewardsToken: wethAddr,
+			ethmxRewards: ethmxRewardsAddr,
+			ethtx: ethtxAddr,
+			ethtxAMM: ethtxAMMAddr,
+			lpRewards: lpRewardsAddr,
+		});
 
 		if (defaultRecipient !== ethmxRewardsAddr) {
 			await ethtxRewardsMgr.setShares(defaultRecipient, defaultShares, true);
@@ -69,6 +71,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			true,
 		);
 		await ethtxRewardsMgr.setShares(lpRewardsAddr, lpRewardsShares, true);
+
+		const feeLogic = FeeLogic__factory.connect(feeLogicAddr, deployerSigner);
+		await feeLogic.setRecipient(result.address);
+		await feeLogic.setExempt(result.address, true);
 	}
 
 	// Never execute twice

@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
 import { ETHmxRewards__factory } from '../build/types/ethers-v5';
-import { getDeployedWETH } from '../utils/weth';
+import { getOrDeployWETH } from '../utils/weth';
 import { salt } from '../utils/create2';
 
 const contractName = 'ETHmxRewards';
@@ -17,7 +17,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accrualUpdateInterval = 86400; // 24 hours
 
 	const chainId = await getChainId();
-	const wethAddr = await getDeployedWETH(deployments, chainId);
+	const wethAddr = await getOrDeployWETH(deployer, deployments, chainId);
 	if (!wethAddr) {
 		throw new Error('WETH address undefined for current network');
 	}

@@ -1,42 +1,72 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import "../exchanges/interfaces/IETHtxAMM.sol";
-import "./interfaces/IETHtxRewardsManager.sol";
-import "./interfaces/IETHmxRewards.sol";
-import "./interfaces/ILPRewards.sol";
-import "./RewardsManager.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
-contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
+import "./ETHtxRewardsManagerData.sol";
+import "../../exchanges/interfaces/IETHtxAMM.sol";
+import "../interfaces/IETHtxRewardsManager.sol";
+import "../interfaces/IETHmxRewards.sol";
+import "../interfaces/ILPRewards.sol";
+import "../../access/OwnableUpgradeable.sol";
+import "../RewardsManager/RewardsManager.sol";
+
+contract ETHtxRewardsManager is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	RewardsManager,
+	ETHtxRewardsManagerData,
+	IETHtxRewardsManager
+{
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Mutable Private State */
-
-	address private _ethmxRewards;
-	address private _ethtx;
-	address private _ethtxAMM;
-	address private _lpRewards;
+	struct ETHtxRewardsManagerArgs {
+		address defaultRecipient;
+		address rewardsToken;
+		address ethmxRewards;
+		address ethtx;
+		address ethtxAMM;
+		address lpRewards;
+	}
 
 	/* Constructor */
 
-	constructor(
-		address owner_,
-		address defaultRecipient_,
-		address rewardsToken_,
-		address ethmxRewards_,
-		address ethtx_,
-		address ethtxAMM_,
-		address lpRewards_
-	) RewardsManager(defaultRecipient_, rewardsToken_) {
-		setEthmxRewardsAddress(ethmxRewards_);
-		setEthtxAddress(ethtx_);
-		setEthtxAMMAddress(ethtxAMM_);
-		setLPRewardsAddress(lpRewards_);
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
-		}
+	constructor(address owner_) RewardsManager(owner_) {
+		return;
+	}
+
+	/* Initializer */
+
+	// init inherited from RewardsManager
+
+	function ethtxRewardsManagerPostInit(ETHtxRewardsManagerArgs memory _args)
+		external
+		virtual
+		onlyOwner
+	{
+		address sender = _msgSender();
+
+		_rewardsToken = _args.rewardsToken;
+		emit RewardsTokenSet(sender, _args.rewardsToken);
+
+		setDefaultRecipient(_args.defaultRecipient);
+
+		_ethmxRewards = _args.ethmxRewards;
+		emit EthmxRewardsSet(sender, _args.ethmxRewards);
+
+		_ethtx = _args.ethtx;
+		emit EthtxSet(sender, _args.ethtx);
+
+		_ethtxAMM = _args.ethtxAMM;
+		emit EthtxAMMSet(sender, _args.ethtxAMM);
+
+		_lpRewards = _args.lpRewards;
+		emit LPRewardsSet(sender, _args.lpRewards);
 	}
 
 	/* External Mutators */
@@ -85,24 +115,24 @@ contract ETHtxRewardsManager is RewardsManager, IETHtxRewardsManager {
 		return rewards;
 	}
 
-	function setEthmxRewardsAddress(address addr) public override onlyOwner {
-		_ethmxRewards = addr;
-		emit EthmxRewardsAddressSet(_msgSender(), addr);
+	function setEthmxRewards(address account) public override onlyOwner {
+		_ethmxRewards = account;
+		emit EthmxRewardsSet(_msgSender(), account);
 	}
 
-	function setEthtxAddress(address addr) public override onlyOwner {
-		_ethtx = addr;
-		emit EthtxAddressSet(_msgSender(), addr);
+	function setEthtx(address account) public override onlyOwner {
+		_ethtx = account;
+		emit EthtxSet(_msgSender(), account);
 	}
 
-	function setEthtxAMMAddress(address addr) public override onlyOwner {
-		_ethtxAMM = addr;
-		emit EthtxAMMAddressSet(_msgSender(), addr);
+	function setEthtxAMM(address account) public override onlyOwner {
+		_ethtxAMM = account;
+		emit EthtxAMMSet(_msgSender(), account);
 	}
 
-	function setLPRewardsAddress(address addr) public override onlyOwner {
-		_lpRewards = addr;
-		emit LPRewardsAddressSet(_msgSender(), addr);
+	function setLPRewards(address account) public override onlyOwner {
+		_lpRewards = account;
+		emit LPRewardsSet(_msgSender(), account);
 	}
 
 	/* Public Views */

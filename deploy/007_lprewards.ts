@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
-import { getDeployedWETH } from '../utils/weth';
+import { getOrDeployWETH } from '../utils/weth';
 import { salt } from '../utils/create2';
 
 const contractName = 'LPRewards';
@@ -13,7 +13,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await getNamedAccounts();
 
 	const chainId = await getChainId();
-	const wethAddr = await getDeployedWETH(deployments, chainId);
+	const wethAddr = await getOrDeployWETH(deployer, deployments, chainId);
 	if (!wethAddr) {
 		throw new Error('WETH address undefined for current network');
 	}

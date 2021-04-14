@@ -22,20 +22,20 @@ interface IETHtxRewardsManager {
 
 	function sendRewards() external returns (uint256);
 
-	function setEthmxRewardsAddress(address addr) external;
+	function setEthmxRewards(address account) external;
 
-	function setEthtxAddress(address addr) external;
+	function setEthtx(address account) external;
 
-	function setEthtxAMMAddress(address addr) external;
+	function setEthtxAMM(address account) external;
 
-	function setLPRewardsAddress(address addr) external;
+	function setLPRewards(address account) external;
 
 	/* Events */
 
-	event EthmxRewardsAddressSet(address indexed author, address indexed addr);
-	event EthtxAddressSet(address indexed author, address indexed addr);
-	event EthtxAMMAddressSet(address indexed author, address indexed addr);
-	event LPRewardsAddressSet(address indexed author, address indexed addr);
+	event EthmxRewardsSet(address indexed author, address indexed account);
+	event EthtxSet(address indexed author, address indexed account);
+	event EthtxAMMSet(address indexed author, address indexed account);
+	event LPRewardsSet(address indexed author, address indexed account);
 	event RewardsSent(
 		address indexed author,
 		address indexed to,
