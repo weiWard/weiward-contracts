@@ -60,17 +60,24 @@ contract RewardsManager is
 
 	/* External Views */
 
-	function defaultRecipient() external view override returns (address) {
+	function defaultRecipient()
+		external
+		view
+		virtual
+		override
+		returns (address)
+	{
 		return _defaultRecipient;
 	}
 
-	function rewardsToken() public view override returns (address) {
+	function rewardsToken() public view virtual override returns (address) {
 		return _rewardsToken;
 	}
 
 	function sharesFor(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint128 active, uint128 total)
 	{
@@ -78,16 +85,28 @@ contract RewardsManager is
 		return (s.active, s.total);
 	}
 
-	function totalRewardsAccrued() external view override returns (uint256) {
+	function totalRewardsAccrued()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		// Overflow is OK
 		return _currentRewardsBalance() + _totalRewardsRedeemed;
 	}
 
-	function totalRewardsRedeemed() external view override returns (uint256) {
+	function totalRewardsRedeemed()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _totalRewardsRedeemed;
 	}
 
-	function totalShares() public view override returns (uint256 total) {
+	function totalShares() public view virtual override returns (uint256 total) {
 		for (uint256 i = 0; i < _recipients.length(); i++) {
 			total += _shares[_recipients.at(i)].total;
 		}
@@ -95,16 +114,22 @@ contract RewardsManager is
 
 	/* External Mutators */
 
-	function activateShares() external override {
+	function activateShares() external virtual override {
 		_activate(_msgSender());
 	}
 
-	function activateSharesFor(address account) external override onlyOwner {
+	function activateSharesFor(address account)
+		external
+		virtual
+		override
+		onlyOwner
+	{
 		_activate(account);
 	}
 
 	function addShares(address account, uint128 amount)
 		external
+		virtual
 		override
 		onlyOwner
 	{
@@ -131,11 +156,16 @@ contract RewardsManager is
 		emit SharesAdded(_msgSender(), account, amount);
 	}
 
-	function deactivateShares() external override {
+	function deactivateShares() external virtual override {
 		_deactivate(_msgSender());
 	}
 
-	function deactivateSharesFor(address account) external override onlyOwner {
+	function deactivateSharesFor(address account)
+		external
+		virtual
+		override
+		onlyOwner
+	{
 		_deactivate(account);
 	}
 
@@ -143,7 +173,7 @@ contract RewardsManager is
 		address token,
 		address to,
 		uint256 amount
-	) external override onlyOwner {
+	) external virtual override onlyOwner {
 		require(
 			token != _rewardsToken,
 			"RewardsManager: cannot recover rewards token"
@@ -154,6 +184,7 @@ contract RewardsManager is
 
 	function removeShares(address account, uint128 amount)
 		external
+		virtual
 		override
 		onlyOwner
 	{
@@ -174,7 +205,12 @@ contract RewardsManager is
 		emit SharesRemoved(_msgSender(), account, amount);
 	}
 
-	function setDefaultRecipient(address account) public override onlyOwner {
+	function setDefaultRecipient(address account)
+		public
+		virtual
+		override
+		onlyOwner
+	{
 		require(
 			account != address(0),
 			"RewardsManager: cannot set to zero address"
@@ -205,7 +241,7 @@ contract RewardsManager is
 		emit DefaultRecipientSet(_msgSender(), account);
 	}
 
-	function setRewardsToken(address token) public override onlyOwner {
+	function setRewardsToken(address token) public virtual override onlyOwner {
 		_rewardsToken = token;
 		emit RewardsTokenSet(_msgSender(), token);
 	}
@@ -214,7 +250,7 @@ contract RewardsManager is
 		address account,
 		uint128 value,
 		bool isActive
-	) public override onlyOwner {
+	) public virtual override onlyOwner {
 		require(
 			account != address(0),
 			"RewardsManager: cannot set shares for zero address"
@@ -263,7 +299,7 @@ contract RewardsManager is
 		address[] calldata accounts,
 		uint128[] calldata values,
 		bool[] calldata isActives
-	) public override onlyOwner {
+	) public virtual override onlyOwner {
 		uint256 length = accounts.length;
 		require(length != 0, "RewardsManager: no accounts specified");
 		require(length == values.length, "RewardsManager: values length mismatch");
@@ -279,13 +315,13 @@ contract RewardsManager is
 
 	/* Internal Views */
 
-	function _currentRewardsBalance() internal view returns (uint256) {
+	function _currentRewardsBalance() internal view virtual returns (uint256) {
 		return IERC20(_rewardsToken).balanceOf(address(this));
 	}
 
 	/* Internal Mutators */
 
-	function _activate(address account) internal {
+	function _activate(address account) internal virtual {
 		Shares storage s = _shares[account];
 
 		// Do nothing if already active
@@ -300,7 +336,7 @@ contract RewardsManager is
 		emit SharesActivated(_msgSender(), account);
 	}
 
-	function _deactivate(address account) internal {
+	function _deactivate(address account) internal virtual {
 		// Skip for the default recipient
 		if (account == _defaultRecipient) {
 			return;
