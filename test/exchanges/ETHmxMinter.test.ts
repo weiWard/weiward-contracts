@@ -133,8 +133,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
 			deployer,
-			feeLogic.address,
-			zeroAddress, // ethmx address
 		);
 
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
@@ -184,7 +182,10 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		});
 
 		await feeLogic.setExempt(contract.address, true);
-		await ethtx.setMinter(contract.address);
+		await ethtx.postInit({
+			feeLogic: feeLogic.address,
+			minter: contract.address,
+		});
 		await ethmx.setMinter(contract.address);
 
 		const testerContract = contract.connect(testerSigner);

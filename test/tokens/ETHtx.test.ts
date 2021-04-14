@@ -51,14 +51,15 @@ const loadFixture = deployments.createFixture(
 			proxy: {
 				methodName: 'init',
 				proxyContract: 'OpenZeppelinTransparentProxy',
-				viaAdminContract: 'DefaultProxyAdmin',
+				viaAdminContract: 'ProxyAdmin',
 			},
-			args: [deployer, feeLogic.address, deployer],
+			args: [deployer],
 		});
 		const contract = MockETHtx__factory.connect(
 			result.address,
 			deployerSigner,
 		);
+		await contract.postInit({ feeLogic: feeLogic.address, minter: deployer });
 		const testerContract = contract.connect(testerSigner);
 
 		const testToken = await new MockERC20__factory(deployerSigner).deploy(

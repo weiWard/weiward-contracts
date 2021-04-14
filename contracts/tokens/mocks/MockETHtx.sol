@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import "../ETHtx.sol";
+import "../ETHtx/ETHtx.sol";
 
 contract MockETHtx is ETHtx {
-	constructor(
-		address owner_,
-		address feeLogic_,
-		address minter_
-	) ETHtx(owner_, feeLogic_, minter_) {
+	constructor(address owner_) ETHtx(owner_) {
 		return;
 	}
 
