@@ -90,6 +90,7 @@ export default func;
 func.tags = [contractName];
 func.id = contractName;
 func.dependencies = [
+	'ProxyAdmin',
 	'ETHmxRewards',
 	'ETHtx',
 	'ETHtxAMM',

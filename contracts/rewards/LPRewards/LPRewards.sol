@@ -1,66 +1,49 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "../libraries/EnumerableMap.sol";
-import "./interfaces/ILPRewards.sol";
-import "./interfaces/IValuePerToken.sol";
+import "./LPRewardsData.sol";
+import "../../libraries/EnumerableMap.sol";
+import "../interfaces/ILPRewards.sol";
+import "../interfaces/IValuePerToken.sol";
+import "../../access/OwnableUpgradeable.sol";
 
-contract LPRewards is Ownable, Pausable, ILPRewards {
+contract LPRewards is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	PausableUpgradeable,
+	LPRewardsData,
+	ILPRewards
+{
 	using EnumerableMap for EnumerableMap.AddressToUintMap;
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Structs */
-
-	struct TokenData {
-		uint256 arpt;
-		uint256 lastRewardsAccrued;
-		uint256 rewards;
-		uint256 rewardsRedeemed;
-		uint256 totalStaked;
-		address valueImpl;
-	}
-
-	struct UserTokenRewards {
-		uint256 pending;
-		uint256 arptLast;
-	}
-
-	struct UserData {
-		EnumerableSet.AddressSet tokensWithRewards;
-		mapping(address => UserTokenRewards) rewardsFor;
-		EnumerableMap.AddressToUintMap staked;
-	}
-
 	/* Immutable Internal State */
 
 	uint256 internal constant _MULTIPLIER = 1e36;
 
-	/* Mutable Internal State */
-
-	address internal _rewardsToken;
-	uint256 internal _lastTotalRewardsAccrued;
-	uint256 internal _totalRewardsRedeemed;
-	uint256 internal _unredeemableRewards;
-	EnumerableSet.AddressSet internal _tokens;
-	mapping(address => TokenData) internal _tokenData;
-	mapping(address => UserData) internal _users;
-
 	/* Constructor */
 
-	constructor(address owner_, address rewardsToken_) Ownable() {
-		setRewardsToken(rewardsToken_);
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
-		}
+	constructor(address owner_) {
+		init(owner_);
+	}
+
+	/* Initializers */
+
+	function init(address owner_) public virtual initializer {
+		__Context_init_unchained();
+		__Ownable_init_unchained(owner_);
+		__Pausable_init_unchained();
 	}
 
 	/* Modifiers */

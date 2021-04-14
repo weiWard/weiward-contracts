@@ -56,4 +56,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default func;
 func.tags = [contractName];
 func.id = contractName;
-func.dependencies = ['ETHmx'];
+func.dependencies = ['ProxyAdmin', 'ETHmx'];
