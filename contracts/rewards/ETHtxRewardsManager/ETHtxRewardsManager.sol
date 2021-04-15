@@ -71,7 +71,7 @@ contract ETHtxRewardsManager is
 
 	/* External Mutators */
 
-	function convertETHtx() public override {
+	function convertETHtx() public virtual override {
 		IERC20 ethtxHandle = IERC20(ethtx());
 		uint256 amount = ethtxHandle.balanceOf(address(this));
 		if (amount == 0) {
@@ -85,7 +85,7 @@ contract ETHtxRewardsManager is
 		IETHtxAMM(ethtxAMM_).swapEthtxForWeth(amount, block.timestamp);
 	}
 
-	function distributeRewards() external override returns (uint256) {
+	function distributeRewards() external virtual override returns (uint256) {
 		convertETHtx();
 		uint256 rewards = sendRewards();
 		if (rewards != 0) {
@@ -94,12 +94,12 @@ contract ETHtxRewardsManager is
 		return rewards;
 	}
 
-	function notifyRecipients() public override {
+	function notifyRecipients() public virtual override {
 		_notifyEthmxRewards();
 		_notifyLpRewards();
 	}
 
-	function sendRewards() public override returns (uint256) {
+	function sendRewards() public virtual override returns (uint256) {
 		uint256 rewards = _currentRewardsBalance();
 		if (rewards == 0) {
 			return 0;
@@ -115,54 +115,54 @@ contract ETHtxRewardsManager is
 		return rewards;
 	}
 
-	function setEthmxRewards(address account) public override onlyOwner {
+	function setEthmxRewards(address account) public virtual override onlyOwner {
 		_ethmxRewards = account;
 		emit EthmxRewardsSet(_msgSender(), account);
 	}
 
-	function setEthtx(address account) public override onlyOwner {
+	function setEthtx(address account) public virtual override onlyOwner {
 		_ethtx = account;
 		emit EthtxSet(_msgSender(), account);
 	}
 
-	function setEthtxAMM(address account) public override onlyOwner {
+	function setEthtxAMM(address account) public virtual override onlyOwner {
 		_ethtxAMM = account;
 		emit EthtxAMMSet(_msgSender(), account);
 	}
 
-	function setLPRewards(address account) public override onlyOwner {
+	function setLPRewards(address account) public virtual override onlyOwner {
 		_lpRewards = account;
 		emit LPRewardsSet(_msgSender(), account);
 	}
 
 	/* Public Views */
 
-	function ethmxRewards() public view override returns (address) {
+	function ethmxRewards() public view virtual override returns (address) {
 		return _ethmxRewards;
 	}
 
-	function ethtx() public view override returns (address) {
+	function ethtx() public view virtual override returns (address) {
 		return _ethtx;
 	}
 
-	function ethtxAMM() public view override returns (address) {
+	function ethtxAMM() public view virtual override returns (address) {
 		return _ethtxAMM;
 	}
 
-	function lpRewards() public view override returns (address) {
+	function lpRewards() public view virtual override returns (address) {
 		return _lpRewards;
 	}
 
 	/* Internal Mutators */
 
-	function _notifyEthmxRewards() internal {
+	function _notifyEthmxRewards() internal virtual {
 		IETHmxRewards ethmxRewardsHandle = IETHmxRewards(ethmxRewards());
 		if (ethmxRewardsHandle.readyForUpdate()) {
 			ethmxRewardsHandle.updateAccrual();
 		}
 	}
 
-	function _notifyLpRewards() internal {
+	function _notifyLpRewards() internal virtual {
 		ILPRewards(lpRewards()).updateAccrual();
 	}
 
@@ -170,7 +170,7 @@ contract ETHtxRewardsManager is
 		address account,
 		uint256 totalShares_,
 		uint256 totalRewards
-	) internal {
+	) internal virtual {
 		Shares storage s = _shares[account];
 		uint256 amount = totalRewards.mul(s.active).div(totalShares_);
 
