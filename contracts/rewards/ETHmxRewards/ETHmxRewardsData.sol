@@ -17,4 +17,6 @@ abstract contract ETHmxRewardsData {
 
 	mapping(address => uint256) internal _stakedFor;
 	uint256 internal _totalStaked;
+
+	uint256[39] private __gap;
 }

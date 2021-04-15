@@ -17,4 +17,6 @@ abstract contract ETHmxMinterData {
 	uint128 internal _lpShareDen;
 	EnumerableSet.AddressSet internal _lps;
 	address internal _lpRecipient;
+
+	uint256[37] private __gap;
 }
