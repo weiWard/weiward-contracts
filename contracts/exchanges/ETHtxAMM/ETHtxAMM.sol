@@ -32,7 +32,7 @@ contract ETHtxAMM is
 	using SafeMath for uint128;
 	using SafeMath for uint256;
 
-	struct Args {
+	struct ETHtxAMMArgs {
 		address ethtx;
 		address gasOracle;
 		address weth;
@@ -54,7 +54,7 @@ contract ETHtxAMM is
 		__Pausable_init_unchained();
 	}
 
-	function postInit(Args memory _args) external virtual onlyOwner {
+	function postInit(ETHtxAMMArgs memory _args) external virtual onlyOwner {
 		address sender = _msgSender();
 
 		_ethtx = _args.ethtx;

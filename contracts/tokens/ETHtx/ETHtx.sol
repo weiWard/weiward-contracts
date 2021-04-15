@@ -24,7 +24,7 @@ contract ETHtx is
 {
 	using SafeERC20 for IERC20;
 
-	struct Args {
+	struct ETHtxArgs {
 		address feeLogic;
 		address minter;
 	}
@@ -43,7 +43,7 @@ contract ETHtx is
 		__Pausable_init_unchained();
 	}
 
-	function postInit(Args memory _args) external virtual onlyOwner {
+	function postInit(ETHtxArgs memory _args) external virtual onlyOwner {
 		address sender = _msgSender();
 
 		_feeLogic = _args.feeLogic;

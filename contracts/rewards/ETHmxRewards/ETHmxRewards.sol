@@ -29,7 +29,7 @@ contract ETHmxRewards is
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	struct Args {
+	struct ETHmxRewardsArgs {
 		address ethmx;
 		address weth;
 		uint256 accrualUpdateInterval;
@@ -55,7 +55,7 @@ contract ETHmxRewards is
 		_arptSnapshots.push(0);
 	}
 
-	function postInit(Args memory _args) external virtual onlyOwner {
+	function postInit(ETHmxRewardsArgs memory _args) external virtual onlyOwner {
 		address sender = _msgSender();
 
 		_ethmx = _args.ethmx;
