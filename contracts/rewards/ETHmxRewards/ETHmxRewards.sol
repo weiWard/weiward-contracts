@@ -70,34 +70,54 @@ contract ETHmxRewards is
 
 	/* Public Views */
 
-	function accrualUpdateInterval() external view override returns (uint256) {
+	function accrualUpdateInterval()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _accrualUpdateInterval;
 	}
 
-	function accruedRewardsPerToken() public view override returns (uint256) {
+	function accruedRewardsPerToken()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _arptSnapshots[_arptSnapshots.length - 1];
 	}
 
 	function accruedRewardsPerTokenLast(address account)
 		public
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _arptSnapshots[_arptLastIdx[account]];
 	}
 
-	function ethmx() public view override returns (address) {
+	function ethmx() public view virtual override returns (address) {
 		return _ethmx;
 	}
 
-	function lastAccrualUpdate() external view override returns (uint256) {
+	function lastAccrualUpdate()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _lastAccrualUpdate;
 	}
 
 	function lastRewardsBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -107,17 +127,24 @@ contract ETHmxRewards is
 	function lastStakedBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _stakedFor[account];
 	}
 
-	function lastTotalRewardsAccrued() public view override returns (uint256) {
+	function lastTotalRewardsAccrued()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _lastTotalRewardsAccrued;
 	}
 
-	function readyForUpdate() external view override returns (bool) {
+	function readyForUpdate() external view virtual override returns (bool) {
 		if (_lastAccrualUpdate > block.timestamp) {
 			return false;
 		}
@@ -128,6 +155,7 @@ contract ETHmxRewards is
 	function rewardsBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -170,6 +198,7 @@ contract ETHmxRewards is
 	function stakedBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -205,41 +234,60 @@ contract ETHmxRewards is
 		return staked;
 	}
 
-	function totalRewardsAccrued() public view override returns (uint256) {
+	function totalRewardsAccrued()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		// Overflow is OK
 		return _currentRewardsBalance() + _totalRewardsRedeemed;
 	}
 
-	function totalRewardsRedeemed() public view override returns (uint256) {
+	function totalRewardsRedeemed()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _totalRewardsRedeemed;
 	}
 
-	function totalStaked() public view override returns (uint256) {
+	function totalStaked() public view virtual override returns (uint256) {
 		return _totalStaked;
 	}
 
-	function unredeemableRewards() public view override returns (uint256) {
+	function unredeemableRewards()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _rewardsFor[address(0)];
 	}
 
-	function weth() public view override returns (address) {
+	function weth() public view virtual override returns (address) {
 		return _weth;
 	}
 
 	/* Public Mutators */
 
-	function exit() public override {
+	function exit() public virtual override {
 		address account = _msgSender();
 		unstakeAll();
 		_redeemReward(account, _rewardsFor[account]);
 	}
 
-	function pause() public override onlyOwner {
+	function pause() public virtual override onlyOwner {
 		_pause();
 	}
 
 	function recoverUnredeemableRewards(address to, uint256 amount)
 		public
+		virtual
 		override
 		onlyOwner
 	{
@@ -254,6 +302,7 @@ contract ETHmxRewards is
 
 	function recoverUnstaked(address to, uint256 amount)
 		public
+		virtual
 		override
 		onlyOwner
 	{
@@ -273,20 +322,20 @@ contract ETHmxRewards is
 		address token,
 		address to,
 		uint256 amount
-	) public override onlyOwner {
+	) public virtual override onlyOwner {
 		require(token != ethmx(), "ETHmxRewards: cannot recover ETHmx");
 		require(token != weth(), "ETHmxRewards: cannot recover WETH");
 		IERC20(token).safeTransfer(to, amount);
 		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
 
-	function redeemAllRewards() public override {
+	function redeemAllRewards() public virtual override {
 		address account = _msgSender();
 		_updateRewardFor(account);
 		_redeemReward(account, _rewardsFor[account]);
 	}
 
-	function redeemReward(uint256 amount) public override {
+	function redeemReward(uint256 amount) public virtual override {
 		require(amount != 0, "ETHmxRewards: cannot redeem zero");
 		address account = _msgSender();
 		// Update reward first (since it only goes up)
@@ -300,6 +349,7 @@ contract ETHmxRewards is
 
 	function setAccrualUpdateInterval(uint256 interval)
 		public
+		virtual
 		override
 		onlyOwner
 	{
@@ -307,17 +357,17 @@ contract ETHmxRewards is
 		emit AccrualUpdateIntervalSet(_msgSender(), interval);
 	}
 
-	function setEthmx(address account) public override onlyOwner {
+	function setEthmx(address account) public virtual override onlyOwner {
 		_ethmx = account;
 		emit ETHmxSet(_msgSender(), account);
 	}
 
-	function setWeth(address account) public override onlyOwner {
+	function setWeth(address account) public virtual override onlyOwner {
 		_weth = account;
 		emit WETHSet(_msgSender(), account);
 	}
 
-	function stake(uint256 amount) public override whenNotPaused {
+	function stake(uint256 amount) public virtual override whenNotPaused {
 		require(amount != 0, "ETHmxRewards: cannot stake zero");
 
 		address account = _msgSender();
@@ -330,11 +380,11 @@ contract ETHmxRewards is
 		emit Staked(account, amount);
 	}
 
-	function unpause() public override onlyOwner {
+	function unpause() public virtual override onlyOwner {
 		_unpause();
 	}
 
-	function unstake(uint256 amount) public override {
+	function unstake(uint256 amount) public virtual override {
 		require(amount != 0, "ETHmxRewards: cannot unstake zero");
 		address account = _msgSender();
 
@@ -355,14 +405,14 @@ contract ETHmxRewards is
 		_unstake(account, amount);
 	}
 
-	function unstakeAll() public override {
+	function unstakeAll() public virtual override {
 		address account = _msgSender();
 		// Update stake first
 		_updateRewardFor(account);
 		_unstake(account, _stakedFor[account]);
 	}
 
-	function updateAccrual() public override {
+	function updateAccrual() public virtual override {
 		uint256 timePassed =
 			block.timestamp.sub(
 				_lastAccrualUpdate,
@@ -376,24 +426,24 @@ contract ETHmxRewards is
 		_updateAccrual();
 	}
 
-	function updateReward() public override {
+	function updateReward() public virtual override {
 		_updateRewardFor(_msgSender());
 	}
 
 	/* Internal Views */
 
-	function _currentRewardsBalance() internal view returns (uint256) {
+	function _currentRewardsBalance() internal view virtual returns (uint256) {
 		return IERC20(weth()).balanceOf(address(this));
 	}
 
 	/* Internal Mutators */
 
-	function _burnETHmx(uint256 amount) internal {
+	function _burnETHmx(uint256 amount) internal virtual {
 		_totalStaked = _totalStaked.sub(amount);
 		IETHmx(ethmx()).burn(amount);
 	}
 
-	function _redeemReward(address account, uint256 amount) internal {
+	function _redeemReward(address account, uint256 amount) internal virtual {
 		// Should be guaranteed safe by caller (gas savings)
 		_rewardsFor[account] -= amount;
 		// Overflow is OK
@@ -404,7 +454,7 @@ contract ETHmxRewards is
 		emit RewardPaid(account, amount);
 	}
 
-	function _unstake(address account, uint256 amount) internal {
+	function _unstake(address account, uint256 amount) internal virtual {
 		if (amount == 0) {
 			return;
 		}
@@ -417,7 +467,7 @@ contract ETHmxRewards is
 		emit Unstaked(account, amount);
 	}
 
-	function _updateAccrual() internal {
+	function _updateAccrual() internal virtual {
 		uint256 rewardsAccrued = totalRewardsAccrued();
 		// Overflow is OK
 		uint256 newRewards = rewardsAccrued - _lastTotalRewardsAccrued;
@@ -454,7 +504,7 @@ contract ETHmxRewards is
 		emit AccrualUpdated(_msgSender(), rewardsAccrued);
 	}
 
-	function _updateRewardFor(address account) internal {
+	function _updateRewardFor(address account) internal virtual {
 		// Gas savings
 		uint256[] memory arptValues = _arptSnapshots;
 		uint256 length = arptValues.length;
