@@ -4,8 +4,8 @@ pragma solidity 0.7.6;
 import "../LPRewards/LPRewards.sol";
 
 contract MockLPRewards is LPRewards {
-	constructor(address owner_, address _rewardsToken) LPRewards(owner_) {
-		setRewardsToken(_rewardsToken);
+	constructor(address owner_) LPRewards(owner_) {
+		return;
 	}
 
 	function multiplier() external pure returns (uint256) {

@@ -11,6 +11,8 @@ describe('ETHmxRewards', function () {
 	};
 
 	addTest('constructor', modules.constructor);
+	addTest('init', modules.init);
+	addTest('postInit', modules.postInit);
 	addTest('exit', modules.exit);
 	addTest('pause', modules.pause);
 	addTest('receive', modules.receive);

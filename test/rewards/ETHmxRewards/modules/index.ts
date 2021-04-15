@@ -1,4 +1,6 @@
 export { default as constructor } from './constructor';
+export { default as init } from './init';
+export { default as postInit } from './postInit';
 export { default as exit } from './exit';
 export { default as pause } from './pause';
 export { default as receive } from './receive';

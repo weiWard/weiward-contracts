@@ -10,9 +10,13 @@ export default function run(): void {
 	});
 
 	it('initial state is correct', async function () {
-		const { deployer, contract, ethmx, ethtx, weth } = fixture;
+		const { deployer, contract, contractImpl, ethmx, ethtx, weth } = fixture;
 
 		expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
+		expect(
+			await contractImpl.owner(),
+			'implemenation owner address mismatch',
+		).to.eq(deployer);
 
 		expect(await contract.ethmx(), 'ETHmx address mismatch').to.eq(
 			ethmx.address,

@@ -56,6 +56,7 @@ interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: MockETHtxRewardsManager;
+	contractImpl: MockETHtxRewardsManager;
 	testerContract: MockETHtxRewardsManager;
 	ethtx: MockETHtx;
 	ethtxAMM: ETHtxAMM;
@@ -65,7 +66,8 @@ interface Fixture {
 }
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -142,13 +144,25 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const lpRewards = await new MockLPRewards__factory(deployerSigner).deploy(
 			deployer,
-			weth.address,
 		);
+		await lpRewards.setRewardsToken(weth.address);
 		await lpRewards.addToken(uniPool.address, valuePerUNIV2.address);
 
-		const contract = await new MockETHtxRewardsManager__factory(
+		const result = await deploy('MockETHtxRewardsManager', {
+			from: deployer,
+			log: true,
+			proxy: {
+				owner: deployer,
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'ProxyAdmin',
+			},
+			args: [deployer],
+		});
+		const contract = MockETHtxRewardsManager__factory.connect(
+			result.address,
 			deployerSigner,
-		).deploy(deployer);
+		);
 		await contract.ethtxRewardsManagerPostInit({
 			defaultRecipient,
 			rewardsToken: weth.address,
@@ -157,6 +171,13 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtxAMM: ethtxAMM.address,
 			lpRewards: lpRewards.address,
 		});
+
+		const contractImpl = MockETHtxRewardsManager__factory.connect(
+			(await deployments.get('MockETHtxRewardsManager_Implementation'))
+				.address,
+			deployerSigner,
+		);
+
 		const testerContract = contract.connect(testerSigner);
 
 		await feeLogic.setRecipient(contract.address);
@@ -178,6 +199,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			ethtx,
 			ethtxAMM,
@@ -199,6 +221,7 @@ describe(contractName, function () {
 		it('initial state is correct', async function () {
 			const {
 				contract,
+				contractImpl,
 				deployer,
 				ethmxRewards,
 				ethtx,
@@ -208,6 +231,10 @@ describe(contractName, function () {
 			} = fixture;
 
 			expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
+			expect(
+				await contractImpl.owner(),
+				'implemenation owner address mismatch',
+			).to.eq(deployer);
 
 			expect(
 				await contract.defaultRecipient(),
@@ -239,6 +266,53 @@ describe(contractName, function () {
 
 			[active] = await contract.sharesFor(defaultRecipient);
 			expect(active, 'defaultRecipient shares mismatch').to.eq(defaultShares);
+		});
+	});
+
+	describe('init', function () {
+		it('should revert on proxy address', async function () {
+			const { contract, tester } = fixture;
+
+			await expect(contract.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+
+		it('should revert on implementation address', async function () {
+			const { contractImpl, tester } = fixture;
+
+			await expect(contractImpl.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+	});
+
+	describe('postInit', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+
+			await expect(
+				testerContract.ethtxRewardsManagerPostInit({
+					defaultRecipient: zeroAddress,
+					rewardsToken: zeroAddress,
+					ethmxRewards: zeroAddress,
+					ethtx: zeroAddress,
+					ethtxAMM: zeroAddress,
+					lpRewards: zeroAddress,
+				}),
+			).to.be.revertedWith('caller is not the owner');
+		});
+	});
+
+	describe('receive', function () {
+		it('should revert', async function () {
+			const { contract, deployerSigner } = fixture;
+			await expect(
+				deployerSigner.sendTransaction({
+					to: contract.address,
+					value: parseEther('1'),
+				}),
+			).to.be.reverted;
 		});
 	});
 

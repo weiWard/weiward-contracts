@@ -13,6 +13,7 @@ export default function run(): void {
 		const {
 			deployer,
 			contract,
+			contractImpl,
 			rewardsToken,
 			tokenA,
 			tokenB,
@@ -26,6 +27,10 @@ export default function run(): void {
 		} = fixture;
 
 		expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
+		expect(
+			await contractImpl.owner(),
+			'implemenation owner address mismatch',
+		).to.eq(deployer);
 
 		expect(
 			await contract.rewardsToken(),

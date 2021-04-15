@@ -11,11 +11,13 @@ describe('LPRewards', function () {
 	};
 
 	addTest('constructor', modules.constructor);
+	addTest('init', modules.init);
 	addTest('addToken', modules.addToken);
 	addTest('changeTokenValueImpl', modules.changeTokenValueImpl);
 	addTest('exit', modules.exit);
 	addTest('exitFrom', modules.exitFrom);
 	addTest('pause', modules.pause);
+	addTest('receive', modules.receive);
 	addTest('recoverUnredeemableRewards', modules.recoverUnredeemableRewards);
 	addTest('recoverUnstaked', modules.recoverUnstaked);
 	addTest('redeemAllRewards', modules.redeemAllRewards);

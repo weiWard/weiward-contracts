@@ -41,6 +41,7 @@ export interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: MockETHmxRewards;
+	contractImpl: MockETHmxRewards;
 	testerContract: MockETHmxRewards;
 	ethmx: ETHmx;
 	ethmxMinter: ETHmxMinter;
@@ -50,7 +51,8 @@ export interface Fixture {
 }
 
 export const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -109,14 +111,32 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			minter: ethmxMinter.address,
 		});
 
-		const contract = await new MockETHmxRewards__factory(
+		const result = await deploy('MockETHmxRewards', {
+			from: deployer,
+			log: true,
+			proxy: {
+				owner: deployer,
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'ProxyAdmin',
+			},
+			args: [deployer],
+		});
+		const contract = MockETHmxRewards__factory.connect(
+			result.address,
 			deployerSigner,
-		).deploy(deployer);
+		);
 		await contract.postInit({
 			ethmx: ethmx.address,
 			weth: weth.address,
 			accrualUpdateInterval,
 		});
+
+		const contractImpl = MockETHmxRewards__factory.connect(
+			(await deployments.get('MockETHmxRewards_Implementation')).address,
+			deployerSigner,
+		);
+
 		const testerContract = contract.connect(testerSigner);
 
 		return {
@@ -125,6 +145,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			ethmx,
 			ethmxMinter,

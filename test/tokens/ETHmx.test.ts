@@ -20,6 +20,7 @@ interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: ETHmx;
+	contractImpl: ETHmx;
 	testerContract: ETHmx;
 	testToken: MockERC20;
 }
@@ -44,6 +45,12 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		});
 		const contract = ETHmx__factory.connect(result.address, deployerSigner);
 		await contract.setMinter(deployer);
+
+		const contractImpl = ETHmx__factory.connect(
+			(await deployments.get('ETHmxTest_Implementation')).address,
+			deployerSigner,
+		);
+
 		const testerContract = contract.connect(testerSigner);
 
 		const testToken = await new MockERC20__factory(deployerSigner).deploy(
@@ -59,6 +66,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			testToken,
 		};
@@ -74,12 +82,34 @@ describe(contractName, function () {
 
 	describe('constructor', function () {
 		it('initial state is correct', async function () {
-			const { deployer, contract } = fixture;
+			const { deployer, contract, contractImpl } = fixture;
 
 			expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
+			expect(
+				await contractImpl.owner(),
+				'implemenation owner address mismatch',
+			).to.eq(deployer);
 
 			expect(await contract.minter(), 'minter address mismatch').to.eq(
 				deployer,
+			);
+		});
+	});
+
+	describe('init', function () {
+		it('should revert on proxy address', async function () {
+			const { contract, tester } = fixture;
+
+			await expect(contract.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+
+		it('should revert on implementation address', async function () {
+			const { contractImpl, tester } = fixture;
+
+			await expect(contractImpl.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
 			);
 		});
 	});
