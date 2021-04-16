@@ -2,7 +2,7 @@
   "name": "@weiward/contracts",
   "version": "0.2.0",
   "description": "Smart contracts for the weiWard platform.",
-  "author": "Ben Kostreva",
+  "author": "weiWard LLC",
   "license": "(Apache-2.0 OR MIT)",
   "private": true,
   "scripts": {
