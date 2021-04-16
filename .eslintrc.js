@@ -7,7 +7,6 @@ module.exports = {
 	},
 	extends: [
 		'plugin:@typescript-eslint/recommended',
-		'prettier/@typescript-eslint', // breaks with global cache
 		'plugin:prettier/recommended',
 	],
 	parser: '@typescript-eslint/parser',

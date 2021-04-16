@@ -32,7 +32,7 @@ export async function uniswapPairFixtureImpl(
 	tokenA: Contract,
 	tokenB: Contract,
 	factoryJson: ContractJSON,
-	pairJson: ContractJSON,
+	pairAbi: unknown[],
 ): Promise<PairFixture> {
 	const deployerSigner = waffle.provider.getSigner(deployerAddress);
 
@@ -44,7 +44,7 @@ export async function uniswapPairFixtureImpl(
 	const pairAddress = await factory.getPair(tokenA.address, tokenB.address);
 	const pair = new Contract(
 		pairAddress,
-		JSON.stringify(pairJson.abi),
+		JSON.stringify(pairAbi),
 		deployerSigner,
 	);
 
@@ -71,7 +71,7 @@ export async function uniswapPairFixture(
 		tokenA,
 		tokenB,
 		UniswapV2Factory,
-		UniswapV2Pair,
+		UniswapV2Pair.abi,
 	);
 }
 
