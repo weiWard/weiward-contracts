@@ -287,7 +287,7 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('postInit', function () {
+	describe('ethtxRewardsManagerPostInit', function () {
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
 

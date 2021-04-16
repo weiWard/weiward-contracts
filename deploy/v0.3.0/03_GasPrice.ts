@@ -2,9 +2,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 
-import { GasPrice__factory } from '../build/types/ethers-v5';
-import { salt } from '../utils/create2';
+import { GasPrice__factory } from '../../build/types/ethers-v5';
+import { salt } from '../../utils/create2';
 
+const version = 'v0.3.0';
 const contractName = 'GasPrice';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -35,6 +36,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	return true;
 };
 
+const id = contractName + version;
+
 export default func;
-func.tags = [contractName];
-func.id = contractName;
+func.tags = [id, version];
+func.id = id;

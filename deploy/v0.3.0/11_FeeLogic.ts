@@ -1,9 +1,10 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
-import { zeroPadAddress } from '../test/helpers/address';
-import { salt } from '../utils/create2';
+import { salt } from '../../utils/create2';
+import { getVersionedDeps } from '../../utils/deploy';
 
+const version = 'v0.3.0';
 const contractName = 'FeeLogic';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -12,7 +13,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const { deployer } = await getNamedAccounts();
 
-	const feeRecipient = zeroPadAddress('0x2');
+	const ethtxRewardsMgrAddr = (await deployments.get('ETHtxRewardsManager'))
+		.address;
+
+	const feeRecipient = ethtxRewardsMgrAddr;
 	const feeNum = 75;
 	const feeDen = 1000;
 
@@ -27,6 +31,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	return true;
 };
 
+const id = contractName + version;
+
 export default func;
-func.tags = [contractName];
-func.id = contractName;
+func.tags = [id, version];
+func.id = id;
+func.dependencies = getVersionedDeps(['ETHtxRewardsManager'], version);
