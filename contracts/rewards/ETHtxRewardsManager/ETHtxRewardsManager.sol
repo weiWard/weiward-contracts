@@ -45,7 +45,7 @@ contract ETHtxRewardsManager is
 
 	// init inherited from RewardsManager
 
-	function ethtxRewardsManagerPostInit(ETHtxRewardsManagerArgs calldata _args)
+	function ethtxRewardsManagerPostInit(ETHtxRewardsManagerArgs memory _args)
 		external
 		virtual
 		onlyOwner

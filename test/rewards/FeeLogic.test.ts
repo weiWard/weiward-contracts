@@ -43,6 +43,7 @@ const loadFixture = deployments.createFixture(
 			feeRecipient,
 			feeNumerator,
 			feeDenominator,
+			[],
 		);
 		const testerContract = contract.connect(testerSigner);
 

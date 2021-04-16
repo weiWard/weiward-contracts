@@ -46,7 +46,7 @@ contract RewardsManager is
 		__Ownable_init_unchained(owner_);
 	}
 
-	function postInit(RewardsManagerArgs calldata _args)
+	function postInit(RewardsManagerArgs memory _args)
 		external
 		virtual
 		onlyOwner
@@ -298,7 +298,7 @@ contract RewardsManager is
 		emit SharesSet(_msgSender(), account, value, isActive);
 	}
 
-	function setSharesBatch(ShareData[] calldata batch)
+	function setSharesBatch(ShareData[] memory batch)
 		public
 		virtual
 		override

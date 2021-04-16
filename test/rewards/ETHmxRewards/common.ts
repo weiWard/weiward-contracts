@@ -62,6 +62,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			feeRecipient,
 			75,
 			1000,
+			[],
 		);
 
 		const oracle = await new SimpleGasPrice__factory(deployerSigner).deploy(

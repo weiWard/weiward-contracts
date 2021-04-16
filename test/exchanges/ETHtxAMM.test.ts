@@ -106,13 +106,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			feeRecipient,
-			feeNumerator,
-			feeDenominator,
-		);
-
 		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
 			deployer,
 			oracleUpdateInterval,
@@ -172,7 +165,19 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			lpRecipient: zeroAddress,
 		});
 
-		await feeLogic.setExempt(contract.address, true);
+		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
+			deployer,
+			feeRecipient,
+			feeNumerator,
+			feeDenominator,
+			[
+				{
+					account: contract.address,
+					isExempt: true,
+				},
+			],
+		);
+
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.postInit({
 			feeLogic: feeLogic.address,

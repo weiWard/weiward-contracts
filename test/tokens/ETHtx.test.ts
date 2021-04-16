@@ -44,6 +44,7 @@ const loadFixture = deployments.createFixture(
 			feeRecipient,
 			feeNumerator,
 			feeDenominator,
+			[],
 		);
 
 		const result = await deploy('MockETHtx', {

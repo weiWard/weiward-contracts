@@ -125,6 +125,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			feeRecipient,
 			feeNum,
 			feeDen,
+			[],
 		);
 
 		const oracle = await new SimpleGasPrice__factory(deployerSigner).deploy(

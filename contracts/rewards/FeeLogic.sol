@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./interfaces/IFeeLogic.sol";
+import "../access/Ownable.sol";
 
 contract FeeLogic is Ownable, IFeeLogic {
 	using EnumerableSet for EnumerableSet.AddressSet;
@@ -25,12 +26,25 @@ contract FeeLogic is Ownable, IFeeLogic {
 		address owner_,
 		address recipient_,
 		uint128 feeRateNumerator,
-		uint128 feeRateDenominator
-	) Ownable() {
-		setRecipient(recipient_);
-		setFeeRate(feeRateNumerator, feeRateDenominator);
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
+		uint128 feeRateDenominator,
+		ExemptData[] memory exemptions
+	) Ownable(owner_) {
+		address sender = _msgSender();
+
+		_recipient = recipient_;
+		emit RecipientSet(sender, recipient_);
+
+		_feeRateNum = feeRateNumerator;
+		_feeRateDen = feeRateDenominator;
+		emit FeeRateSet(sender, feeRateNumerator, feeRateDenominator);
+
+		for (uint256 i = 0; i < exemptions.length; i++) {
+			address account = exemptions[i].account;
+			if (exemptions[i].isExempt && _exempts.add(account)) {
+				emit ExemptAdded(sender, account);
+			} else if (_exempts.remove(account)) {
+				emit ExemptRemoved(sender, account);
+			}
 		}
 	}
 
@@ -106,7 +120,7 @@ contract FeeLogic is Ownable, IFeeLogic {
 	}
 
 	function setExempt(address account, bool isExempt_)
-		external
+		public
 		virtual
 		override
 		onlyOwner
@@ -118,10 +132,19 @@ contract FeeLogic is Ownable, IFeeLogic {
 		}
 	}
 
-	/* Public Mutators */
+	function setExemptBatch(ExemptData[] memory batch)
+		public
+		virtual
+		override
+		onlyOwner
+	{
+		for (uint256 i = 0; i < batch.length; i++) {
+			setExempt(batch[i].account, batch[i].isExempt);
+		}
+	}
 
 	function setFeeRate(uint128 numerator, uint128 denominator)
-		public
+		external
 		virtual
 		override
 		onlyOwner
@@ -133,7 +156,7 @@ contract FeeLogic is Ownable, IFeeLogic {
 		emit FeeRateSet(_msgSender(), numerator, denominator);
 	}
 
-	function setRecipient(address account) public virtual override onlyOwner {
+	function setRecipient(address account) external virtual override onlyOwner {
 		require(account != address(0), "FeeLogic: recipient is zero address");
 		_recipient = account;
 		emit RecipientSet(_msgSender(), account);

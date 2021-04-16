@@ -58,7 +58,7 @@ interface IRewardsManager {
 		bool isActive
 	) external;
 
-	function setSharesBatch(ShareData[] calldata batch) external;
+	function setSharesBatch(ShareData[] memory batch) external;
 
 	/* Events */
 

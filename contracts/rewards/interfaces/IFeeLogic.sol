@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 interface IFeeLogic {
+	/* Types */
+
+	struct ExemptData {
+		address account;
+		bool isExempt;
+	}
+
 	/* Views */
 
 	function exemptsAt(uint256 index) external view returns (address);
@@ -34,6 +42,8 @@ interface IFeeLogic {
 	function notify(uint256 amount) external;
 
 	function setExempt(address account, bool isExempt_) external;
+
+	function setExemptBatch(ExemptData[] memory batch) external;
 
 	function setFeeRate(uint128 numerator, uint128 denominator) external;
 

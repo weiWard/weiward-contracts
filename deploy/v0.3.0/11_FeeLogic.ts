@@ -13,6 +13,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const { deployer } = await getNamedAccounts();
 
+	const ethtxAmmAddr = (await deployments.get('ETHtxAMM')).address;
+	const ethmxMinterAddr = (await deployments.get('ETHmxMinter')).address;
 	const ethtxRewardsMgrAddr = (await deployments.get('ETHtxRewardsManager'))
 		.address;
 
@@ -23,7 +25,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deploy(contractName, {
 		from: deployer,
 		log: true,
-		args: [deployer, feeRecipient, feeNum, feeDen],
+		args: [
+			deployer,
+			feeRecipient,
+			feeNum,
+			feeDen,
+			[
+				{ account: ethtxAmmAddr, isExempt: true },
+				{ account: ethmxMinterAddr, isExempt: true },
+				{ account: ethtxRewardsMgrAddr, isExempt: true },
+			],
+		],
 		deterministicDeployment: salt,
 	});
 
@@ -36,4 +48,7 @@ const id = contractName + version;
 export default func;
 func.tags = [id, version];
 func.id = id;
-func.dependencies = getVersionedDeps(['ETHtxRewardsManager'], version);
+func.dependencies = getVersionedDeps(
+	['ETHtxAMM', 'ETHmxMinter', 'ETHtxRewardsManager'],
+	version,
+);

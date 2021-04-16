@@ -79,6 +79,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			defaultRecipient,
 			feeNumerator,
 			feeDenominator,
+			[],
 		);
 
 		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
@@ -101,7 +102,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			targetCRatioNum: targetCRatioNumerator,
 			targetCRatioDen: targetCRatioDenominator,
 		});
-		await feeLogic.setExempt(ethtxAMM.address, true);
 
 		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
 
@@ -198,7 +198,16 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const testerContract = contract.connect(testerSigner);
 
 		await feeLogic.setRecipient(contract.address);
-		await feeLogic.setExempt(contract.address, true);
+		await feeLogic.setExemptBatch([
+			{
+				account: ethtxAMM.address,
+				isExempt: true,
+			},
+			{
+				account: contract.address,
+				isExempt: true,
+			},
+		]);
 
 		return {
 			deployer,

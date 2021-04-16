@@ -152,12 +152,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		],
 	});
 
-	// TODO add setExemptBatch
-	// TODO add setExemptBatch to constructor
-	await feeLogic.setExempt(ethtxAmm.address, true);
-	await feeLogic.setExempt(ethmxMinter.address, true);
-	await feeLogic.setExempt(ethtxRewardsMgr.address, true);
-
 	// eslint-disable-next-line no-console
 	console.log('Completed postInit script.');
 
