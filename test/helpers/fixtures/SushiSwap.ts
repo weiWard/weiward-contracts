@@ -1,6 +1,6 @@
 import { Contract } from 'ethers';
 import { waffle } from 'hardhat';
-import UniswapV2Pair from '@sushiswap/core/build/contracts/UniswapV2Pair.json';
+import UniswapV2Pair from '@sushiswap/core/build/abi/UniswapV2Pair.json';
 
 import SushiV2Factory from '../../../contracts/exchanges/mocks/SushiV2Factory.json';
 import { MockSushiV2Router02__factory } from '../../../build/types/ethers-v5';
