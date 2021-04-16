@@ -1,66 +1,49 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "../libraries/EnumerableMap.sol";
-import "./interfaces/ILPRewards.sol";
-import "./interfaces/IValuePerToken.sol";
+import "./LPRewardsData.sol";
+import "../../libraries/EnumerableMap.sol";
+import "../interfaces/ILPRewards.sol";
+import "../interfaces/IValuePerToken.sol";
+import "../../access/OwnableUpgradeable.sol";
 
-contract LPRewards is Ownable, Pausable, ILPRewards {
+contract LPRewards is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	PausableUpgradeable,
+	LPRewardsData,
+	ILPRewards
+{
 	using EnumerableMap for EnumerableMap.AddressToUintMap;
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Structs */
-
-	struct TokenData {
-		uint256 arpt;
-		uint256 lastRewardsAccrued;
-		uint256 rewards;
-		uint256 rewardsRedeemed;
-		uint256 totalStaked;
-		address valueImpl;
-	}
-
-	struct UserTokenRewards {
-		uint256 pending;
-		uint256 arptLast;
-	}
-
-	struct UserData {
-		EnumerableSet.AddressSet tokensWithRewards;
-		mapping(address => UserTokenRewards) rewardsFor;
-		EnumerableMap.AddressToUintMap staked;
-	}
-
 	/* Immutable Internal State */
 
 	uint256 internal constant _MULTIPLIER = 1e36;
 
-	/* Mutable Internal State */
-
-	address internal _rewardsToken;
-	uint256 internal _lastTotalRewardsAccrued;
-	uint256 internal _totalRewardsRedeemed;
-	uint256 internal _unredeemableRewards;
-	EnumerableSet.AddressSet internal _tokens;
-	mapping(address => TokenData) internal _tokenData;
-	mapping(address => UserData) internal _users;
-
 	/* Constructor */
 
-	constructor(address owner_, address rewardsToken_) Ownable() {
-		setRewardsToken(rewardsToken_);
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
-		}
+	constructor(address owner_) {
+		init(owner_);
+	}
+
+	/* Initializers */
+
+	function init(address owner_) public virtual initializer {
+		__Context_init_unchained();
+		__Ownable_init_unchained(owner_);
+		__Pausable_init_unchained();
 	}
 
 	/* Modifiers */
@@ -75,6 +58,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function accruedRewardsPerTokenFor(address token)
 		public
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -84,6 +68,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function accruedRewardsPerTokenLastFor(address account, address token)
 		public
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -93,6 +78,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function lastRewardsBalanceOf(address account)
 		public
 		view
+		virtual
 		override
 		returns (uint256 total)
 	{
@@ -106,32 +92,47 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function lastRewardsBalanceOfFor(address account, address token)
 		public
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _users[account].rewardsFor[token].pending;
 	}
 
-	function lastTotalRewardsAccrued() external view override returns (uint256) {
+	function lastTotalRewardsAccrued()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _lastTotalRewardsAccrued;
 	}
 
 	function lastTotalRewardsAccruedFor(address token)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _tokenData[token].lastRewardsAccrued;
 	}
 
-	function numStakingTokens() external view override returns (uint256) {
+	function numStakingTokens()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _tokens.length();
 	}
 
 	function rewardsBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -141,6 +142,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function rewardsBalanceOfFor(address account, address token)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -155,19 +157,21 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function rewardsForToken(address token)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _tokenData[token].rewards;
 	}
 
-	function rewardsToken() public view override returns (address) {
+	function rewardsToken() public view virtual override returns (address) {
 		return _rewardsToken;
 	}
 
 	function sharesFor(address account, address token)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -177,6 +181,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function sharesPerToken(address token)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -186,6 +191,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function stakedBalanceOf(address account, address token)
 		public
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -199,6 +205,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function stakingTokenAt(uint256 index)
 		external
 		view
+		virtual
 		override
 		returns (address)
 	{
@@ -208,13 +215,20 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function supportsStakingToken(address token)
 		public
 		view
+		virtual
 		override
 		returns (bool)
 	{
 		return _tokens.contains(token);
 	}
 
-	function totalRewardsAccrued() public view override returns (uint256) {
+	function totalRewardsAccrued()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		// Overflow is OK
 		return _currentRewardsBalance() + _totalRewardsRedeemed;
 	}
@@ -222,6 +236,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function totalRewardsAccruedFor(address token)
 		public
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -230,20 +245,33 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		return td.rewards + td.rewardsRedeemed;
 	}
 
-	function totalRewardsRedeemed() external view override returns (uint256) {
+	function totalRewardsRedeemed()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _totalRewardsRedeemed;
 	}
 
 	function totalRewardsRedeemedFor(address token)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _tokenData[token].rewardsRedeemed;
 	}
 
-	function totalShares() external view override returns (uint256 total) {
+	function totalShares()
+		external
+		view
+		virtual
+		override
+		returns (uint256 total)
+	{
 		for (uint256 i = 0; i < _tokens.length(); i++) {
 			total = total.add(_totalSharesForToken(_tokens.at(i)));
 		}
@@ -252,6 +280,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function totalSharesFor(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256 total)
 	{
@@ -265,23 +294,37 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function totalSharesForToken(address token)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _totalSharesForToken(token);
 	}
 
-	function totalStaked(address token) public view override returns (uint256) {
+	function totalStaked(address token)
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _tokenData[token].totalStaked;
 	}
 
-	function unredeemableRewards() external view override returns (uint256) {
+	function unredeemableRewards()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _unredeemableRewards;
 	}
 
 	function valuePerTokenImpl(address token)
 		public
 		view
+		virtual
 		override
 		returns (address)
 	{
@@ -292,6 +335,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	function addToken(address token, address tokenValueImpl)
 		external
+		virtual
 		override
 		onlyOwner
 	{
@@ -308,6 +352,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	function changeTokenValueImpl(address token, address tokenValueImpl)
 		external
+		virtual
 		override
 		onlyOwner
 		supportsToken(token)
@@ -320,22 +365,23 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		emit TokenValueImplChanged(_msgSender(), token, tokenValueImpl);
 	}
 
-	function exit() external override {
+	function exit() external virtual override {
 		unstakeAll();
 		redeemAllRewards();
 	}
 
-	function exitFrom(address token) external override {
+	function exitFrom(address token) external virtual override {
 		unstakeAllFrom(token);
 		redeemAllRewardsFrom(token);
 	}
 
-	function pause() external override onlyOwner {
+	function pause() external virtual override onlyOwner {
 		_pause();
 	}
 
 	function recoverUnredeemableRewards(address to, uint256 amount)
 		external
+		virtual
 		override
 		onlyOwner
 	{
@@ -352,7 +398,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		address token,
 		address to,
 		uint256 amount
-	) external override onlyOwner {
+	) external virtual override onlyOwner {
 		require(token != _rewardsToken, "LPRewards: cannot recover rewardsToken");
 
 		uint256 unstaked =
@@ -364,7 +410,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		emit RecoveredUnstaked(_msgSender(), token, to, amount);
 	}
 
-	function redeemAllRewards() public override {
+	function redeemAllRewards() public virtual override {
 		address account = _msgSender();
 		_updateAllRewardsFor(account);
 
@@ -394,7 +440,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		IERC20(_rewardsToken).safeTransfer(account, redemption);
 	}
 
-	function redeemAllRewardsFrom(address token) public override {
+	function redeemAllRewardsFrom(address token) public virtual override {
 		address account = _msgSender();
 		_updateRewardFor(account, token);
 		uint256 pending = _users[account].rewardsFor[token].pending;
@@ -403,7 +449,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		}
 	}
 
-	function redeemReward(uint256 amount) external override {
+	function redeemReward(uint256 amount) external virtual override {
 		require(amount != 0, "LPRewards: cannot redeem zero");
 		address account = _msgSender();
 		_updateAllRewardsFor(account);
@@ -449,7 +495,11 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		IERC20(_rewardsToken).safeTransfer(account, amount);
 	}
 
-	function redeemRewardFrom(address token, uint256 amount) external override {
+	function redeemRewardFrom(address token, uint256 amount)
+		external
+		virtual
+		override
+	{
 		require(amount != 0, "LPRewards: cannot redeem zero");
 		address account = _msgSender();
 		_updateRewardFor(account, token);
@@ -462,6 +512,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	function removeToken(address token)
 		external
+		virtual
 		override
 		onlyOwner
 		supportsToken(token)
@@ -473,13 +524,14 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		emit TokenRemoved(_msgSender(), token);
 	}
 
-	function setRewardsToken(address token) public override onlyOwner {
+	function setRewardsToken(address token) public virtual override onlyOwner {
 		_rewardsToken = token;
 		emit RewardsTokenSet(_msgSender(), token);
 	}
 
 	function stake(address token, uint256 amount)
 		external
+		virtual
 		override
 		whenNotPaused
 		supportsToken(token)
@@ -498,11 +550,11 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		emit Staked(account, token, amount);
 	}
 
-	function unpause() external override onlyOwner {
+	function unpause() external virtual override onlyOwner {
 		_unpause();
 	}
 
-	function unstake(address token, uint256 amount) external override {
+	function unstake(address token, uint256 amount) external virtual override {
 		require(amount != 0, "LPRewards: cannot unstake zero");
 
 		address account = _msgSender();
@@ -516,7 +568,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		_unstake(token, amount);
 	}
 
-	function unstakeAll() public override {
+	function unstakeAll() public virtual override {
 		UserData storage user = _users[_msgSender()];
 		for (uint256 length = user.staked.length(); length > 0; length--) {
 			(address token, uint256 amount) = user.staked.at(0);
@@ -524,11 +576,11 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		}
 	}
 
-	function unstakeAllFrom(address token) public override {
+	function unstakeAllFrom(address token) public virtual override {
 		_unstake(token, stakedBalanceOf(_msgSender(), token));
 	}
 
-	function updateAccrual() external override {
+	function updateAccrual() external virtual override {
 		// Gas savings
 		uint256 totalRewardsAccrued_ = totalRewardsAccrued();
 		uint256 pending = totalRewardsAccrued_ - _lastTotalRewardsAccrued;
@@ -567,11 +619,11 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		emit AccrualUpdated(_msgSender(), pending);
 	}
 
-	function updateReward() external override {
+	function updateReward() external virtual override {
 		_updateAllRewardsFor(_msgSender());
 	}
 
-	function updateRewardFor(address token) external override {
+	function updateRewardFor(address token) external virtual override {
 		_updateRewardFor(_msgSender(), token);
 	}
 
@@ -580,6 +632,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function _accruedRewardsPerTokenFor(address token, uint256 rewardsAccrued)
 		internal
 		view
+		virtual
 		returns (uint256)
 	{
 		TokenData storage td = _tokenData[token];
@@ -606,6 +659,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function _allPendingRewardsFor(address account)
 		internal
 		view
+		virtual
 		returns (uint256 total)
 	{
 		EnumerableMap.AddressToUintMap storage staked = _users[account].staked;
@@ -615,7 +669,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		}
 	}
 
-	function _currentRewardsBalance() internal view returns (uint256) {
+	function _currentRewardsBalance() internal view virtual returns (uint256) {
 		return IERC20(_rewardsToken).balanceOf(address(this));
 	}
 
@@ -623,7 +677,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		address account,
 		address token,
 		uint256 amountStaked
-	) internal view returns (uint256) {
+	) internal view virtual returns (uint256) {
 		uint256 arpt = accruedRewardsPerTokenFor(token);
 		uint256 arptLast = accruedRewardsPerTokenLastFor(account, token);
 		// Overflow is OK
@@ -635,6 +689,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function _shares(address token, uint256 amountStaked)
 		internal
 		view
+		virtual
 		returns (uint256)
 	{
 		if (!supportsStakingToken(token)) {
@@ -652,6 +707,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 	function _totalSharesForToken(address token)
 		internal
 		view
+		virtual
 		returns (uint256)
 	{
 		return _shares(token, _tokenData[token].totalStaked);
@@ -659,7 +715,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	/* Internal Mutators */
 
-	function _redeemRewardFrom(address token, uint256 amount) internal {
+	function _redeemRewardFrom(address token, uint256 amount) internal virtual {
 		address account = _msgSender();
 		UserData storage user = _users[account];
 		UserTokenRewards storage rewards = user.rewardsFor[token];
@@ -680,7 +736,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		emit RewardPaid(account, token, amount);
 	}
 
-	function _unstake(address token, uint256 amount) internal {
+	function _unstake(address token, uint256 amount) internal virtual {
 		address account = _msgSender();
 
 		_updateRewardFor(account, token);
@@ -705,6 +761,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 
 	function _updateRewardFor(address account, address token)
 		internal
+		virtual
 		returns (uint256)
 	{
 		UserData storage user = _users[account];
@@ -721,7 +778,7 @@ contract LPRewards is Ownable, Pausable, ILPRewards {
 		return total;
 	}
 
-	function _updateAllRewardsFor(address account) internal {
+	function _updateAllRewardsFor(address account) internal virtual {
 		EnumerableMap.AddressToUintMap storage staked = _users[account].staked;
 		for (uint256 i = 0; i < staked.length(); i++) {
 			(address token, ) = staked.at(i);

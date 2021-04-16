@@ -26,6 +26,7 @@ interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: MockETHtx;
+	contractImpl: MockETHtx;
 	testerContract: MockETHtx;
 	feeLogic: FeeLogic;
 	testToken: MockERC20;
@@ -43,6 +44,7 @@ const loadFixture = deployments.createFixture(
 			feeRecipient,
 			feeNumerator,
 			feeDenominator,
+			[],
 		);
 
 		const result = await deploy('MockETHtx', {
@@ -51,14 +53,21 @@ const loadFixture = deployments.createFixture(
 			proxy: {
 				methodName: 'init',
 				proxyContract: 'OpenZeppelinTransparentProxy',
-				viaAdminContract: 'DefaultProxyAdmin',
+				viaAdminContract: 'ProxyAdmin',
 			},
-			args: [deployer, feeLogic.address, deployer],
+			args: [deployer],
 		});
 		const contract = MockETHtx__factory.connect(
 			result.address,
 			deployerSigner,
 		);
+		await contract.postInit({ feeLogic: feeLogic.address, minter: deployer });
+
+		const contractImpl = MockETHtx__factory.connect(
+			(await deployments.get('MockETHtx_Implementation')).address,
+			deployerSigner,
+		);
+
 		const testerContract = contract.connect(testerSigner);
 
 		const testToken = await new MockERC20__factory(deployerSigner).deploy(
@@ -74,6 +83,7 @@ const loadFixture = deployments.createFixture(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			feeLogic,
 			testToken,
@@ -90,9 +100,13 @@ describe(contractName, function () {
 
 	describe('constructor', function () {
 		it('initial state is correct', async function () {
-			const { contract, deployer, feeLogic } = fixture;
+			const { contract, contractImpl, deployer, feeLogic } = fixture;
 
 			expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
+			expect(
+				await contractImpl.owner(),
+				'implemenation owner address mismatch',
+			).to.eq(deployer);
 
 			expect(await contract.feeLogic(), 'feeLogic address mismatch').to.eq(
 				feeLogic.address,
@@ -101,6 +115,49 @@ describe(contractName, function () {
 			expect(await contract.minter(), 'minter address mismatch').to.eq(
 				deployer,
 			);
+		});
+	});
+
+	describe('init', function () {
+		it('should revert on proxy address', async function () {
+			const { contract, tester } = fixture;
+
+			await expect(contract.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+
+		it('should revert on implementation address', async function () {
+			const { contractImpl, tester } = fixture;
+
+			await expect(contractImpl.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+	});
+
+	describe('postInit', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+
+			await expect(
+				testerContract.postInit({
+					feeLogic: zeroAddress,
+					minter: zeroAddress,
+				}),
+			).to.be.revertedWith('caller is not the owner');
+		});
+	});
+
+	describe('receive', function () {
+		it('should revert', async function () {
+			const { contract, deployerSigner } = fixture;
+			await expect(
+				deployerSigner.sendTransaction({
+					to: contract.address,
+					value: parseEther('1'),
+				}),
+			).to.be.reverted;
 		});
 	});
 

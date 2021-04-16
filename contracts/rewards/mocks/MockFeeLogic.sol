@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import "../FeeLogic.sol";
 
@@ -10,8 +11,17 @@ contract MockFeeLogic is FeeLogic {
 		address owner_,
 		address recipient_,
 		uint128 feeRateNumerator,
-		uint128 feeRateDenominator
-	) FeeLogic(owner_, recipient_, feeRateNumerator, feeRateDenominator) {
+		uint128 feeRateDenominator,
+		ExemptData[] memory exemptions
+	)
+		FeeLogic(
+			owner_,
+			recipient_,
+			feeRateNumerator,
+			feeRateDenominator,
+			exemptions
+		)
+	{
 		return;
 	}
 

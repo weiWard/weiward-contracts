@@ -1,28 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import "../ETHtxRewardsManager.sol";
+import "../ETHtxRewardsManager/ETHtxRewardsManager.sol";
 
 contract MockETHtxRewardsManager is ETHtxRewardsManager {
-	constructor(
-		address owner_,
-		address defaultRecipient_,
-		address rewardsToken_,
-		address ethmxRewards_,
-		address ethtx_,
-		address ethtxAMM_,
-		address lpRewards_
-	)
-		ETHtxRewardsManager(
-			owner_,
-			defaultRecipient_,
-			rewardsToken_,
-			ethmxRewards_,
-			ethtx_,
-			ethtxAMM_,
-			lpRewards_
-		)
-	{
+	constructor(address owner_) ETHtxRewardsManager(owner_) {
 		return;
 	}
 

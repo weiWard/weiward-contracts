@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import "../ETHmxRewards.sol";
+import "../ETHmxRewards/ETHmxRewards.sol";
 
 contract MockETHmxRewards is ETHmxRewards {
-	constructor(
-		address owner_,
-		address ethmxAddr_,
-		address wethAddr_,
-		uint256 accrualUpdateInterval_
-	) ETHmxRewards(owner_, ethmxAddr_, wethAddr_, accrualUpdateInterval_) {
+	constructor(address owner_) ETHmxRewards(owner_) {
 		return;
 	}
 

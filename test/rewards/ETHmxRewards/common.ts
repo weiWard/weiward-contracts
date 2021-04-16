@@ -41,6 +41,7 @@ export interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: MockETHmxRewards;
+	contractImpl: MockETHmxRewards;
 	testerContract: MockETHmxRewards;
 	ethmx: ETHmx;
 	ethmxMinter: ETHmxMinter;
@@ -50,7 +51,8 @@ export interface Fixture {
 }
 
 export const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -60,6 +62,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			feeRecipient,
 			75,
 			1000,
+			[],
 		);
 
 		const oracle = await new SimpleGasPrice__factory(deployerSigner).deploy(
@@ -70,24 +73,21 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
 			deployer,
-			feeLogic.address,
-			zeroAddress, // ethmx address
 		);
 
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
 			deployer,
-			ethtx.address,
-			oracle.address,
-			weth.address,
-			2,
-			1,
 		);
+		await ethtxAMM.postInit({
+			ethtx: ethtx.address,
+			gasOracle: oracle.address,
+			weth: weth.address,
+			targetCRatioNum: 2,
+			targetCRatioDen: 1,
+		});
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
-			deployer,
-			zeroAddress,
-		);
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,
@@ -107,11 +107,37 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			lpRecipient: zeroAddress,
 		});
 		await ethmx.setMinter(ethmxMinter.address);
-		await ethtx.setMinter(ethmxMinter.address);
+		await ethtx.postInit({
+			feeLogic: feeLogic.address,
+			minter: ethmxMinter.address,
+		});
 
-		const contract = await new MockETHmxRewards__factory(
+		const result = await deploy('MockETHmxRewards', {
+			from: deployer,
+			log: true,
+			proxy: {
+				owner: deployer,
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'ProxyAdmin',
+			},
+			args: [deployer],
+		});
+		const contract = MockETHmxRewards__factory.connect(
+			result.address,
 			deployerSigner,
-		).deploy(deployer, ethmx.address, weth.address, accrualUpdateInterval);
+		);
+		await contract.postInit({
+			ethmx: ethmx.address,
+			weth: weth.address,
+			accrualUpdateInterval,
+		});
+
+		const contractImpl = MockETHmxRewards__factory.connect(
+			(await deployments.get('MockETHmxRewards_Implementation')).address,
+			deployerSigner,
+		);
+
 		const testerContract = contract.connect(testerSigner);
 
 		return {
@@ -120,6 +146,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			ethmx,
 			ethmxMinter,

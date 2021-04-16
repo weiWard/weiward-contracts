@@ -1,57 +1,86 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./interfaces/IRewardsManager.sol";
+import "./RewardsManagerData.sol";
+import "../interfaces/IRewardsManager.sol";
+import "../../access/OwnableUpgradeable.sol";
 
-contract RewardsManager is Ownable, IRewardsManager {
+contract RewardsManager is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	RewardsManagerData,
+	IRewardsManager
+{
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeCast for uint256;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 	using SafeMath for uint128;
 
-	/* Types */
-
-	struct Shares {
-		uint128 active;
-		uint128 total;
+	struct RewardsManagerArgs {
+		address defaultRecipient;
+		address rewardsToken;
+		ShareData[] shares;
 	}
-
-	/* Mutable Internal State */
-
-	address internal _rewardsToken;
-	address internal _defaultRecipient;
-	uint256 internal _totalRewardsRedeemed;
-	EnumerableSet.AddressSet internal _recipients;
-	mapping(address => Shares) internal _shares;
 
 	/* Constructor */
 
-	constructor(address defaultRecipient_, address rewardsToken_) Ownable() {
-		setRewardsToken(rewardsToken_);
-		setDefaultRecipient(defaultRecipient_);
+	constructor(address owner_) {
+		init(owner_);
+	}
+
+	/* Initializers */
+
+	function init(address owner_) public virtual initializer {
+		__Context_init_unchained();
+		__Ownable_init_unchained(owner_);
+	}
+
+	function postInit(RewardsManagerArgs memory _args)
+		external
+		virtual
+		onlyOwner
+	{
+		address sender = _msgSender();
+
+		_rewardsToken = _args.rewardsToken;
+		emit RewardsTokenSet(sender, _args.rewardsToken);
+
+		setDefaultRecipient(_args.defaultRecipient);
+
+		setSharesBatch(_args.shares);
 	}
 
 	/* External Views */
 
-	function defaultRecipient() external view override returns (address) {
+	function defaultRecipient()
+		external
+		view
+		virtual
+		override
+		returns (address)
+	{
 		return _defaultRecipient;
 	}
 
-	function rewardsToken() public view override returns (address) {
+	function rewardsToken() public view virtual override returns (address) {
 		return _rewardsToken;
 	}
 
 	function sharesFor(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint128 active, uint128 total)
 	{
@@ -59,16 +88,28 @@ contract RewardsManager is Ownable, IRewardsManager {
 		return (s.active, s.total);
 	}
 
-	function totalRewardsAccrued() external view override returns (uint256) {
+	function totalRewardsAccrued()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		// Overflow is OK
 		return _currentRewardsBalance() + _totalRewardsRedeemed;
 	}
 
-	function totalRewardsRedeemed() external view override returns (uint256) {
+	function totalRewardsRedeemed()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _totalRewardsRedeemed;
 	}
 
-	function totalShares() public view override returns (uint256 total) {
+	function totalShares() public view virtual override returns (uint256 total) {
 		for (uint256 i = 0; i < _recipients.length(); i++) {
 			total += _shares[_recipients.at(i)].total;
 		}
@@ -76,16 +117,22 @@ contract RewardsManager is Ownable, IRewardsManager {
 
 	/* External Mutators */
 
-	function activateShares() external override {
+	function activateShares() external virtual override {
 		_activate(_msgSender());
 	}
 
-	function activateSharesFor(address account) external override onlyOwner {
+	function activateSharesFor(address account)
+		external
+		virtual
+		override
+		onlyOwner
+	{
 		_activate(account);
 	}
 
 	function addShares(address account, uint128 amount)
 		external
+		virtual
 		override
 		onlyOwner
 	{
@@ -112,11 +159,16 @@ contract RewardsManager is Ownable, IRewardsManager {
 		emit SharesAdded(_msgSender(), account, amount);
 	}
 
-	function deactivateShares() external override {
+	function deactivateShares() external virtual override {
 		_deactivate(_msgSender());
 	}
 
-	function deactivateSharesFor(address account) external override onlyOwner {
+	function deactivateSharesFor(address account)
+		external
+		virtual
+		override
+		onlyOwner
+	{
 		_deactivate(account);
 	}
 
@@ -124,7 +176,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 		address token,
 		address to,
 		uint256 amount
-	) external override onlyOwner {
+	) external virtual override onlyOwner {
 		require(
 			token != _rewardsToken,
 			"RewardsManager: cannot recover rewards token"
@@ -135,6 +187,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 
 	function removeShares(address account, uint128 amount)
 		external
+		virtual
 		override
 		onlyOwner
 	{
@@ -155,7 +208,12 @@ contract RewardsManager is Ownable, IRewardsManager {
 		emit SharesRemoved(_msgSender(), account, amount);
 	}
 
-	function setDefaultRecipient(address account) public override onlyOwner {
+	function setDefaultRecipient(address account)
+		public
+		virtual
+		override
+		onlyOwner
+	{
 		require(
 			account != address(0),
 			"RewardsManager: cannot set to zero address"
@@ -186,7 +244,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 		emit DefaultRecipientSet(_msgSender(), account);
 	}
 
-	function setRewardsToken(address token) public override onlyOwner {
+	function setRewardsToken(address token) public virtual override onlyOwner {
 		_rewardsToken = token;
 		emit RewardsTokenSet(_msgSender(), token);
 	}
@@ -195,7 +253,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 		address account,
 		uint128 value,
 		bool isActive
-	) external override onlyOwner {
+	) public virtual override onlyOwner {
 		require(
 			account != address(0),
 			"RewardsManager: cannot set shares for zero address"
@@ -240,15 +298,26 @@ contract RewardsManager is Ownable, IRewardsManager {
 		emit SharesSet(_msgSender(), account, value, isActive);
 	}
 
+	function setSharesBatch(ShareData[] memory batch)
+		public
+		virtual
+		override
+		onlyOwner
+	{
+		for (uint256 i = 0; i < batch.length; i++) {
+			setShares(batch[i].account, batch[i].value, batch[i].isActive);
+		}
+	}
+
 	/* Internal Views */
 
-	function _currentRewardsBalance() internal view returns (uint256) {
+	function _currentRewardsBalance() internal view virtual returns (uint256) {
 		return IERC20(_rewardsToken).balanceOf(address(this));
 	}
 
 	/* Internal Mutators */
 
-	function _activate(address account) internal {
+	function _activate(address account) internal virtual {
 		Shares storage s = _shares[account];
 
 		// Do nothing if already active
@@ -263,7 +332,7 @@ contract RewardsManager is Ownable, IRewardsManager {
 		emit SharesActivated(_msgSender(), account);
 	}
 
-	function _deactivate(address account) internal {
+	function _deactivate(address account) internal virtual {
 		// Skip for the default recipient
 		if (account == _defaultRecipient) {
 			return;

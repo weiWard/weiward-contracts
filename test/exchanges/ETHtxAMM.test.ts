@@ -89,6 +89,7 @@ interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: ETHtxAMM;
+	contractImpl: ETHtxAMM;
 	testerContract: ETHtxAMM;
 	ethtx: MockETHtx;
 	ethmx: ETHmx;
@@ -105,13 +106,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			feeRecipient,
-			feeNumerator,
-			feeDenominator,
-		);
-
 		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
 			deployer,
 			oracleUpdateInterval,
@@ -123,14 +117,9 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const ethtx = await new MockETHtx__factory(deployerSigner).deploy(
 			deployer,
-			feeLogic.address,
-			zeroAddress, // ETHmx minter
 		);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(
-			deployer,
-			zeroAddress,
-		);
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
 
 		const result = await deploy('ETHtxAMMTest', {
 			contract: 'ETHtxAMM',
@@ -140,18 +129,23 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 				owner: deployer,
 				methodName: 'init',
 				proxyContract: 'OpenZeppelinTransparentProxy',
-				viaAdminContract: 'DefaultProxyAdmin',
+				viaAdminContract: 'ProxyAdmin',
 			},
-			args: [
-				deployer,
-				ethtx.address,
-				oracle.address,
-				weth.address,
-				targetCRatioNumerator,
-				targetCRatioDenominator,
-			],
+			args: [deployer],
 		});
 		const contract = ETHtxAMM__factory.connect(result.address, deployerSigner);
+		await contract.postInit({
+			ethtx: ethtx.address,
+			gasOracle: oracle.address,
+			weth: weth.address,
+			targetCRatioNum: targetCRatioNumerator,
+			targetCRatioDen: targetCRatioDenominator,
+		});
+
+		const contractImpl = ETHtxAMM__factory.connect(
+			(await deployments.get('ETHtxAMMTest_Implementation')).address,
+			deployerSigner,
+		);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,
@@ -171,9 +165,24 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			lpRecipient: zeroAddress,
 		});
 
-		await feeLogic.setExempt(contract.address, true);
+		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
+			deployer,
+			feeRecipient,
+			feeNumerator,
+			feeDenominator,
+			[
+				{
+					account: contract.address,
+					isExempt: true,
+				},
+			],
+		);
+
 		await ethmx.setMinter(ethmxMinter.address);
-		await ethtx.setMinter(ethmxMinter.address);
+		await ethtx.postInit({
+			feeLogic: feeLogic.address,
+			minter: ethmxMinter.address,
+		});
 		const testerContract = contract.connect(testerSigner);
 
 		return {
@@ -182,6 +191,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			ethtx,
 			ethmx,
@@ -202,9 +212,21 @@ describe(contractName, function () {
 
 	describe('constructor', function () {
 		it('initial state is correct', async function () {
-			const { contract, deployer, ethtx, feeLogic, oracle, weth } = fixture;
+			const {
+				contract,
+				contractImpl,
+				deployer,
+				ethtx,
+				feeLogic,
+				oracle,
+				weth,
+			} = fixture;
 
 			expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
+			expect(
+				await contractImpl.owner(),
+				'implemenation owner address mismatch',
+			).to.eq(deployer);
 
 			expect(await contract.ethtx(), 'ethtx address mismatch').to.eq(
 				ethtx.address,
@@ -247,6 +269,40 @@ describe(contractName, function () {
 			).to.eq(0);
 
 			expect(await contract.ethNeeded(), 'ethNeeded mismatch').to.eq(0);
+		});
+	});
+
+	describe('init', function () {
+		it('should revert on proxy address', async function () {
+			const { contract, tester } = fixture;
+
+			await expect(contract.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+
+		it('should revert on implementation address', async function () {
+			const { contractImpl, tester } = fixture;
+
+			await expect(contractImpl.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+	});
+
+	describe('postInit', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+
+			await expect(
+				testerContract.postInit({
+					ethtx: zeroAddress,
+					gasOracle: zeroAddress,
+					weth: zeroAddress,
+					targetCRatioNum: 0,
+					targetCRatioDen: 0,
+				}),
+			).to.be.revertedWith('caller is not the owner');
 		});
 	});
 

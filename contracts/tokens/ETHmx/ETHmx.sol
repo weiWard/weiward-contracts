@@ -4,12 +4,13 @@ pragma solidity 0.7.6;
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./ERC20/ERC20Upgradeable.sol";
-import "./interfaces/IETHmx.sol";
+import "./ETHmxData.sol";
+import "../ERC20/ERC20Upgradeable.sol";
+import "../interfaces/IETHmx.sol";
+import "../../access/OwnableUpgradeable.sol";
 
 contract ETHmx is
 	Initializable,
@@ -17,33 +18,24 @@ contract ETHmx is
 	OwnableUpgradeable,
 	PausableUpgradeable,
 	ERC20Upgradeable,
+	ETHmxData,
 	IETHmx
 {
 	using SafeERC20 for IERC20;
 
-	/* Mutable Internal State */
-
-	address internal _minter;
-
 	/* Constructor */
 
-	constructor(address owner_, address minter_) {
-		init(owner_, minter_);
+	constructor(address owner_) {
+		init(owner_);
 	}
 
 	/* Initializer */
 
-	function init(address owner_, address minter_) public virtual initializer {
+	function init(address owner_) public virtual initializer {
 		__Context_init_unchained();
-		__Ownable_init_unchained();
+		__Ownable_init_unchained(owner_);
 		__Pausable_init_unchained();
 		__ERC20_init_unchained();
-
-		setMinter(minter_);
-
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
-		}
 	}
 
 	/* Modifiers */

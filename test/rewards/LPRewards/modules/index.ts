@@ -1,9 +1,11 @@
 export { default as constructor } from './constructor';
+export { default as init } from './init';
 export { default as addToken } from './addToken';
 export { default as changeTokenValueImpl } from './changeTokenValueImpl';
 export { default as exit } from './exit';
 export { default as exitFrom } from './exitFrom';
 export { default as pause } from './pause';
+export { default as receive } from './receive';
 export { default as recoverUnredeemableRewards } from './recoverUnredeemableRewards';
 export { default as recoverUnstaked } from './recoverUnstaked';
 export { default as redeemAllRewards } from './redeemAllRewards';

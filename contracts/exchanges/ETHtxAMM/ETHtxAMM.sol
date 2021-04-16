@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -17,6 +17,7 @@ import "../../tokens/interfaces/IERC20TxFee.sol";
 import "../../tokens/interfaces/IWETH.sol";
 import "../../rewards/interfaces/IFeeLogic.sol";
 import "../../oracles/interfaces/IGasPrice.sol";
+import "../../access/OwnableUpgradeable.sol";
 
 contract ETHtxAMM is
 	Initializable,
@@ -31,48 +32,43 @@ contract ETHtxAMM is
 	using SafeMath for uint128;
 	using SafeMath for uint256;
 
+	struct ETHtxAMMArgs {
+		address ethtx;
+		address gasOracle;
+		address weth;
+		uint128 targetCRatioNum;
+		uint128 targetCRatioDen;
+	}
+
 	/* Constructor */
 
-	constructor(
-		address owner_,
-		address ethtx_,
-		address gasOracle_,
-		address weth_,
-		uint128 targetCRatioNum_,
-		uint128 targetCRatioDen_
-	) {
-		init(
-			owner_,
-			ethtx_,
-			gasOracle_,
-			weth_,
-			targetCRatioNum_,
-			targetCRatioDen_
-		);
+	constructor(address owner_) {
+		init(owner_);
 	}
 
 	/* Initializer */
 
-	function init(
-		address owner_,
-		address ethtx_,
-		address gasOracle_,
-		address weth_,
-		uint128 targetCRatioNum_,
-		uint128 targetCRatioDen_
-	) public virtual initializer {
+	function init(address owner_) public virtual initializer {
 		__Context_init_unchained();
-		__Ownable_init_unchained();
+		__Ownable_init_unchained(owner_);
 		__Pausable_init_unchained();
+	}
 
-		setEthtx(ethtx_);
-		setGasOracle(gasOracle_);
-		setTargetCRatio(targetCRatioNum_, targetCRatioDen_);
-		setWETH(weth_);
+	function postInit(ETHtxAMMArgs memory _args) external virtual onlyOwner {
+		address sender = _msgSender();
 
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
-		}
+		_ethtx = _args.ethtx;
+		emit ETHtxSet(sender, _args.ethtx);
+
+		_gasOracle = _args.gasOracle;
+		emit GasOracleSet(sender, _args.gasOracle);
+
+		_weth = _args.weth;
+		emit WETHSet(sender, _args.weth);
+
+		_targetCRatioNum = _args.targetCRatioNum;
+		_targetCRatioDen = _args.targetCRatioDen;
+		emit TargetCRatioSet(sender, _args.targetCRatioNum, _args.targetCRatioDen);
 	}
 
 	/* Fallbacks */

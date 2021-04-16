@@ -50,6 +50,7 @@ export interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: MockLPRewards;
+	contractImpl: MockLPRewards;
 	testerContract: MockLPRewards;
 	tokenA: MockERC20;
 	tokenB: MockERC20;
@@ -68,7 +69,8 @@ export interface Fixture {
 }
 
 export const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -130,10 +132,28 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		).deploy(testPool.address, tokenB.address);
 
 		// Deploy contract
-		const contract = await new MockLPRewards__factory(deployerSigner).deploy(
-			deployer,
-			rewardsToken.address,
+		const result = await deploy('MockLPRewards', {
+			from: deployer,
+			log: true,
+			proxy: {
+				owner: deployer,
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'ProxyAdmin',
+			},
+			args: [deployer],
+		});
+		const contract = MockLPRewards__factory.connect(
+			result.address,
+			deployerSigner,
 		);
+		await contract.setRewardsToken(rewardsToken.address);
+
+		const contractImpl = MockLPRewards__factory.connect(
+			(await deployments.get('MockLPRewards_Implementation')).address,
+			deployerSigner,
+		);
+
 		const testerContract = contract.connect(testerSigner);
 
 		// Add support for tokens
@@ -147,6 +167,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			tokenA,
 			tokenB,

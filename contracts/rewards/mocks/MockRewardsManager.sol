@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import "../RewardsManager.sol";
+import "../RewardsManager/RewardsManager.sol";
 
 contract MockRewardsManager is RewardsManager {
-	constructor(address defaultRecipient_, address rewardsToken_)
-		RewardsManager(defaultRecipient_, rewardsToken_)
-	{
+	constructor(address owner_) RewardsManager(owner_) {
 		return;
 	}
 

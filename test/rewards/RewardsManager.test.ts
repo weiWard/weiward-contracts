@@ -27,12 +27,14 @@ interface Fixture {
 	tester: string;
 	testerSigner: JsonRpcSigner;
 	contract: MockRewardsManager;
+	contractImpl: MockRewardsManager;
 	testerContract: MockRewardsManager;
 	rewardsToken: MockERC20;
 }
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
-	async ({ getNamedAccounts, waffle }) => {
+	async ({ deployments, getNamedAccounts, waffle }) => {
+		const { deploy } = deployments;
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
@@ -44,9 +46,32 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			0,
 		);
 
-		const contract = await new MockRewardsManager__factory(
+		const result = await deploy('MockRewardsManager', {
+			from: deployer,
+			log: true,
+			proxy: {
+				owner: deployer,
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'ProxyAdmin',
+			},
+			args: [deployer],
+		});
+		const contract = MockRewardsManager__factory.connect(
+			result.address,
 			deployerSigner,
-		).deploy(defaultRecipient, rewardsToken.address);
+		);
+		await contract.postInit({
+			defaultRecipient,
+			rewardsToken: rewardsToken.address,
+			shares: [],
+		});
+
+		const contractImpl = MockRewardsManager__factory.connect(
+			(await deployments.get('MockRewardsManager_Implementation')).address,
+			deployerSigner,
+		);
+
 		const testerContract = contract.connect(testerSigner);
 
 		return {
@@ -55,6 +80,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			tester,
 			testerSigner,
 			contract,
+			contractImpl,
 			testerContract,
 			rewardsToken,
 		};
@@ -70,9 +96,19 @@ describe(contractName, function () {
 
 	describe('constructor', function () {
 		it('initial state is correct', async function () {
-			const { contract, deployer, tester, rewardsToken } = fixture;
+			const {
+				contract,
+				contractImpl,
+				deployer,
+				tester,
+				rewardsToken,
+			} = fixture;
 
 			expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
+			expect(
+				await contractImpl.owner(),
+				'implemenation owner address mismatch',
+			).to.eq(deployer);
 
 			expect(
 				await contract.defaultRecipient(),
@@ -98,6 +134,50 @@ describe(contractName, function () {
 				await contract.rewardsToken(),
 				'rewardsToken address mismatch',
 			).to.eq(rewardsToken.address);
+		});
+	});
+
+	describe('init', function () {
+		it('should revert on proxy address', async function () {
+			const { contract, tester } = fixture;
+
+			await expect(contract.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+
+		it('should revert on implementation address', async function () {
+			const { contractImpl, tester } = fixture;
+
+			await expect(contractImpl.init(tester)).to.be.revertedWith(
+				'contract is already initialized',
+			);
+		});
+	});
+
+	describe('postInit', function () {
+		it('can only be called by owner', async function () {
+			const { testerContract } = fixture;
+
+			await expect(
+				testerContract.postInit({
+					defaultRecipient: zeroAddress,
+					rewardsToken: zeroAddress,
+					shares: [],
+				}),
+			).to.be.revertedWith('caller is not the owner');
+		});
+	});
+
+	describe('receive', function () {
+		it('should revert', async function () {
+			const { contract, deployerSigner } = fixture;
+			await expect(
+				deployerSigner.sendTransaction({
+					to: contract.address,
+					value: parseEther('1'),
+				}),
+			).to.be.reverted;
 		});
 	});
 

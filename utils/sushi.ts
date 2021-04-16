@@ -72,6 +72,20 @@ export async function getOrDeploySushiFactory(
 	return new Contract(address, JSON.stringify(SushiV2Factory.abi), signer);
 }
 
+export async function getDeployedSushiFactory(
+	deployments: DeploymentsExtension,
+	chainId: string,
+): Promise<string | undefined> {
+	let address = sushiFactoryAddresses.get(chainId);
+	if (!address) {
+		if (chainId === '1') {
+			return undefined;
+		}
+		address = (await deployments.get('SushiV2Factory')).address;
+	}
+	return address;
+}
+
 export async function getOrDeploySushiPair(
 	deployer: string,
 	signer: JsonRpcSigner,
@@ -120,6 +134,32 @@ export async function getOrDeploySushiPair(
 	return address;
 }
 
+export async function getDeployedSushiPair(
+	deployments: DeploymentsExtension,
+	chainId: string,
+	signer: JsonRpcSigner,
+	ethtxAddr: string,
+	wethAddr: string,
+): Promise<string | undefined> {
+	let address = sushiPairAddresses.get(chainId);
+	if (!address) {
+		if (chainId === '1') {
+			return undefined;
+		}
+		const factoryAddr = await getDeployedSushiFactory(deployments, chainId);
+		if (!factoryAddr) {
+			return undefined;
+		}
+		const factory = new Contract(
+			factoryAddr,
+			JSON.stringify(SushiV2Factory.abi),
+			signer,
+		);
+		address = await factory.getPair(ethtxAddr, wethAddr);
+	}
+	return address;
+}
+
 export async function getOrDeploySushiRouter(
 	deployer: string,
 	signer: JsonRpcSigner,
@@ -165,5 +205,19 @@ export async function getOrDeploySushiRouter(
 		}
 	}
 
+	return address;
+}
+
+export async function getDeployedSushiRouter(
+	deployments: DeploymentsExtension,
+	chainId: string,
+): Promise<string | undefined> {
+	let address = sushiRouterAddresses.get(chainId);
+	if (!address) {
+		if (chainId === '1') {
+			return undefined;
+		}
+		address = (await deployments.get('MockSushiV2Router02')).address;
+	}
 	return address;
 }

@@ -1,44 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import "@openzeppelin/contracts/utils/Arrays.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "../tokens/interfaces/IETHmx.sol";
-import "./interfaces/IETHmxRewards.sol";
+import "./ETHmxRewardsData.sol";
+import "../../tokens/interfaces/IETHmx.sol";
+import "../interfaces/IETHmxRewards.sol";
+import "../../access/OwnableUpgradeable.sol";
 
 // High accuracy in block.timestamp is not needed.
 // https://consensys.github.io/smart-contract-best-practices/recommendations/#the-15-second-rule
 /* solhint-disable not-rely-on-time */
 
-contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
-	using Arrays for uint256[];
-	using Counters for Counters.Counter;
+contract ETHmxRewards is
+	Initializable,
+	ContextUpgradeable,
+	OwnableUpgradeable,
+	PausableUpgradeable,
+	ETHmxRewardsData,
+	IETHmxRewards
+{
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	/* Mutable Internal State */
-
-	address internal _ethmx;
-	address internal _weth;
-
-	uint256[] internal _arptSnapshots;
-	mapping(address => uint256) internal _arptLastIdx;
-
-	uint256 internal _lastAccrualUpdate;
-	uint256 internal _accrualUpdateInterval;
-
-	mapping(address => uint256) internal _rewardsFor;
-	uint256 internal _lastTotalRewardsAccrued;
-	uint256 internal _totalRewardsRedeemed;
-
-	mapping(address => uint256) internal _stakedFor;
-	uint256 internal _totalStaked;
+	struct ETHmxRewardsArgs {
+		address ethmx;
+		address weth;
+		uint256 accrualUpdateInterval;
+	}
 
 	/* Immutable Internal State */
 
@@ -46,51 +41,83 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	/* Constructor */
 
-	constructor(
-		address owner_,
-		address ethmx_,
-		address weth_,
-		uint256 accrualUpdateInterval_
-	) Ownable() {
-		setEthmx(ethmx_);
-		setWeth(weth_);
+	constructor(address owner_) {
+		init(owner_);
+	}
+
+	/* Initializer */
+
+	function init(address owner_) public virtual initializer {
+		__Context_init_unchained();
+		__Ownable_init_unchained(owner_);
+		__Pausable_init_unchained();
+
 		_arptSnapshots.push(0);
-		setAccrualUpdateInterval(accrualUpdateInterval_);
-		if (owner_ != owner()) {
-			transferOwnership(owner_);
-		}
+	}
+
+	function postInit(ETHmxRewardsArgs memory _args) external virtual onlyOwner {
+		address sender = _msgSender();
+
+		_ethmx = _args.ethmx;
+		emit ETHmxSet(sender, _args.ethmx);
+
+		_weth = _args.weth;
+		emit WETHSet(sender, _args.weth);
+
+		_accrualUpdateInterval = _args.accrualUpdateInterval;
+		emit AccrualUpdateIntervalSet(sender, _args.accrualUpdateInterval);
 	}
 
 	/* Public Views */
 
-	function accrualUpdateInterval() external view override returns (uint256) {
+	function accrualUpdateInterval()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _accrualUpdateInterval;
 	}
 
-	function accruedRewardsPerToken() public view override returns (uint256) {
+	function accruedRewardsPerToken()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _arptSnapshots[_arptSnapshots.length - 1];
 	}
 
 	function accruedRewardsPerTokenLast(address account)
 		public
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _arptSnapshots[_arptLastIdx[account]];
 	}
 
-	function ethmx() public view override returns (address) {
+	function ethmx() public view virtual override returns (address) {
 		return _ethmx;
 	}
 
-	function lastAccrualUpdate() external view override returns (uint256) {
+	function lastAccrualUpdate()
+		external
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _lastAccrualUpdate;
 	}
 
 	function lastRewardsBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -100,17 +127,24 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	function lastStakedBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
 		return _stakedFor[account];
 	}
 
-	function lastTotalRewardsAccrued() public view override returns (uint256) {
+	function lastTotalRewardsAccrued()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _lastTotalRewardsAccrued;
 	}
 
-	function readyForUpdate() external view override returns (bool) {
+	function readyForUpdate() external view virtual override returns (bool) {
 		if (_lastAccrualUpdate > block.timestamp) {
 			return false;
 		}
@@ -121,6 +155,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	function rewardsBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -163,6 +198,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 	function stakedBalanceOf(address account)
 		external
 		view
+		virtual
 		override
 		returns (uint256)
 	{
@@ -198,41 +234,60 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		return staked;
 	}
 
-	function totalRewardsAccrued() public view override returns (uint256) {
+	function totalRewardsAccrued()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		// Overflow is OK
 		return _currentRewardsBalance() + _totalRewardsRedeemed;
 	}
 
-	function totalRewardsRedeemed() public view override returns (uint256) {
+	function totalRewardsRedeemed()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _totalRewardsRedeemed;
 	}
 
-	function totalStaked() public view override returns (uint256) {
+	function totalStaked() public view virtual override returns (uint256) {
 		return _totalStaked;
 	}
 
-	function unredeemableRewards() public view override returns (uint256) {
+	function unredeemableRewards()
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
 		return _rewardsFor[address(0)];
 	}
 
-	function weth() public view override returns (address) {
+	function weth() public view virtual override returns (address) {
 		return _weth;
 	}
 
 	/* Public Mutators */
 
-	function exit() public override {
+	function exit() public virtual override {
 		address account = _msgSender();
 		unstakeAll();
 		_redeemReward(account, _rewardsFor[account]);
 	}
 
-	function pause() public override onlyOwner {
+	function pause() public virtual override onlyOwner {
 		_pause();
 	}
 
 	function recoverUnredeemableRewards(address to, uint256 amount)
 		public
+		virtual
 		override
 		onlyOwner
 	{
@@ -247,6 +302,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	function recoverUnstaked(address to, uint256 amount)
 		public
+		virtual
 		override
 		onlyOwner
 	{
@@ -266,20 +322,20 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		address token,
 		address to,
 		uint256 amount
-	) public override onlyOwner {
+	) public virtual override onlyOwner {
 		require(token != ethmx(), "ETHmxRewards: cannot recover ETHmx");
 		require(token != weth(), "ETHmxRewards: cannot recover WETH");
 		IERC20(token).safeTransfer(to, amount);
 		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
 
-	function redeemAllRewards() public override {
+	function redeemAllRewards() public virtual override {
 		address account = _msgSender();
 		_updateRewardFor(account);
 		_redeemReward(account, _rewardsFor[account]);
 	}
 
-	function redeemReward(uint256 amount) public override {
+	function redeemReward(uint256 amount) public virtual override {
 		require(amount != 0, "ETHmxRewards: cannot redeem zero");
 		address account = _msgSender();
 		// Update reward first (since it only goes up)
@@ -293,6 +349,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 
 	function setAccrualUpdateInterval(uint256 interval)
 		public
+		virtual
 		override
 		onlyOwner
 	{
@@ -300,17 +357,17 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit AccrualUpdateIntervalSet(_msgSender(), interval);
 	}
 
-	function setEthmx(address account) public override onlyOwner {
+	function setEthmx(address account) public virtual override onlyOwner {
 		_ethmx = account;
 		emit ETHmxSet(_msgSender(), account);
 	}
 
-	function setWeth(address account) public override onlyOwner {
+	function setWeth(address account) public virtual override onlyOwner {
 		_weth = account;
 		emit WETHSet(_msgSender(), account);
 	}
 
-	function stake(uint256 amount) public override whenNotPaused {
+	function stake(uint256 amount) public virtual override whenNotPaused {
 		require(amount != 0, "ETHmxRewards: cannot stake zero");
 
 		address account = _msgSender();
@@ -323,11 +380,11 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit Staked(account, amount);
 	}
 
-	function unpause() public override onlyOwner {
+	function unpause() public virtual override onlyOwner {
 		_unpause();
 	}
 
-	function unstake(uint256 amount) public override {
+	function unstake(uint256 amount) public virtual override {
 		require(amount != 0, "ETHmxRewards: cannot unstake zero");
 		address account = _msgSender();
 
@@ -348,14 +405,14 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		_unstake(account, amount);
 	}
 
-	function unstakeAll() public override {
+	function unstakeAll() public virtual override {
 		address account = _msgSender();
 		// Update stake first
 		_updateRewardFor(account);
 		_unstake(account, _stakedFor[account]);
 	}
 
-	function updateAccrual() public override {
+	function updateAccrual() public virtual override {
 		uint256 timePassed =
 			block.timestamp.sub(
 				_lastAccrualUpdate,
@@ -369,24 +426,24 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		_updateAccrual();
 	}
 
-	function updateReward() public override {
+	function updateReward() public virtual override {
 		_updateRewardFor(_msgSender());
 	}
 
 	/* Internal Views */
 
-	function _currentRewardsBalance() internal view returns (uint256) {
+	function _currentRewardsBalance() internal view virtual returns (uint256) {
 		return IERC20(weth()).balanceOf(address(this));
 	}
 
 	/* Internal Mutators */
 
-	function _burnETHmx(uint256 amount) internal {
+	function _burnETHmx(uint256 amount) internal virtual {
 		_totalStaked = _totalStaked.sub(amount);
 		IETHmx(ethmx()).burn(amount);
 	}
 
-	function _redeemReward(address account, uint256 amount) internal {
+	function _redeemReward(address account, uint256 amount) internal virtual {
 		// Should be guaranteed safe by caller (gas savings)
 		_rewardsFor[account] -= amount;
 		// Overflow is OK
@@ -397,7 +454,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit RewardPaid(account, amount);
 	}
 
-	function _unstake(address account, uint256 amount) internal {
+	function _unstake(address account, uint256 amount) internal virtual {
 		if (amount == 0) {
 			return;
 		}
@@ -410,7 +467,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit Unstaked(account, amount);
 	}
 
-	function _updateAccrual() internal {
+	function _updateAccrual() internal virtual {
 		uint256 rewardsAccrued = totalRewardsAccrued();
 		// Overflow is OK
 		uint256 newRewards = rewardsAccrued - _lastTotalRewardsAccrued;
@@ -447,7 +504,7 @@ contract ETHmxRewards is Ownable, Pausable, IETHmxRewards {
 		emit AccrualUpdated(_msgSender(), rewardsAccrued);
 	}
 
-	function _updateRewardFor(address account) internal {
+	function _updateRewardFor(address account) internal virtual {
 		// Gas savings
 		uint256[] memory arptValues = _arptSnapshots;
 		uint256 length = arptValues.length;

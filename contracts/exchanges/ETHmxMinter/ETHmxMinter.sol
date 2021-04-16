@@ -49,7 +49,7 @@ contract ETHmxMinter is
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	struct Args {
+	struct ETHmxMinterArgs {
 		address ethmx;
 		address ethtx;
 		address ethtxAMM;
@@ -78,8 +78,8 @@ contract ETHmxMinter is
 		__Pausable_init_unchained();
 	}
 
-	function postInit(Args memory _args) external virtual onlyOwner {
-		address sender = msg.sender;
+	function postInit(ETHmxMinterArgs memory _args) external virtual onlyOwner {
+		address sender = _msgSender();
 
 		// Set early threshold
 		_earlyThreshold = _args.earlyThreshold;

@@ -1,12 +1,13 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
-import { getOrDeployWETH } from '../utils/weth';
-import { getOrDeploySushiPair } from '../utils/sushi';
-import { zeroAddress } from '../test/helpers/address';
-import { LPRewards__factory } from '../build/types/ethers-v5';
-import { salt } from '../utils/create2';
+import { getOrDeployWETH } from '../../utils/weth';
+import { getDeployedSushiPair } from '../../utils/sushi';
+import { zeroAddress } from '../../test/helpers/address';
+import { salt } from '../../utils/create2';
+import { getVersionedDeps } from '../../utils/deploy';
 
+const version = 'v0.3.0';
 const contractName = 'ValuePerSushi';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -16,7 +17,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await getNamedAccounts();
 
 	const ethtxAddr = (await deployments.get('ETHtx')).address;
-	const lpRewardsAddr = (await deployments.get('LPRewards')).address;
 
 	const chainId = await getChainId();
 	const wethAddr = await getOrDeployWETH(deployer, deployments, chainId);
@@ -26,11 +26,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const deployerSigner = ethers.provider.getSigner(deployer);
 
-	const pairAddr = await getOrDeploySushiPair(
-		deployer,
-		deployerSigner,
+	const pairAddr = await getDeployedSushiPair(
 		deployments,
 		chainId,
+		deployerSigner,
 		ethtxAddr,
 		wethAddr,
 	);
@@ -40,10 +39,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		throw new Error('Sushi pair address is zero address for current network');
 	}
 
-	// eslint-disable-next-line no-console
-	console.log(`SLP ETHtx-WETH: ${pairAddr}`);
-
-	const result = await deploy(contractName, {
+	await deploy(contractName, {
 		contract: 'ValuePerUNIV2',
 		from: deployer,
 		log: true,
@@ -51,19 +47,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		deterministicDeployment: salt,
 	});
 
-	if (result.newlyDeployed) {
-		const lpRewards = LPRewards__factory.connect(
-			lpRewardsAddr,
-			deployerSigner,
-		);
-		await lpRewards.addToken(pairAddr, result.address);
-	}
-
 	// Never execute twice
 	return true;
 };
 
+const id = contractName + version;
+
 export default func;
-func.tags = [contractName];
-func.id = contractName;
-func.dependencies = ['ETHtx', 'LPRewards'];
+func.tags = [id, version];
+func.id = id;
+func.dependencies = getVersionedDeps(
+	['WETH', 'ETHtx', 'SushiV2Pair'],
+	version,
+);
