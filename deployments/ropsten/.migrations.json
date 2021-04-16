@@ -1,14 +1,14 @@
 {
-  "GasPrice": 1617683150,
-  "FeeLogic": 1617683151,
-  "ETHtx": 1617683152,
-  "ETHtxAMM": 1617683153,
-  "ETHmx": 1617683154,
-  "setMintGasPrice": 1617683156,
-  "ProxyAdmin": 1617767500,
-  "ETHmxMinter": 1617767510,
-  "ETHmxRewards": 1617767560,
-  "LPRewards": 1617767596,
-  "ValuePerSushi": 1617767808,
-  "ETHtxRewardsManager": 1617767830
+  "ProxyAdminv0.3.0": 1618553577,
+  "GasPricev0.3.0": 1618553600,
+  "ETHtxv0.3.0": 1618553676,
+  "ETHmxv0.3.0": 1618553724,
+  "ETHtxAMMv0.3.0": 1618553790,
+  "ETHmxMinterv0.3.0": 1618553838,
+  "ETHmxRewardsv0.3.0": 1618553872,
+  "LPRewardsv0.3.0": 1618554062,
+  "ETHtxRewardsManagerv0.3.0": 1618554124,
+  "FeeLogicv0.3.0": 1618554224,
+  "ValuePerSushiv0.3.0": 1618554429,
+  "postInitv0.3.0": 1618554439
 }

@@ -17,7 +17,7 @@ const sushiFactoryAddresses = new Map([
 const sushiPairAddresses = new Map([
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
-	['3', '0x9aa4715368c48F38F46D7626C647a2d60C26f54F'], // ropsten
+	['3', '0x6BD807AdCE1e9Ad7c4060891dFACAeA368787830'], // ropsten
 	['1', undefined], // mainnet
 ]);
 
@@ -101,6 +101,8 @@ export async function getOrDeploySushiPair(
 		case '42':
 		// rinkeby
 		case '4':
+		// ropsten
+		case '3':
 		// ganache
 		case '1337':
 		// hardhat
