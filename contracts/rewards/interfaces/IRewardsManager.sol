@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 interface IRewardsManager {
+	/* Types */
+
+	struct ShareData {
+		address account;
+		uint128 value;
+		bool isActive;
+	}
+
 	/* Views */
 
 	function defaultRecipient() external view returns (address);
@@ -49,11 +58,7 @@ interface IRewardsManager {
 		bool isActive
 	) external;
 
-	function setSharesBatch(
-		address[] calldata accounts,
-		uint128[] calldata values,
-		bool[] calldata isActives
-	) external;
+	function setSharesBatch(ShareData[] calldata batch) external;
 
 	/* Events */
 

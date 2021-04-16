@@ -64,6 +64,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		await contract.postInit({
 			defaultRecipient,
 			rewardsToken: rewardsToken.address,
+			shares: [],
 		});
 
 		const contractImpl = MockRewardsManager__factory.connect(
@@ -162,6 +163,7 @@ describe(contractName, function () {
 				testerContract.postInit({
 					defaultRecipient: zeroAddress,
 					rewardsToken: zeroAddress,
+					shares: [],
 				}),
 			).to.be.revertedWith('caller is not the owner');
 		});

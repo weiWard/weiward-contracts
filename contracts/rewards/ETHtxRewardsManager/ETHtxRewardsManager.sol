@@ -32,6 +32,7 @@ contract ETHtxRewardsManager is
 		address ethtx;
 		address ethtxAMM;
 		address lpRewards;
+		ShareData[] shares;
 	}
 
 	/* Constructor */
@@ -44,7 +45,7 @@ contract ETHtxRewardsManager is
 
 	// init inherited from RewardsManager
 
-	function ethtxRewardsManagerPostInit(ETHtxRewardsManagerArgs memory _args)
+	function ethtxRewardsManagerPostInit(ETHtxRewardsManagerArgs calldata _args)
 		external
 		virtual
 		onlyOwner
@@ -67,6 +68,8 @@ contract ETHtxRewardsManager is
 
 		_lpRewards = _args.lpRewards;
 		emit LPRewardsSet(sender, _args.lpRewards);
+
+		setSharesBatch(_args.shares);
 	}
 
 	/* External Mutators */

@@ -30,6 +30,7 @@ contract RewardsManager is
 	struct RewardsManagerArgs {
 		address defaultRecipient;
 		address rewardsToken;
+		ShareData[] shares;
 	}
 
 	/* Constructor */
@@ -45,7 +46,7 @@ contract RewardsManager is
 		__Ownable_init_unchained(owner_);
 	}
 
-	function postInit(RewardsManagerArgs memory _args)
+	function postInit(RewardsManagerArgs calldata _args)
 		external
 		virtual
 		onlyOwner
@@ -56,6 +57,8 @@ contract RewardsManager is
 		emit RewardsTokenSet(sender, _args.rewardsToken);
 
 		setDefaultRecipient(_args.defaultRecipient);
+
+		setSharesBatch(_args.shares);
 	}
 
 	/* External Views */
@@ -295,21 +298,14 @@ contract RewardsManager is
 		emit SharesSet(_msgSender(), account, value, isActive);
 	}
 
-	function setSharesBatch(
-		address[] calldata accounts,
-		uint128[] calldata values,
-		bool[] calldata isActives
-	) public virtual override onlyOwner {
-		uint256 length = accounts.length;
-		require(length != 0, "RewardsManager: no accounts specified");
-		require(length == values.length, "RewardsManager: values length mismatch");
-		require(
-			length == isActives.length,
-			"RewardsManager: isActives length mismatch"
-		);
-
-		for (uint256 i = 0; i < length; i++) {
-			setShares(accounts[i], values[i], isActives[i]);
+	function setSharesBatch(ShareData[] calldata batch)
+		public
+		virtual
+		override
+		onlyOwner
+	{
+		for (uint256 i = 0; i < batch.length; i++) {
+			setShares(batch[i].account, batch[i].value, batch[i].isActive);
 		}
 	}
 

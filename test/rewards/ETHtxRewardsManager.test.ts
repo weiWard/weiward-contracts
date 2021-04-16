@@ -170,6 +170,23 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtx: ethtx.address,
 			ethtxAMM: ethtxAMM.address,
 			lpRewards: lpRewards.address,
+			shares: [
+				{
+					account: defaultRecipient,
+					value: defaultShares,
+					isActive: true,
+				},
+				{
+					account: ethmxRewards.address,
+					value: ethmxRewardsShares,
+					isActive: true,
+				},
+				{
+					account: lpRewards.address,
+					value: lpRewardsShares,
+					isActive: true,
+				},
+			],
 		});
 
 		const contractImpl = MockETHtxRewardsManager__factory.connect(
@@ -182,16 +199,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		await feeLogic.setRecipient(contract.address);
 		await feeLogic.setExempt(contract.address, true);
-
-		const sharesAccounts = [
-			defaultRecipient,
-			ethmxRewards.address,
-			lpRewards.address,
-		];
-		const sharesValues = [defaultShares, ethmxRewardsShares, lpRewardsShares];
-		const sharesActive = [true, true, true];
-
-		await contract.setSharesBatch(sharesAccounts, sharesValues, sharesActive);
 
 		return {
 			deployer,
@@ -299,6 +306,7 @@ describe(contractName, function () {
 					ethtx: zeroAddress,
 					ethtxAMM: zeroAddress,
 					lpRewards: zeroAddress,
+					shares: [],
 				}),
 			).to.be.revertedWith('caller is not the owner');
 		});

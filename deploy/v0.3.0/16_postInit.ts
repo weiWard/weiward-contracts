@@ -133,21 +133,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		ethtx: ethtx.address,
 		ethtxAMM: ethtxAmm.address,
 		lpRewards: lpRewards.address,
+		shares: [
+			{
+				account: defaultRecipient,
+				value: 10,
+				isActive: true,
+			},
+			{
+				account: ethmxRewards.address,
+				value: 45,
+				isActive: true,
+			},
+			{
+				account: lpRewards.address,
+				value: 20,
+				isActive: true,
+			},
+		],
 	});
-
-	// TODO add setSharesBatch to postInit
-	const sharesAccounts = [
-		defaultRecipient,
-		ethmxRewards.address,
-		lpRewards.address,
-	];
-	const sharesValues = [10, 45, 20];
-	const sharesActive = [true, true, true];
-	await ethtxRewardsMgr.setSharesBatch(
-		sharesAccounts,
-		sharesValues,
-		sharesActive,
-	);
 
 	// TODO add setExemptBatch
 	// TODO add setExemptBatch to constructor
