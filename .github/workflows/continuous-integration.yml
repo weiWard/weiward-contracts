@@ -4,6 +4,9 @@ on:
     types: [opened, synchronize, reopened]
     branches:
       - main
+  push:
+    tags:
+      - 'v*'
 
 name: Continuous Integration
 
