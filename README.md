@@ -64,6 +64,8 @@ npm run deploy
 npm run deploy -- --tags GasPrice
 # Verify deployed contracts on Etherscan
 npm run verify -- --network mainnet
+# Verify proxy contracts point to implementations on Etherscan
+npm run verify:proxies -- --network mainnet
 # Export ABI and addresses for deployed contracts to build/abi.json.
 npm run export -- --network mainnet
 # Export ABI and addresses for deployed contracts across all networks to build/abi.json.

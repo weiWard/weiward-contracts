@@ -28,6 +28,7 @@ specifiers:
   '@uniswap/lib': ^4.0.1-alpha
   '@uniswap/v2-core': ^1.0.1
   '@uniswap/v2-periphery': ^1.1.0-beta.0
+  axios: ^0.21.1
   chai: ^4.3.4
   dotenv: ^8.2.0
   eslint: ^7.24.0
@@ -82,6 +83,7 @@ devDependencies:
   '@uniswap/lib': 4.0.1-alpha
   '@uniswap/v2-core': 1.0.1
   '@uniswap/v2-periphery': 1.1.0-beta.0
+  axios: 0.21.1
   chai: 4.3.4
   dotenv: 8.2.0
   eslint: 7.24.0
@@ -1529,6 +1531,14 @@ packages:
 
   /aws4/1.11.0:
     resolution: {integrity: sha512-xh1Rl34h6Fi1DC2WWKfxUTVqRsNnr6LsKz2+hfwDxQJWmrx8+c7ylaqBMcHfl1U1r2dsifOvKX3LQuLNZ+XSvA==}
+    dev: true
+
+  /axios/0.21.1:
+    resolution: {integrity: sha512-dKQiRHxGD9PPRIUNIWvZhPTPpl1rf/OxTYKsqKUDjBwYylTvV7SjSHJb9ratfyzM6wCdLCOYLzs73qpg5c4iGA==}
+    dependencies:
+      follow-redirects: 1.13.3_debug@4.3.1
+    transitivePeerDependencies:
+      - debug
     dev: true
 
   /axios/0.21.1_debug@4.3.1:
