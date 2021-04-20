@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { deployments, network } from 'hardhat';
 import axios, { AxiosRequestConfig } from 'axios';
 import qs from 'qs';
