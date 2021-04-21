@@ -25,7 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		deployerSigner,
 	);
 
-	let isExempt = await feeLogic.isExempt(sushiRouterAddr);
+	const isExempt = await feeLogic.isExempt(sushiRouterAddr);
 	if (isExempt) {
 		console.log('Skipping makeSushiRouterExempt script');
 
@@ -33,14 +33,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	}
 
 	await feeLogic.setExempt(sushiRouterAddr, true);
-
-	isExempt = await feeLogic.isExempt(sushiRouterAddr);
-	if (isExempt) {
-		console.log(`SushiV2Router at ${sushiRouterAddr} is now exempt from fees`);
-	} else {
-		console.error('SushV2Router was not made exempt');
-		return false;
-	}
 
 	console.log('Completed makeSushiRouterExempt script.');
 
