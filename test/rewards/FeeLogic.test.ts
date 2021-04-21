@@ -168,13 +168,15 @@ describe(contractName, function () {
 					.withArgs(deployer, tester);
 			});
 
-			it('should not emit event if already exempt', async function () {
+			it('should do nothing if already exempt', async function () {
 				const { contract, tester } = fixture;
 				await contract.setExempt(tester, true);
 				await expect(contract.setExempt(tester, true)).to.not.emit(
 					contract,
 					'ExemptAdded',
 				);
+
+				expect(await contract.isExempt(tester)).to.be.true;
 			});
 		});
 
@@ -203,13 +205,15 @@ describe(contractName, function () {
 					.withArgs(deployer, tester);
 			});
 
-			it('should not emit event if already not exempt', async function () {
+			it('should do nothing if already not exempt', async function () {
 				const { contract, tester } = fixture;
 				await contract.setExempt(tester, false);
 				await expect(contract.setExempt(tester, false)).to.not.emit(
 					contract,
 					'ExemptRemoved',
 				);
+
+				expect(await contract.isExempt(tester)).to.be.false;
 			});
 		});
 	});
