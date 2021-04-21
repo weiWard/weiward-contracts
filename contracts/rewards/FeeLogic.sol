@@ -142,9 +142,13 @@ contract FeeLogic is Ownable, IFeeLogic {
 		override
 		onlyOwner
 	{
-		if (isExempt_ && _exempts.add(account)) {
-			emit ExemptAdded(_msgSender(), account);
-		} else if (_exempts.remove(account)) {
+		if (isExempt_) {
+			if (_exempts.add(account)) {
+				emit ExemptAdded(_msgSender(), account);
+			}
+			return;
+		}
+		if (_exempts.remove(account)) {
 			emit ExemptRemoved(_msgSender(), account);
 		}
 	}
