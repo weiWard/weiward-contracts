@@ -10,5 +10,6 @@
   "ETHtxRewardsManagerv0.3.0": 1618554124,
   "FeeLogicv0.3.0": 1618554224,
   "ValuePerSushiv0.3.0": 1618554429,
-  "postInitv0.3.0": 1618554439
+  "postInitv0.3.0": 1618554439,
+  "makeSushiRouterExemptv0.3.0": 1618960942
 }
