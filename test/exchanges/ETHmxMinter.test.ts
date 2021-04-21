@@ -198,7 +198,10 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployerSigner,
 		);
 
-		await feeLogic.setExempt(contract.address, true);
+		await feeLogic.setExemptBatch([
+			{ account: contract.address, isExempt: true },
+			{ account: sushiRouter.address, isExempt: true },
+		]);
 		await ethtx.postInit({
 			feeLogic: feeLogic.address,
 			minter: contract.address,
