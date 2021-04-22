@@ -102,7 +102,7 @@ contract ETHtxRewardsManager is
 		ethtxHandle.safeIncreaseAllowance(ethtxAMM_, amount);
 
 		// solhint-disable-next-line not-rely-on-time
-		IETHtxAMM(ethtxAMM_).swapEthtxForWeth(amount, block.timestamp);
+		IETHtxAMM(ethtxAMM_).swapEthtxForEth(amount, block.timestamp, true);
 	}
 
 	function distributeRewards() external virtual override returns (uint256) {

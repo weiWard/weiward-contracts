@@ -99,18 +99,24 @@ interface IETHtxAMM {
 		uint256 deadline
 	) external;
 
-	function swapEthtxForWeth(uint256 amountIn, uint256 deadline) external;
-
-	function swapEthtxForExactWeth(
-		uint256 amountInMax,
-		uint256 amountOut,
-		uint256 deadline
+	function swapEthtxForEth(
+		uint256 amountIn,
+		uint256 deadline,
+		bool asWETH
 	) external;
 
-	function swapExactEthtxForWeth(
+	function swapEthtxForExactEth(
+		uint256 amountInMax,
+		uint256 amountOut,
+		uint256 deadline,
+		bool asWETH
+	) external;
+
+	function swapExactEthtxForEth(
 		uint256 amountIn,
 		uint256 amountOutMin,
-		uint256 deadline
+		uint256 deadline,
+		bool asWETH
 	) external;
 
 	function pause() external;

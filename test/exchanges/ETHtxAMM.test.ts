@@ -1487,13 +1487,13 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('swapEthtxForWeth', function () {
+	describe('swapEthtxForEth', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETHtx = parseETHtx('100');
 			await expect(
-				contract.swapEthtxForWeth(amountETHtx, deadline),
+				contract.swapEthtxForEth(amountETHtx, deadline, true),
 			).to.be.revertedWith('expired');
 		});
 
@@ -1507,7 +1507,7 @@ describe(contractName, function () {
 			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
 
 			await expect(
-				contract.swapEthtxForWeth(amountETHtx, deadline),
+				contract.swapEthtxForEth(amountETHtx, deadline, true),
 			).to.be.revertedWith('gas price is outdated');
 		});
 
@@ -1523,7 +1523,7 @@ describe(contractName, function () {
 			await addWETH(fixture, amountETH);
 			await ethtx.increaseAllowance(contract.address, amountETHtx);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(ethtx, 'Transfer')
 				.withArgs(deployer, contract.address, contractETHtx);
 
@@ -1550,7 +1550,7 @@ describe(contractName, function () {
 			await addWETH(fixture, amountETH);
 			await ethtx.increaseAllowance(contract.address, amountETHtx);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(ethtx, 'Transfer')
 				.withArgs(deployer, feeRecipient, fee);
 
@@ -1574,7 +1574,7 @@ describe(contractName, function () {
 			await addWETH(fixture, ethRequired);
 			await ethtx.increaseAllowance(contract.address, amountETHtx);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, ethReturned);
 
@@ -1582,6 +1582,38 @@ describe(contractName, function () {
 				await weth.balanceOf(deployer),
 				'deployer WETH balance mismatch',
 			).to.eq(ethReturned);
+
+			expect(
+				await weth.balanceOf(contract.address),
+				'contract WETH balance mismatch',
+			).to.eq(ethRequired.sub(ethReturned));
+		});
+
+		it('should transfer correct ETH', async function () {
+			const { contract, deployer, deployerSigner, ethtx, weth } = fixture;
+			const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+			const amountETHtx = parseETHtx('100');
+			const fee = calcFee(amountETHtx);
+
+			const ethRequired = targetETH(ethtxToEth(defaultGasPrice, amountETHtx));
+			const ethReturned = ethtxToEth(defaultGasPrice, amountETHtx.sub(fee));
+
+			await ethtx.mockMint(deployer, amountETHtx);
+			await addWETH(fixture, ethRequired);
+			await ethtx.increaseAllowance(contract.address, amountETHtx);
+
+			const balanceBefore = await deployerSigner.getBalance();
+
+			const tx = await contract.swapEthtxForEth(amountETHtx, deadline, false);
+
+			const gasUsed = await ethUsedOnGas(tx);
+			const balanceAfter = await deployerSigner.getBalance();
+
+			expect(
+				balanceAfter.sub(balanceBefore),
+				'deployer ETH balance mismatch',
+			).to.eq(ethReturned.sub(gasUsed));
 
 			expect(
 				await weth.balanceOf(contract.address),
@@ -1612,7 +1644,7 @@ describe(contractName, function () {
 				defaultGasPrice.div(2),
 			);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, ethReturned);
 
@@ -1636,7 +1668,7 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, amountETHtx);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(ethtx, 'Transfer')
 				.withArgs(deployer, contract.address, 1);
 		});
@@ -1644,9 +1676,9 @@ describe(contractName, function () {
 		it('should revert on zero', async function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) + 3600;
-			await expect(contract.swapEthtxForWeth(0, deadline)).to.be.revertedWith(
-				'cannot swap zero',
-			);
+			await expect(
+				contract.swapEthtxForEth(0, deadline, true),
+			).to.be.revertedWith('cannot swap zero');
 		});
 
 		it('should transfer back zero WETH with 1 weiETHtx', async function () {
@@ -1658,7 +1690,7 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, amountETHtx);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, 0);
 		});
@@ -1672,7 +1704,7 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, amountETHtx);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, 0);
 		});
@@ -1686,20 +1718,20 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, amountETHtx);
 
-			await expect(contract.swapEthtxForWeth(amountETHtx, deadline))
+			await expect(contract.swapEthtxForEth(amountETHtx, deadline, true))
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, 1);
 		});
 	});
 
-	describe('swapEthtxForExactWeth', function () {
+	describe('swapEthtxForExactEth', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETHtx = parseETHtx('100');
 			const amountETH = parseEther('1');
 			await expect(
-				contract.swapEthtxForExactWeth(amountETHtx, amountETH, deadline),
+				contract.swapEthtxForExactEth(amountETHtx, amountETH, deadline, true),
 			).to.be.revertedWith('expired');
 		});
 
@@ -1714,7 +1746,7 @@ describe(contractName, function () {
 			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
 
 			await expect(
-				contract.swapEthtxForExactWeth(amountETHtx, amountETH, deadline),
+				contract.swapEthtxForExactEth(amountETHtx, amountETH, deadline, true),
 			).to.be.revertedWith('gas price is outdated');
 		});
 
@@ -1724,7 +1756,7 @@ describe(contractName, function () {
 			const amountETHtx = parseETHtx('100');
 			const amountETH = parseEther('1');
 			await expect(
-				contract.swapEthtxForExactWeth(amountETHtx, amountETH, deadline),
+				contract.swapEthtxForExactEth(amountETHtx, amountETH, deadline, true),
 			).to.be.revertedWith('amountIn exceeds max');
 		});
 
@@ -1756,7 +1788,9 @@ describe(contractName, function () {
 			it('correct ETHtx amount to contract', async function () {
 				const { contract, deployer, ethtx } = fixture;
 
-				await expect(contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline))
+				await expect(
+					contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
+				)
 					.to.emit(ethtx, 'Transfer')
 					.withArgs(deployer, contract.address, contractETHtx);
 
@@ -1774,7 +1808,9 @@ describe(contractName, function () {
 			it('correct ETHtx amount to fee recipient', async function () {
 				const { contract, deployer, ethtx } = fixture;
 
-				await expect(contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline))
+				await expect(
+					contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
+				)
 					.to.emit(ethtx, 'Transfer')
 					.withArgs(deployer, feeRecipient, fee);
 
@@ -1787,7 +1823,9 @@ describe(contractName, function () {
 			it('correct WETH amount', async function () {
 				const { contract, deployer, weth } = fixture;
 
-				await expect(contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline))
+				await expect(
+					contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
+				)
 					.to.emit(weth, 'Transfer')
 					.withArgs(contract.address, deployer, ethOut);
 
@@ -1795,6 +1833,32 @@ describe(contractName, function () {
 					await weth.balanceOf(deployer),
 					'deployer WETH balance mismatch',
 				).to.eq(ethOut);
+
+				expect(
+					await weth.balanceOf(contract.address),
+					'contract WETH balance mismatch',
+				).to.eq(ethSupply.sub(ethOut));
+			});
+
+			it('correct ETH amount', async function () {
+				const { contract, deployerSigner, weth } = fixture;
+
+				const balanceBefore = await deployerSigner.getBalance();
+
+				const tx = await contract.swapEthtxForExactEth(
+					ethtxIn,
+					ethOut,
+					deadline,
+					false,
+				);
+
+				const gasUsed = await ethUsedOnGas(tx);
+				const balanceAfter = await deployerSigner.getBalance();
+
+				expect(
+					balanceAfter.sub(balanceBefore),
+					'deployer ETH balance mismatch',
+				).to.eq(ethOut.sub(gasUsed));
 
 				expect(
 					await weth.balanceOf(contract.address),
@@ -1822,7 +1886,9 @@ describe(contractName, function () {
 			await addWETH(fixture, ethSupply);
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
-			await expect(contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline))
+			await expect(
+				contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
+			)
 				.to.emit(ethtx, 'Transfer')
 				.withArgs(deployer, contract.address, contractETHtx);
 
@@ -1851,7 +1917,9 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
-			await expect(contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline))
+			await expect(
+				contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
+			)
 				.to.emit(ethtx, 'Transfer')
 				.withArgs(deployer, contract.address, ethtxIn.sub(fee));
 		});
@@ -1867,7 +1935,9 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
-			await expect(contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline))
+			await expect(
+				contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
+			)
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, ethOut);
 		});
@@ -1876,7 +1946,7 @@ describe(contractName, function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) + 3600;
 			await expect(
-				contract.swapEthtxForExactWeth(0, 1, deadline),
+				contract.swapEthtxForExactEth(0, 1, deadline, true),
 			).to.be.revertedWith('cannot swap zero');
 		});
 
@@ -1892,7 +1962,7 @@ describe(contractName, function () {
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
 			await expect(
-				contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline),
+				contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
 			).to.be.revertedWith('amountIn exceeds max');
 		});
 
@@ -1907,20 +1977,22 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
-			await expect(contract.swapEthtxForExactWeth(ethtxIn, ethOut, deadline))
+			await expect(
+				contract.swapEthtxForExactEth(ethtxIn, ethOut, deadline, true),
+			)
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, ethOut);
 		});
 	});
 
-	describe('swapExactEthtxForWeth', function () {
+	describe('swapExactEthtxForEth', function () {
 		it('should revert after deadline', async function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) - 3600;
 			const amountETHtx = parseETHtx('100');
 			const amountETH = parseEther('1');
 			await expect(
-				contract.swapExactEthtxForWeth(amountETHtx, amountETH, deadline),
+				contract.swapExactEthtxForEth(amountETHtx, amountETH, deadline, true),
 			).to.be.revertedWith('expired');
 		});
 
@@ -1935,7 +2007,7 @@ describe(contractName, function () {
 			await oracle.setUpdatedAt(now - oracleUpdateInterval * 2);
 
 			await expect(
-				contract.swapExactEthtxForWeth(amountETHtx, amountETH, deadline),
+				contract.swapExactEthtxForEth(amountETHtx, amountETH, deadline, true),
 			).to.be.revertedWith('gas price is outdated');
 		});
 
@@ -1945,7 +2017,7 @@ describe(contractName, function () {
 			const ethtxIn = parseETHtx('1');
 			const ethOut = parseEther('1');
 			await expect(
-				contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline),
+				contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
 			).to.be.revertedWith('amountOut below min');
 		});
 
@@ -1977,7 +2049,9 @@ describe(contractName, function () {
 			it('correct ETHtx amount to contract', async function () {
 				const { contract, deployer, ethtx } = fixture;
 
-				await expect(contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline))
+				await expect(
+					contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
+				)
 					.to.emit(ethtx, 'Transfer')
 					.withArgs(deployer, contract.address, contractETHtx);
 
@@ -1995,7 +2069,9 @@ describe(contractName, function () {
 			it('correct ETHtx amount to fee recipient', async function () {
 				const { contract, deployer, ethtx } = fixture;
 
-				await expect(contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline))
+				await expect(
+					contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
+				)
 					.to.emit(ethtx, 'Transfer')
 					.withArgs(deployer, feeRecipient, fee);
 
@@ -2008,7 +2084,9 @@ describe(contractName, function () {
 			it('correct WETH', async function () {
 				const { contract, deployer, weth } = fixture;
 
-				await expect(contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline))
+				await expect(
+					contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
+				)
 					.to.emit(weth, 'Transfer')
 					.withArgs(contract.address, deployer, ethOut);
 
@@ -2016,6 +2094,32 @@ describe(contractName, function () {
 					await weth.balanceOf(deployer),
 					'deployer WETH balance mismatch',
 				).to.eq(ethOut);
+
+				expect(
+					await weth.balanceOf(contract.address),
+					'contract WETH balance mismatch',
+				).to.eq(ethSupply.sub(ethOut));
+			});
+
+			it('correct ETH amount', async function () {
+				const { contract, deployerSigner, weth } = fixture;
+
+				const balanceBefore = await deployerSigner.getBalance();
+
+				const tx = await contract.swapExactEthtxForEth(
+					ethtxIn,
+					ethOut,
+					deadline,
+					false,
+				);
+
+				const gasUsed = await ethUsedOnGas(tx);
+				const balanceAfter = await deployerSigner.getBalance();
+
+				expect(
+					balanceAfter.sub(balanceBefore),
+					'deployer ETH balance mismatch',
+				).to.eq(ethOut.sub(gasUsed));
 
 				expect(
 					await weth.balanceOf(contract.address),
@@ -2043,7 +2147,9 @@ describe(contractName, function () {
 			await addWETH(fixture, ethSupply);
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
-			await expect(contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline))
+			await expect(
+				contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
+			)
 				.to.emit(ethtx, 'Transfer')
 				.withArgs(deployer, contract.address, contractETHtx);
 
@@ -2062,7 +2168,7 @@ describe(contractName, function () {
 			const { contract } = fixture;
 			const deadline = Math.floor(Date.now() / 1000) + 3600;
 			await expect(
-				contract.swapExactEthtxForWeth(0, 1, deadline),
+				contract.swapExactEthtxForEth(0, 1, deadline, true),
 			).to.be.revertedWith('cannot swap zero');
 		});
 
@@ -2077,7 +2183,7 @@ describe(contractName, function () {
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
 			await expect(
-				contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline),
+				contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
 			).to.be.revertedWith('amountOut below min');
 		});
 
@@ -2092,7 +2198,7 @@ describe(contractName, function () {
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
 			await expect(
-				contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline),
+				contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
 			).to.be.revertedWith('amountOut below min');
 		});
 
@@ -2107,7 +2213,9 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
-			await expect(contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline))
+			await expect(
+				contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
+			)
 				.to.emit(weth, 'Transfer')
 				.withArgs(contract.address, deployer, ethOut);
 		});
@@ -2122,7 +2230,9 @@ describe(contractName, function () {
 			await addWETH(fixture, parseEther('10'));
 			await ethtx.increaseAllowance(contract.address, ethtxIn);
 
-			await expect(contract.swapExactEthtxForWeth(ethtxIn, ethOut, deadline))
+			await expect(
+				contract.swapExactEthtxForEth(ethtxIn, ethOut, deadline, true),
+			)
 				.to.emit(ethtx, 'Transfer')
 				.withArgs(deployer, contract.address, 1);
 		});
