@@ -125,6 +125,16 @@ const config: HardhatUserConfig = {
 					},
 				},
 			},
+			{
+				version: '0.4.19',
+				settings: {
+					evmVersion: 'byzantium',
+					optimizer: {
+						enabled: false,
+						runs: 200,
+					},
+				},
+			},
 		],
 	},
 	paths: {
