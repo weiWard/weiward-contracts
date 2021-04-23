@@ -64,7 +64,7 @@ interface IETHmxRewards {
 
 	/* Mutators */
 
-	function exit() external;
+	function exit(bool asWETH) external;
 
 	function pause() external;
 
@@ -78,9 +78,9 @@ interface IETHmxRewards {
 		uint256 amount
 	) external;
 
-	function redeemAllRewards() external;
+	function redeemAllRewards(bool asWETH) external;
 
-	function redeemReward(uint256 amount) external;
+	function redeemReward(uint256 amount, bool asWETH) external;
 
 	function setAccrualUpdateInterval(uint256 interval) external;
 

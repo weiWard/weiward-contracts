@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { parseEther } from 'ethers/lib/utils';
 import { MaxUint256 } from '@ethersproject/constants';
 
-import { parseETHmx } from '../../../helpers/conversions';
+import { ethUsedOnGas, parseETHmx } from '../../../helpers/conversions';
 import { Fixture, loadFixture, addRewards, stake } from '../common';
 
 export default function run(): void {
@@ -47,7 +47,7 @@ export default function run(): void {
 
 	it('should transfer all rewards', async function () {
 		const { contract, deployer, weth } = fixture;
-		await contract.redeemAllRewards();
+		await contract.redeemAllRewards(true);
 
 		expect(
 			await weth.balanceOf(contract.address),
@@ -60,17 +60,38 @@ export default function run(): void {
 		).to.eq(earnedRewards);
 	});
 
+	it('should transfer all rewards as ETH', async function () {
+		const { contract, deployerSigner, weth } = fixture;
+
+		const balanceBefore = await deployerSigner.getBalance();
+
+		const tx = await contract.redeemAllRewards(false);
+
+		const gasUsed = await ethUsedOnGas(tx);
+		const balanceAfter = await deployerSigner.getBalance();
+
+		expect(
+			await weth.balanceOf(contract.address),
+			'contract rewards balance mismatch after redemption',
+		).to.eq(rewardsAmount.sub(earnedRewards));
+
+		expect(
+			balanceAfter.sub(balanceBefore),
+			'deployer rewards balance mismatch after redemption',
+		).to.eq(earnedRewards.sub(gasUsed));
+	});
+
 	describe('should update totalRewardsRedeemed', function () {
 		it('correctly', async function () {
 			const { contract } = fixture;
-			await contract.redeemAllRewards();
+			await contract.redeemAllRewards(true);
 			expect(await contract.totalRewardsRedeemed()).to.eq(earnedRewards);
 		});
 
 		it('with overflow', async function () {
 			const { contract } = fixture;
 			await contract.setTotalRewardsRedeemed(MaxUint256);
-			await contract.redeemAllRewards();
+			await contract.redeemAllRewards(true);
 			expect(await contract.totalRewardsRedeemed()).to.eq(
 				earnedRewards.sub(1),
 			);
@@ -85,7 +106,7 @@ export default function run(): void {
 			'mismatch before redemption',
 		).to.eq(rewardsAmount);
 
-		await contract.redeemAllRewards();
+		await contract.redeemAllRewards(true);
 
 		expect(
 			await contract.totalRewardsAccrued(),
@@ -95,13 +116,13 @@ export default function run(): void {
 
 	it('should zero rewardsBalanceOf', async function () {
 		const { contract, deployer } = fixture;
-		await contract.redeemAllRewards();
+		await contract.redeemAllRewards(true);
 		expect(await contract.rewardsBalanceOf(deployer)).to.eq(0);
 	});
 
 	it('should not affect rewardsBalanceOf for others', async function () {
 		const { contract, tester, testerContract } = fixture;
-		await contract.redeemAllRewards();
+		await contract.redeemAllRewards(true);
 
 		expect(
 			await contract.lastRewardsBalanceOf(tester),
@@ -126,7 +147,7 @@ export default function run(): void {
 
 	it('should emit RewardPaid event', async function () {
 		const { contract, deployer } = fixture;
-		await expect(contract.redeemAllRewards())
+		await expect(contract.redeemAllRewards(true))
 			.to.emit(contract, 'RewardPaid')
 			.withArgs(deployer, earnedRewards);
 	});

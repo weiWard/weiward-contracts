@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -30,6 +31,7 @@ import "./LPRewardsData.sol";
 import "../../libraries/EnumerableMap.sol";
 import "../interfaces/ILPRewards.sol";
 import "../interfaces/IValuePerToken.sol";
+import "../../tokens/interfaces/IWETH.sol";
 import "../../access/OwnableUpgradeable.sol";
 
 contract LPRewards is
@@ -40,6 +42,7 @@ contract LPRewards is
 	LPRewardsData,
 	ILPRewards
 {
+	using Address for address payable;
 	using EnumerableMap for EnumerableMap.AddressToUintMap;
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
@@ -61,6 +64,13 @@ contract LPRewards is
 		__Context_init_unchained();
 		__Ownable_init_unchained(owner_);
 		__Pausable_init_unchained();
+	}
+
+	/* Fallbacks */
+
+	receive() external payable {
+		// Only accept ETH via fallback from the WETH contract
+		require(msg.sender == _rewardsToken);
 	}
 
 	/* Modifiers */
@@ -382,14 +392,14 @@ contract LPRewards is
 		emit TokenValueImplChanged(_msgSender(), token, tokenValueImpl);
 	}
 
-	function exit() external virtual override {
+	function exit(bool asWETH) external virtual override {
 		unstakeAll();
-		redeemAllRewards();
+		redeemAllRewards(asWETH);
 	}
 
-	function exitFrom(address token) external virtual override {
+	function exitFrom(address token, bool asWETH) external virtual override {
 		unstakeAllFrom(token);
-		redeemAllRewardsFrom(token);
+		redeemAllRewardsFrom(token, asWETH);
 	}
 
 	function pause() external virtual override onlyOwner {
@@ -427,7 +437,7 @@ contract LPRewards is
 		emit RecoveredUnstaked(_msgSender(), token, to, amount);
 	}
 
-	function redeemAllRewards() public virtual override {
+	function redeemAllRewards(bool asWETH) public virtual override {
 		address account = _msgSender();
 		_updateAllRewardsFor(account);
 
@@ -454,19 +464,27 @@ contract LPRewards is
 
 		_totalRewardsRedeemed += redemption;
 
-		IERC20(_rewardsToken).safeTransfer(account, redemption);
+		_sendRewards(account, redemption, asWETH);
 	}
 
-	function redeemAllRewardsFrom(address token) public virtual override {
+	function redeemAllRewardsFrom(address token, bool asWETH)
+		public
+		virtual
+		override
+	{
 		address account = _msgSender();
 		_updateRewardFor(account, token);
 		uint256 pending = _users[account].rewardsFor[token].pending;
 		if (pending != 0) {
-			_redeemRewardFrom(token, pending);
+			_redeemRewardFrom(token, pending, asWETH);
 		}
 	}
 
-	function redeemReward(uint256 amount) external virtual override {
+	function redeemReward(uint256 amount, bool asWETH)
+		external
+		virtual
+		override
+	{
 		require(amount != 0, "LPRewards: cannot redeem zero");
 		address account = _msgSender();
 		_updateAllRewardsFor(account);
@@ -509,14 +527,14 @@ contract LPRewards is
 
 		_totalRewardsRedeemed += amount;
 
-		IERC20(_rewardsToken).safeTransfer(account, amount);
+		_sendRewards(account, amount, asWETH);
 	}
 
-	function redeemRewardFrom(address token, uint256 amount)
-		external
-		virtual
-		override
-	{
+	function redeemRewardFrom(
+		address token,
+		uint256 amount,
+		bool asWETH
+	) external virtual override {
 		require(amount != 0, "LPRewards: cannot redeem zero");
 		address account = _msgSender();
 		_updateRewardFor(account, token);
@@ -524,7 +542,7 @@ contract LPRewards is
 			amount <= _users[account].rewardsFor[token].pending,
 			"LPRewards: cannot redeem more rewards than earned"
 		);
-		_redeemRewardFrom(token, amount);
+		_redeemRewardFrom(token, amount, asWETH);
 	}
 
 	function removeToken(address token)
@@ -732,7 +750,11 @@ contract LPRewards is
 
 	/* Internal Mutators */
 
-	function _redeemRewardFrom(address token, uint256 amount) internal virtual {
+	function _redeemRewardFrom(
+		address token,
+		uint256 amount,
+		bool asWETH
+	) internal virtual {
 		address account = _msgSender();
 		UserData storage user = _users[account];
 		UserTokenRewards storage rewards = user.rewardsFor[token];
@@ -749,8 +771,21 @@ contract LPRewards is
 
 		_totalRewardsRedeemed += amount;
 
-		IERC20(_rewardsToken).safeTransfer(account, amount);
+		_sendRewards(account, amount, asWETH);
 		emit RewardPaid(account, token, amount);
+	}
+
+	function _sendRewards(
+		address to,
+		uint256 amount,
+		bool asWETH
+	) internal virtual {
+		if (asWETH) {
+			IERC20(_rewardsToken).safeTransfer(to, amount);
+		} else {
+			IWETH(_rewardsToken).withdraw(amount);
+			payable(to).sendValue(amount);
+		}
 	}
 
 	function _unstake(address token, uint256 amount) internal virtual {

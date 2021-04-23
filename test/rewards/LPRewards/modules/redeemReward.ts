@@ -11,7 +11,11 @@ import {
 	parseRewardsToken,
 	moonStake,
 } from '../common';
-import { ethToEthtx, parseGwei } from '../../../helpers/conversions';
+import {
+	ethToEthtx,
+	ethUsedOnGas,
+	parseGwei,
+} from '../../../helpers/conversions';
 
 export default function run(): void {
 	let fixture: Fixture;
@@ -127,7 +131,7 @@ export default function run(): void {
 
 	it('should revert if amount is zero', async function () {
 		const { contract } = fixture;
-		await expect(contract.redeemReward(0)).to.be.revertedWith(
+		await expect(contract.redeemReward(0, true)).to.be.revertedWith(
 			'cannot redeem zero',
 		);
 	});
@@ -135,43 +139,84 @@ export default function run(): void {
 	it('should revert when amount > rewards', async function () {
 		const { contract } = fixture;
 		await expect(
-			contract.redeemReward(deployerRewards.add(1)),
+			contract.redeemReward(deployerRewards.add(1), true),
 		).to.be.revertedWith('cannot redeem more rewards than earned');
 	});
 
 	describe('should transfer correct reward', async function () {
 		let redeemed: BigNumber;
 
-		afterEach(async function () {
-			const { contract, deployer, rewardsToken } = fixture;
+		describe('with WETH', async function () {
+			afterEach(async function () {
+				const { contract, deployer, rewardsToken } = fixture;
 
-			await contract.redeemReward(redeemed);
+				await contract.redeemReward(redeemed, true);
 
-			expect(
-				await rewardsToken.balanceOf(contract.address),
-				'contract rewards balance mismatch after redemption',
-			).to.eq(rewards.sub(redeemed));
+				expect(
+					await rewardsToken.balanceOf(contract.address),
+					'contract rewards balance mismatch after redemption',
+				).to.eq(rewards.sub(redeemed));
 
-			expect(
-				await rewardsToken.balanceOf(deployer),
-				'deployer rewards balance mismatch after redemption',
-			).to.eq(redeemed);
+				expect(
+					await rewardsToken.balanceOf(deployer),
+					'deployer rewards balance mismatch after redemption',
+				).to.eq(redeemed);
+			});
+
+			it('with amount < one token rewards', async function () {
+				redeemed = deployerUniRewards.div(2);
+			});
+
+			it('with amount == one token rewards', async function () {
+				redeemed = deployerUniRewards;
+			});
+
+			it('with amount > one token rewards', async function () {
+				redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
+			});
+
+			it('with amount == all rewards', async function () {
+				redeemed = deployerRewards;
+			});
 		});
 
-		it('with amount < one token rewards', async function () {
-			redeemed = deployerUniRewards.div(2);
-		});
+		describe('with ETH', async function () {
+			afterEach(async function () {
+				const { contract, deployerSigner, rewardsToken } = fixture;
 
-		it('with amount == one token rewards', async function () {
-			redeemed = deployerUniRewards;
-		});
+				const balanceBefore = await deployerSigner.getBalance();
 
-		it('with amount > one token rewards', async function () {
-			redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
-		});
+				const tx = await contract.redeemReward(redeemed, false);
 
-		it('with amount == all rewards', async function () {
-			redeemed = deployerRewards;
+				const gasUsed = await ethUsedOnGas(tx);
+				const balanceAfter = await deployerSigner.getBalance();
+
+				expect(
+					await rewardsToken.balanceOf(contract.address),
+					'contract rewards balance mismatch after redemption',
+				).to.eq(rewards.sub(redeemed));
+
+				expect(
+					balanceAfter.sub(balanceBefore),
+					'deployer rewards balance mismatch after redemption',
+				).to.eq(redeemed.sub(gasUsed));
+			});
+
+			it('with amount < one token rewards', async function () {
+				redeemed = deployerUniRewards.div(2);
+			});
+
+			it('with amount == one token rewards', async function () {
+				redeemed = deployerUniRewards;
+			});
+
+			it('with amount > one token rewards', async function () {
+				redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
+			});
+
+			it('with amount == all rewards', async function () {
+				redeemed = deployerRewards;
+			});
 		});
 	});
 
@@ -200,7 +245,7 @@ export default function run(): void {
 			'accruedRewardsPerTokenLastFor moon mismatch before redemption',
 		).to.eq(0);
 
-		await contract.redeemReward(1);
+		await contract.redeemReward(1, true);
 
 		expect(
 			await contract.accruedRewardsPerTokenLastFor(
@@ -222,7 +267,7 @@ export default function run(): void {
 		it('correctly', async function () {
 			const { contract } = fixture;
 			const redeemed = deployerUniRewards.add(1);
-			await contract.redeemReward(redeemed);
+			await contract.redeemReward(redeemed, true);
 			expect(await contract.totalRewardsRedeemed()).to.eq(redeemed);
 		});
 
@@ -230,7 +275,7 @@ export default function run(): void {
 			const { contract } = fixture;
 			await contract.setTotalRewardsRedeemed(MaxUint256);
 			const redeemed = deployerUniRewards.add(1);
-			await contract.redeemReward(redeemed);
+			await contract.redeemReward(redeemed, true);
 			expect(await contract.totalRewardsRedeemed()).to.eq(redeemed.sub(1));
 		});
 	});
@@ -240,7 +285,10 @@ export default function run(): void {
 			const { contract, uniswapPool, mooniswapPool } = fixture;
 			const redeemedForMoon = deployerMoonRewards.div(2);
 
-			await contract.redeemReward(deployerUniRewards.add(redeemedForMoon));
+			await contract.redeemReward(
+				deployerUniRewards.add(redeemedForMoon),
+				true,
+			);
 
 			expect(
 				await contract.totalRewardsRedeemedFor(uniswapPool.address),
@@ -259,7 +307,10 @@ export default function run(): void {
 			await contract.setRewardsRedeemedFor(uniswapPool.address, MaxUint256);
 			await contract.setRewardsRedeemedFor(mooniswapPool.address, MaxUint256);
 
-			await contract.redeemReward(deployerUniRewards.add(redeemedForMoon));
+			await contract.redeemReward(
+				deployerUniRewards.add(redeemedForMoon),
+				true,
+			);
 
 			expect(
 				await contract.totalRewardsRedeemedFor(uniswapPool.address),
@@ -276,7 +327,7 @@ export default function run(): void {
 		const { contract, uniswapPool, mooniswapPool } = fixture;
 		const redeemedForMoon = deployerMoonRewards.div(2);
 
-		await contract.redeemReward(deployerUniRewards.add(redeemedForMoon));
+		await contract.redeemReward(deployerUniRewards.add(redeemedForMoon), true);
 
 		expect(
 			await contract.rewardsForToken(uniswapPool.address),
@@ -297,7 +348,7 @@ export default function run(): void {
 		).to.eq(rewards);
 
 		const redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
-		await contract.redeemReward(redeemed);
+		await contract.redeemReward(redeemed, true);
 
 		expect(
 			await contract.totalRewardsAccrued(),
@@ -321,7 +372,7 @@ export default function run(): void {
 		).to.eq(moonExpected);
 
 		const redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
-		await contract.redeemReward(redeemed);
+		await contract.redeemReward(redeemed, true);
 
 		expect(
 			await contract.totalRewardsAccruedFor(uniswapPool.address),
@@ -337,7 +388,7 @@ export default function run(): void {
 		const { contract, deployer, uniswapPool, mooniswapPool } = fixture;
 		const redeemedForMoon = deployerMoonRewards.div(2);
 
-		await contract.redeemReward(deployerUniRewards.add(redeemedForMoon));
+		await contract.redeemReward(deployerUniRewards.add(redeemedForMoon), true);
 
 		expect(
 			await contract.rewardsBalanceOfFor(deployer, uniswapPool.address),
@@ -353,7 +404,7 @@ export default function run(): void {
 		const { contract, deployer } = fixture;
 
 		const redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
-		await contract.redeemReward(redeemed);
+		await contract.redeemReward(redeemed, true);
 
 		expect(await contract.rewardsBalanceOf(deployer)).to.eq(
 			deployerRewards.sub(redeemed),
@@ -364,7 +415,7 @@ export default function run(): void {
 		const { contract, tester } = fixture;
 
 		const redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
-		await contract.redeemReward(redeemed);
+		await contract.redeemReward(redeemed, true);
 
 		expect(await contract.rewardsBalanceOf(tester)).to.eq(testerRewards);
 	});
@@ -373,7 +424,7 @@ export default function run(): void {
 		const { contract, tester, uniswapPool } = fixture;
 
 		const redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
-		await contract.redeemReward(redeemed);
+		await contract.redeemReward(redeemed, true);
 
 		expect(
 			await contract.rewardsBalanceOfFor(tester, uniswapPool.address),
@@ -384,7 +435,7 @@ export default function run(): void {
 		const { contract, deployer, uniswapPool } = fixture;
 		const redeemed = deployerUniRewards.add(deployerMoonRewards.div(2));
 
-		await expect(contract.redeemReward(redeemed))
+		await expect(contract.redeemReward(redeemed, true))
 			.to.emit(contract, 'RewardPaid')
 			.withArgs(deployer, uniswapPool.address, deployerUniRewards);
 	});
@@ -394,7 +445,7 @@ export default function run(): void {
 		const redeemedForMoon = deployerMoonRewards.div(2);
 		const redeemed = deployerUniRewards.add(redeemedForMoon);
 
-		await expect(contract.redeemReward(redeemed))
+		await expect(contract.redeemReward(redeemed, true))
 			.to.emit(contract, 'RewardPaid')
 			.withArgs(deployer, mooniswapPool.address, redeemedForMoon);
 	});

@@ -19,6 +19,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
@@ -29,6 +30,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ETHmxRewardsData.sol";
 import "../../tokens/interfaces/IETHmx.sol";
 import "../interfaces/IETHmxRewards.sol";
+import "../../tokens/interfaces/IWETH.sol";
 import "../../access/OwnableUpgradeable.sol";
 
 // High accuracy in block.timestamp is not needed.
@@ -43,6 +45,7 @@ contract ETHmxRewards is
 	ETHmxRewardsData,
 	IETHmxRewards
 {
+	using Address for address payable;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
@@ -83,6 +86,13 @@ contract ETHmxRewards is
 
 		_accrualUpdateInterval = _args.accrualUpdateInterval;
 		emit AccrualUpdateIntervalSet(sender, _args.accrualUpdateInterval);
+	}
+
+	/* Fallbacks */
+
+	receive() external payable {
+		// Only accept ETH via fallback from the WETH contract
+		require(msg.sender == weth());
 	}
 
 	/* Public Views */
@@ -292,10 +302,10 @@ contract ETHmxRewards is
 
 	/* Public Mutators */
 
-	function exit() public virtual override {
+	function exit(bool asWETH) public virtual override {
 		address account = _msgSender();
 		unstakeAll();
-		_redeemReward(account, _rewardsFor[account]);
+		_redeemReward(account, _rewardsFor[account], asWETH);
 	}
 
 	function pause() public virtual override onlyOwner {
@@ -346,13 +356,13 @@ contract ETHmxRewards is
 		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
 
-	function redeemAllRewards() public virtual override {
+	function redeemAllRewards(bool asWETH) public virtual override {
 		address account = _msgSender();
 		_updateRewardFor(account);
-		_redeemReward(account, _rewardsFor[account]);
+		_redeemReward(account, _rewardsFor[account], asWETH);
 	}
 
-	function redeemReward(uint256 amount) public virtual override {
+	function redeemReward(uint256 amount, bool asWETH) public virtual override {
 		require(amount != 0, "ETHmxRewards: cannot redeem zero");
 		address account = _msgSender();
 		// Update reward first (since it only goes up)
@@ -361,7 +371,7 @@ contract ETHmxRewards is
 			amount <= _rewardsFor[account],
 			"ETHmxRewards: cannot redeem more rewards than earned"
 		);
-		_redeemReward(account, amount);
+		_redeemReward(account, amount, asWETH);
 	}
 
 	function setAccrualUpdateInterval(uint256 interval)
@@ -460,13 +470,22 @@ contract ETHmxRewards is
 		IETHmx(ethmx()).burn(amount);
 	}
 
-	function _redeemReward(address account, uint256 amount) internal virtual {
+	function _redeemReward(
+		address account,
+		uint256 amount,
+		bool asWETH
+	) internal virtual {
 		// Should be guaranteed safe by caller (gas savings)
 		_rewardsFor[account] -= amount;
 		// Overflow is OK
 		_totalRewardsRedeemed += amount;
 
-		IERC20(weth()).safeTransfer(account, amount);
+		if (asWETH) {
+			IERC20(weth()).safeTransfer(account, amount);
+		} else {
+			IWETH(weth()).withdraw(amount);
+			payable(account).sendValue(amount);
+		}
 
 		emit RewardPaid(account, amount);
 	}

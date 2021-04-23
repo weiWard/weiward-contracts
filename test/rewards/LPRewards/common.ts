@@ -14,6 +14,8 @@ import {
 	ValuePerUNIV2__factory,
 	ValuePerMoonV1,
 	ValuePerMoonV1__factory,
+	WETH9__factory,
+	WETH9,
 } from '../../../build/types/ethers-v5';
 import {
 	mooniswapFixture,
@@ -21,6 +23,7 @@ import {
 	uniswapPairFixture,
 } from '../../helpers/fixtures';
 import { sqrt } from '../../helpers/math';
+import { sendWETH } from '../../helpers/conversions';
 
 export const tokenADecimals = 18;
 export function parseTokenA(value: string): BigNumber {
@@ -53,8 +56,8 @@ export interface Fixture {
 	contractImpl: MockLPRewards;
 	testerContract: MockLPRewards;
 	tokenA: MockERC20;
-	tokenB: MockERC20;
-	rewardsToken: MockERC20;
+	tokenB: WETH9;
+	rewardsToken: WETH9;
 	mooniswapPool: Mooniswap;
 	testerMooniswapPool: Mooniswap;
 	valuePerMoonV1: ValuePerMoonV1;
@@ -76,19 +79,13 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const testerSigner = waffle.provider.getSigner(tester);
 
 		// Deploy mock ERC20s
-		const erc20Factory = new MockERC20__factory(deployerSigner);
-		const tokenA = await erc20Factory.deploy(
+		const tokenA = await new MockERC20__factory(deployerSigner).deploy(
 			'Token A',
 			'AERC20',
 			tokenADecimals,
 			0,
 		);
-		const tokenB = await erc20Factory.deploy(
-			'Token B',
-			'BERC20',
-			tokenBDecimals,
-			0,
-		);
+		const tokenB = await new WETH9__factory(deployerSigner).deploy();
 		const rewardsToken = tokenB;
 
 		// Deploy LPs and valuePerToken implementations
@@ -230,7 +227,8 @@ async function uniAddLiquidityImpl(
 	const initBalance: BigNumber = await pool.balanceOf(from);
 
 	await tokenA.mint(pool.address, amountA);
-	await tokenB.mint(pool.address, amountB);
+	// await tokenB.mint(pool.address, amountB);
+	await sendWETH(tokenB, pool.address, amountB);
 	await pool.mint(from);
 
 	const newBalance: BigNumber = await pool.balanceOf(from);
@@ -370,14 +368,21 @@ export async function moonAddLiquidity(
 	const initBalance = await mooniswapPool.balanceOf(from);
 
 	await tokenA.mint(from, amountA);
-	await tokenB.mint(from, amountB);
+	// await tokenB.mint(from, amountB);
+	await sendWETH(tokenB, from, amountB);
 
 	await tokenA
 		.connect(signer)
 		.increaseAllowance(mooniswapPool.address, amountA);
+	// await tokenB
+	// 	.connect(signer)
+	// 	.increaseAllowance(mooniswapPool.address, amountB);
+	const allowance = await tokenB
+		.connect(signer)
+		.allowance(from, mooniswapPool.address);
 	await tokenB
 		.connect(signer)
-		.increaseAllowance(mooniswapPool.address, amountB);
+		.approve(mooniswapPool.address, allowance.add(amountB));
 
 	const tokens = await mooniswapPool.getTokens();
 	if (tokens.length === 0) {
@@ -464,7 +469,8 @@ export async function addRewards(
 ): Promise<BigNumber> {
 	const { contract, rewardsToken } = fixture;
 	const amountBig = BigNumber.from(amount);
-	await rewardsToken.mint(contract.address, amountBig);
+	// await rewardsToken.mint(contract.address, amountBig);
+	await sendWETH(rewardsToken, contract.address, amountBig);
 	return amountBig;
 }
 
