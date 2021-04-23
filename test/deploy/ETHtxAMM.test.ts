@@ -9,6 +9,9 @@ import {
 	WETH9,
 	WETH9__factory,
 } from '../../build/types/ethers-v5';
+import { getVersionTag } from '../../utils/deploy';
+
+const version = getVersionTag();
 
 interface Fixture {
 	deployer: string;
@@ -21,7 +24,7 @@ interface Fixture {
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
 	async ({ deployments, getNamedAccounts, ethers }) => {
-		await deployments.fixture();
+		await deployments.fixture(version);
 
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = ethers.provider.getSigner(deployer);

@@ -1,4 +1,4 @@
-import { HardhatUserConfig, task } from 'hardhat/config';
+import { HardhatUserConfig, task, types } from 'hardhat/config';
 import 'dotenv/config';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
@@ -9,6 +9,7 @@ import { Deployment } from 'hardhat-deploy/dist/types';
 import * as fs from 'fs';
 
 import { node_url, accounts, hardhatAccounts } from './utils/network';
+import { getVersionTag } from './utils/deploy';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ALCHEMY_URI = process.env.ALCHEMY_URI ? process.env.ALCHEMY_URI : '';
@@ -47,6 +48,44 @@ task(
 		fs.writeFileSync('./build/addresses.json', stringRepresentation);
 	},
 );
+
+task('deploy', 'Deploy contracts')
+	.addOptionalParam(
+		'ignoreVersion',
+		'ignore the requirement to use the latest version in any tags',
+		false,
+		types.boolean,
+	)
+	.setAction(async (args, hre, runSuper) => {
+		if (args.ignoreVersion) {
+			return runSuper(args);
+		}
+
+		const tags: string[] =
+			typeof args.tags === 'string' ? args.tags.split(',') : args.tags;
+
+		const version = getVersionTag();
+
+		if (!tags || tags.length == 0) {
+			args.tags = version;
+		} else {
+			let canRun = true;
+			for (let i = 0; i < tags.length; i++) {
+				if (!tags[i].includes(version)) {
+					canRun = false;
+					break;
+				}
+			}
+
+			if (!canRun) {
+				throw Error(`Can only deploy tags with '${version}' included`);
+			}
+		}
+
+		console.log(`Deploying version ${version}`);
+
+		return runSuper(args);
+	});
 /* eslint-enable no-console */
 
 const config: HardhatUserConfig = {
@@ -59,7 +98,7 @@ const config: HardhatUserConfig = {
 			saveDeployments: false,
 			forking: {
 				url: ALCHEMY_URI,
-				blockNumber: 10078689,
+				blockNumber: 10093324,
 				enabled: false,
 			},
 		},
