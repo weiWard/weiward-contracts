@@ -16,7 +16,7 @@ export default function run(): void {
 			const staked = parseEther('10');
 			await stake(fixture, staked);
 
-			await expect(contract.exit())
+			await expect(contract.exit(true))
 				.to.emit(contract, 'Unstaked')
 				.withArgs(deployer, staked);
 		});
@@ -30,7 +30,7 @@ export default function run(): void {
 			await stake(fixture, staked);
 			await contract.updateAccrual();
 
-			await expect(contract.exit())
+			await expect(contract.exit(true))
 				.to.emit(contract, 'RewardPaid')
 				.withArgs(deployer, rewards);
 		});
