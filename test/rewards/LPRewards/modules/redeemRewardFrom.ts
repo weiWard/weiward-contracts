@@ -11,7 +11,11 @@ import {
 	parseRewardsToken,
 	moonStake,
 } from '../common';
-import { ethToEthtx, parseGwei } from '../../../helpers/conversions';
+import {
+	ethToEthtx,
+	ethUsedOnGas,
+	parseGwei,
+} from '../../../helpers/conversions';
 
 export default function run(): void {
 	let fixture: Fixture;
@@ -130,7 +134,7 @@ export default function run(): void {
 	it('should revert if amount is zero', async function () {
 		const { contract, uniswapPool } = fixture;
 		await expect(
-			contract.redeemRewardFrom(uniswapPool.address, 0),
+			contract.redeemRewardFrom(uniswapPool.address, 0, true),
 		).to.be.revertedWith('cannot redeem zero');
 	});
 
@@ -140,13 +144,14 @@ export default function run(): void {
 			contract.redeemRewardFrom(
 				uniswapPool.address,
 				deployerUniRewards.add(1),
+				true,
 			),
 		).to.be.revertedWith('cannot redeem more rewards than earned');
 	});
 
 	it('should transfer correct rewards for a token', async function () {
 		const { contract, deployer, rewardsToken, uniswapPool } = fixture;
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(
 			await rewardsToken.balanceOf(contract.address),
@@ -157,6 +162,31 @@ export default function run(): void {
 			await rewardsToken.balanceOf(deployer),
 			'deployer rewards balance mismatch after redemption',
 		).to.eq(redeemed);
+	});
+
+	it('should transfer correct rewards for a token in ETH', async function () {
+		const { contract, deployerSigner, rewardsToken, uniswapPool } = fixture;
+
+		const balanceBefore = await deployerSigner.getBalance();
+
+		const tx = await contract.redeemRewardFrom(
+			uniswapPool.address,
+			redeemed,
+			false,
+		);
+
+		const gasUsed = await ethUsedOnGas(tx);
+		const balanceAfter = await deployerSigner.getBalance();
+
+		expect(
+			await rewardsToken.balanceOf(contract.address),
+			'contract rewards balance mismatch after redemption',
+		).to.eq(rewards.sub(redeemed));
+
+		expect(
+			balanceAfter.sub(balanceBefore),
+			'deployer rewards balance mismatch after redemption',
+		).to.eq(redeemed.sub(gasUsed));
 	});
 
 	it('should update accruedRewardsPerTokenLastFor', async function () {
@@ -172,7 +202,7 @@ export default function run(): void {
 			'accruedRewardsPerTokenLastFor mismatch before redemption',
 		).to.eq(0);
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(
 			await contract.accruedRewardsPerTokenLastFor(
@@ -186,14 +216,14 @@ export default function run(): void {
 	describe('should update totalRewardsRedeemed', async function () {
 		it('correctly', async function () {
 			const { contract, uniswapPool } = fixture;
-			await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+			await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 			expect(await contract.totalRewardsRedeemed()).to.eq(redeemed);
 		});
 
 		it('with overflow', async function () {
 			const { contract, uniswapPool } = fixture;
 			await contract.setTotalRewardsRedeemed(MaxUint256);
-			await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+			await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 			expect(await contract.totalRewardsRedeemed()).to.eq(redeemed.sub(1));
 		});
 	});
@@ -201,7 +231,7 @@ export default function run(): void {
 	describe('should update totalRewardsRedeemedFor', async function () {
 		it('correctly', async function () {
 			const { contract, uniswapPool } = fixture;
-			await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+			await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 			expect(
 				await contract.totalRewardsRedeemedFor(uniswapPool.address),
 			).to.eq(redeemed);
@@ -210,7 +240,7 @@ export default function run(): void {
 		it('with overflow', async function () {
 			const { contract, uniswapPool } = fixture;
 			await contract.setRewardsRedeemedFor(uniswapPool.address, MaxUint256);
-			await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+			await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 			expect(
 				await contract.totalRewardsRedeemedFor(uniswapPool.address),
 			).to.eq(redeemed.sub(1));
@@ -219,7 +249,7 @@ export default function run(): void {
 
 	it('should update rewardsForToken', async function () {
 		const { contract, uniswapPool } = fixture;
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 		expect(await contract.rewardsForToken(uniswapPool.address)).to.eq(
 			deployerUniRewards.add(testerRewards).sub(redeemed).add(1),
 		);
@@ -227,7 +257,7 @@ export default function run(): void {
 
 	it('should not affect rewardsForToken for other tokens', async function () {
 		const { contract, uniswapPool, mooniswapPool } = fixture;
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 		expect(await contract.rewardsForToken(mooniswapPool.address)).to.eq(
 			deployerMoonRewards.add(1),
 		);
@@ -241,7 +271,7 @@ export default function run(): void {
 			'mismatch before redemption',
 		).to.eq(rewards);
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(
 			await contract.totalRewardsAccrued(),
@@ -259,7 +289,7 @@ export default function run(): void {
 			'mismatch before redemption',
 		).to.eq(expected);
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(
 			await contract.totalRewardsAccruedFor(uniswapPool.address),
@@ -270,7 +300,7 @@ export default function run(): void {
 	it('should update rewardsBalanceOfFor token', async function () {
 		const { contract, deployer, uniswapPool } = fixture;
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(
 			await contract.rewardsBalanceOfFor(deployer, uniswapPool.address),
@@ -280,7 +310,7 @@ export default function run(): void {
 	it('should update rewardsBalanceOf', async function () {
 		const { contract, deployer, uniswapPool } = fixture;
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(await contract.rewardsBalanceOf(deployer)).to.eq(
 			deployerRewards.sub(redeemed),
@@ -290,7 +320,7 @@ export default function run(): void {
 	it('should not affect rewardsBalanceOf for others', async function () {
 		const { contract, tester, uniswapPool } = fixture;
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(await contract.rewardsBalanceOf(tester)).to.eq(testerRewards);
 	});
@@ -298,7 +328,7 @@ export default function run(): void {
 	it('should not affect rewardsBalanceOfFor token for others', async function () {
 		const { contract, tester, uniswapPool } = fixture;
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(
 			await contract.rewardsBalanceOfFor(tester, uniswapPool.address),
@@ -308,7 +338,7 @@ export default function run(): void {
 	it('should not affect rewardsBalanceOfFor other tokens', async function () {
 		const { contract, deployer, uniswapPool, mooniswapPool } = fixture;
 
-		await contract.redeemRewardFrom(uniswapPool.address, redeemed);
+		await contract.redeemRewardFrom(uniswapPool.address, redeemed, true);
 
 		expect(
 			await contract.rewardsBalanceOfFor(deployer, mooniswapPool.address),
@@ -318,7 +348,9 @@ export default function run(): void {
 	it('should emit RewardPaid event', async function () {
 		const { contract, deployer, uniswapPool } = fixture;
 
-		await expect(contract.redeemRewardFrom(uniswapPool.address, redeemed))
+		await expect(
+			contract.redeemRewardFrom(uniswapPool.address, redeemed, true),
+		)
 			.to.emit(contract, 'RewardPaid')
 			.withArgs(deployer, uniswapPool.address, redeemed);
 	});

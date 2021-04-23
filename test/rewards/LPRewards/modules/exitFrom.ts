@@ -33,7 +33,7 @@ export default function run(): void {
 	it('should unstake all for token', async function () {
 		const { contract, deployer, uniswapPool } = fixture;
 
-		await expect(contract.exitFrom(uniswapPool.address))
+		await expect(contract.exitFrom(uniswapPool.address, true))
 			.to.emit(contract, 'Unstaked')
 			.withArgs(deployer, uniswapPool.address, staked);
 	});
@@ -41,7 +41,7 @@ export default function run(): void {
 	it('should redeem all rewards for token', async function () {
 		const { contract, deployer, uniswapPool } = fixture;
 
-		await expect(contract.exitFrom(uniswapPool.address))
+		await expect(contract.exitFrom(uniswapPool.address, true))
 			.to.emit(contract, 'RewardPaid')
 			.withArgs(deployer, uniswapPool.address, rewards.sub(1));
 	});

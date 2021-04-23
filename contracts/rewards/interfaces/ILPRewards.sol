@@ -110,9 +110,9 @@ interface ILPRewards {
 	function changeTokenValueImpl(address token, address tokenValueImpl)
 		external;
 
-	function exit() external;
+	function exit(bool asWETH) external;
 
-	function exitFrom(address token) external;
+	function exitFrom(address token, bool asWETH) external;
 
 	function pause() external;
 
@@ -124,13 +124,17 @@ interface ILPRewards {
 		uint256 amount
 	) external;
 
-	function redeemAllRewards() external;
+	function redeemAllRewards(bool asWETH) external;
 
-	function redeemAllRewardsFrom(address token) external;
+	function redeemAllRewardsFrom(address token, bool asWETH) external;
 
-	function redeemReward(uint256 amount) external;
+	function redeemReward(uint256 amount, bool asWETH) external;
 
-	function redeemRewardFrom(address token, uint256 amount) external;
+	function redeemRewardFrom(
+		address token,
+		uint256 amount,
+		bool asWETH
+	) external;
 
 	function removeToken(address token) external;
 

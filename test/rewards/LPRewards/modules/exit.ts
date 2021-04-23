@@ -36,7 +36,7 @@ export default function run(): void {
 	it('should unstake all of first token', async function () {
 		const { contract, deployer, uniswapPool } = fixture;
 
-		await expect(contract.exit())
+		await expect(contract.exit(true))
 			.to.emit(contract, 'Unstaked')
 			.withArgs(deployer, uniswapPool.address, uniStaked);
 	});
@@ -44,7 +44,7 @@ export default function run(): void {
 	it('should unstake all of second token', async function () {
 		const { contract, deployer, mooniswapPool } = fixture;
 
-		await expect(contract.exit())
+		await expect(contract.exit(true))
 			.to.emit(contract, 'Unstaked')
 			.withArgs(deployer, mooniswapPool.address, moonStaked);
 	});
@@ -57,7 +57,7 @@ export default function run(): void {
 			uniswapPool.address,
 		);
 
-		await expect(contract.exit())
+		await expect(contract.exit(true))
 			.to.emit(contract, 'RewardPaid')
 			.withArgs(deployer, uniswapPool.address, uniRewards);
 	});
@@ -70,7 +70,7 @@ export default function run(): void {
 			mooniswapPool.address,
 		);
 
-		await expect(contract.exit())
+		await expect(contract.exit(true))
 			.to.emit(contract, 'RewardPaid')
 			.withArgs(deployer, mooniswapPool.address, moonRewards);
 	});
