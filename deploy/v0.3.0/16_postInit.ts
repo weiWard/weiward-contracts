@@ -111,7 +111,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		roiDenominator: 1,
 		earlyThreshold: parseEther('1000'),
 		lpShareNumerator: 25,
-		lpShareDenominator: 1000,
+		lpShareDenominator: 100,
 		lps: [sushiRouterAddr],
 		lpRecipient: deployer,
 	});
