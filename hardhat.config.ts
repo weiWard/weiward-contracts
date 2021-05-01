@@ -1,4 +1,4 @@
-import { HardhatUserConfig, task, types } from 'hardhat/config';
+import { HardhatUserConfig, subtask, task, types } from 'hardhat/config';
 import 'dotenv/config';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
@@ -6,6 +6,7 @@ import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-deploy';
 import 'hardhat-abi-exporter';
 import { Deployment } from 'hardhat-deploy/dist/types';
+import { TASK_DEPLOY_MAIN } from 'hardhat-deploy';
 import * as fs from 'fs';
 
 import { node_url, accounts, hardhatAccounts } from './utils/network';
@@ -49,7 +50,7 @@ task(
 	},
 );
 
-task('deploy', 'Deploy contracts')
+subtask(TASK_DEPLOY_MAIN, 'deploy')
 	.addOptionalParam(
 		'ignoreVersion',
 		'ignore the requirement to use the latest version in any tags',

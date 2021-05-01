@@ -18,6 +18,7 @@
     "lint:tsc": "tsc --noEmit",
     "lint:eslint": "eslint \"*/**/*.{js,jsx,ts,tsx}\"",
     "lint:sol": "solhint contracts/**/*.sol",
+		"node": "hardhat node",
     "pre-commit": "tsc --noEmit && lint-staged",
     "preinstall": "npx only-allow pnpm",
     "prepare": "husky install",
