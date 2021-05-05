@@ -180,7 +180,7 @@ contract ETHtxAMM is
 		bool asWETH
 	) external virtual override ensure(deadline) priceIsFresh {
 		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
+		uint256 amountOut = exactEthtxToEth(amountIn);
 		_swapEthtxForEth(_msgSender(), amountIn, amountOut, asWETH);
 	}
 
@@ -191,7 +191,7 @@ contract ETHtxAMM is
 		bool asWETH
 	) external virtual override ensure(deadline) priceIsFresh {
 		require(amountInMax != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountIn = ethtxForEthAtRedemption(amountOut);
+		uint256 amountIn = ethtxToExactEth(amountOut);
 		require(amountIn <= amountInMax, "ETHtxAMM: amountIn exceeds max");
 		_swapEthtxForEth(_msgSender(), amountIn, amountOut, asWETH);
 	}
@@ -203,7 +203,7 @@ contract ETHtxAMM is
 		bool asWETH
 	) external virtual override ensure(deadline) priceIsFresh {
 		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethFromEthtxAtRedemption(amountIn);
+		uint256 amountOut = exactEthtxToEth(amountIn);
 		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
 		_swapEthtxForEth(_msgSender(), amountIn, amountOut, asWETH);
 	}
@@ -275,7 +275,7 @@ contract ETHtxAMM is
 		returns (uint256 numerator, uint256 denominator)
 	{
 		numerator = ethSupply();
-		denominator = ethForEthtx(ethtxOutstanding());
+		denominator = ethToExactEthtx(ethtxOutstanding());
 	}
 
 	function cRatioBelowTarget() public view virtual override returns (bool) {
@@ -290,30 +290,6 @@ contract ETHtxAMM is
 		uint256 target = targetNum.mul(1e18).div(targetDen);
 
 		return current < target;
-	}
-
-	function ethForEthtx(uint256 amountETHtxOut)
-		public
-		view
-		virtual
-		override
-		returns (uint256)
-	{
-		return _ethtxToEth(gasPrice(), amountETHtxOut);
-	}
-
-	function ethFromEthtxAtRedemption(uint256 amountETHtxIn)
-		public
-		view
-		virtual
-		override
-		returns (uint256)
-	{
-		// Account for fee
-		uint256 fee =
-			IFeeLogic(feeLogic()).getFee(_msgSender(), address(this), amountETHtxIn);
-
-		return _ethtxToEth(gasPriceAtRedemption(), amountETHtxIn.sub(fee));
 	}
 
 	function ethNeeded() external view virtual override returns (uint256) {
@@ -333,28 +309,52 @@ contract ETHtxAMM is
 		return _ethtx;
 	}
 
-	function ethtxFromEth(uint256 amountETHIn)
+	function exactEthToEthtx(uint256 amountEthIn)
 		public
 		view
 		virtual
 		override
 		returns (uint256)
 	{
-		return _ethToEthtx(gasPrice(), amountETHIn);
+		return _ethToEthtx(gasPrice(), amountEthIn);
 	}
 
-	function ethtxForEthAtRedemption(uint256 amountETHOut)
+	function ethToExactEthtx(uint256 amountEthtxOut)
 		public
 		view
 		virtual
 		override
 		returns (uint256)
 	{
-		uint256 amountETHtx = _ethToEthtx(gasPriceAtRedemption(), amountETHOut);
+		return _ethtxToEth(gasPrice(), amountEthtxOut);
+	}
+
+	function exactEthtxToEth(uint256 amountEthtxIn)
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
+		// Account for fee
+		uint256 fee =
+			IFeeLogic(feeLogic()).getFee(_msgSender(), address(this), amountEthtxIn);
+
+		return _ethtxToEth(gasPriceAtRedemption(), amountEthtxIn.sub(fee));
+	}
+
+	function ethtxToExactEth(uint256 amountEthOut)
+		public
+		view
+		virtual
+		override
+		returns (uint256)
+	{
+		uint256 amountEthtx = _ethToEthtx(gasPriceAtRedemption(), amountEthOut);
 
 		// Account for fee
 		uint256 amountBeforeFee =
-			IFeeLogic(feeLogic()).undoFee(_msgSender(), address(this), amountETHtx);
+			IFeeLogic(feeLogic()).undoFee(_msgSender(), address(this), amountEthtx);
 
 		return amountBeforeFee;
 	}
@@ -365,7 +365,7 @@ contract ETHtxAMM is
 
 	function ethSupplyTarget() external view virtual override returns (uint256) {
 		(uint128 targetNum, uint128 targetDen) = targetCRatio();
-		return ethForEthtx(ethtxOutstanding()).mul(targetNum).div(targetDen);
+		return ethToExactEthtx(ethtxOutstanding()).mul(targetNum).div(targetDen);
 	}
 
 	function ethtxAvailable() public view virtual override returns (uint256) {
@@ -463,7 +463,7 @@ contract ETHtxAMM is
 		bool useWETH
 	) internal virtual ensure(deadline) priceIsFresh {
 		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethtxFromEth(amountIn);
+		uint256 amountOut = exactEthToEthtx(amountIn);
 		_swapEthForEthtx(_msgSender(), amountIn, amountOut, useWETH);
 	}
 
@@ -475,7 +475,7 @@ contract ETHtxAMM is
 	) internal virtual ensure(deadline) priceIsFresh returns (uint256 amountIn) {
 		require(amountInMax != 0, "ETHtxAMM: cannot swap zero");
 		// Add 1 to account for rounding (can't get ETHtx for 0 wei)
-		amountIn = ethForEthtx(amountOut).add(1);
+		amountIn = ethToExactEthtx(amountOut).add(1);
 		require(amountIn <= amountInMax, "ETHtxAMM: amountIn exceeds max");
 		_swapEthForEthtx(_msgSender(), amountIn, amountOut, useWETH);
 	}
@@ -487,7 +487,7 @@ contract ETHtxAMM is
 		bool useWETH
 	) internal virtual ensure(deadline) priceIsFresh {
 		require(amountIn != 0, "ETHtxAMM: cannot swap zero");
-		uint256 amountOut = ethtxFromEth(amountIn);
+		uint256 amountOut = exactEthToEthtx(amountIn);
 		require(amountOut >= amountOutMin, "ETHtxAMM: amountOut below min");
 		_swapEthForEthtx(_msgSender(), amountIn, amountOut, useWETH);
 	}

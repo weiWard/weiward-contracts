@@ -385,12 +385,12 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('ethForEthtx', function () {
+	describe('ethToExactEthtx', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 			const amountETHtx = parseETHtx('100');
 			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx);
-			expect(await contract.ethForEthtx(amountETHtx)).to.eq(amountETH);
+			expect(await contract.ethToExactEthtx(amountETHtx)).to.eq(amountETH);
 		});
 
 		it('should change with gas price', async function () {
@@ -402,11 +402,11 @@ describe(contractName, function () {
 
 			const amountETHtx = parseETHtx('100');
 			const amountETH = ethtxToEth(gasPrice, amountETHtx);
-			expect(await contract.ethForEthtx(amountETHtx)).to.eq(amountETH);
+			expect(await contract.ethToExactEthtx(amountETHtx)).to.eq(amountETH);
 		});
 	});
 
-	describe('ethFromEthtxAtRedemption', function () {
+	describe('exactEthtxToEth', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 
@@ -414,9 +414,7 @@ describe(contractName, function () {
 			const fee = calcFee(amountETHtx);
 			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx.sub(fee));
 
-			expect(await contract.ethFromEthtxAtRedemption(amountETHtx)).to.eq(
-				amountETH,
-			);
+			expect(await contract.exactEthtxToEth(amountETHtx)).to.eq(amountETH);
 		});
 
 		it('should change with gas price', async function () {
@@ -430,9 +428,7 @@ describe(contractName, function () {
 			const fee = calcFee(amountETHtx);
 			const amountETH = ethtxToEth(gasPrice, amountETHtx.sub(fee));
 
-			expect(await contract.ethFromEthtxAtRedemption(amountETHtx)).to.eq(
-				amountETH,
-			);
+			expect(await contract.exactEthtxToEth(amountETHtx)).to.eq(amountETH);
 		});
 
 		it('should use maxGasPrice cap', async function () {
@@ -454,9 +450,7 @@ describe(contractName, function () {
 			const fee = calcFee(amountETHtx);
 			const amountETH = ethtxToEth(maxGasPrice, amountETHtx.sub(fee));
 
-			expect(await contract.ethFromEthtxAtRedemption(amountETHtx)).to.eq(
-				amountETH,
-			);
+			expect(await contract.exactEthtxToEth(amountETHtx)).to.eq(amountETH);
 		});
 	});
 
@@ -515,12 +509,12 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('ethtxFromEth', function () {
+	describe('exactEthToEthtx', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 			const amountETH = parseEther('10');
 			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH);
-			expect(await contract.ethtxFromEth(amountETH)).to.eq(amountETHtx);
+			expect(await contract.exactEthToEthtx(amountETH)).to.eq(amountETHtx);
 		});
 
 		it('should change with gas price', async function () {
@@ -532,20 +526,18 @@ describe(contractName, function () {
 
 			const amountETH = parseEther('10');
 			const amountETHtx = ethToEthtx(gasPrice, amountETH);
-			expect(await contract.ethtxFromEth(amountETH)).to.eq(amountETHtx);
+			expect(await contract.exactEthToEthtx(amountETH)).to.eq(amountETHtx);
 		});
 	});
 
-	describe('ethtxForEthAtRedemption', function () {
+	describe('ethtxToExactEth', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 
 			const amountETH = parseEther('10');
 			const amountETHtx = undoFee(ethToEthtx(defaultGasPrice, amountETH));
 
-			expect(await contract.ethtxForEthAtRedemption(amountETH)).to.eq(
-				amountETHtx,
-			);
+			expect(await contract.ethtxToExactEth(amountETH)).to.eq(amountETHtx);
 		});
 
 		it('should change with gas price', async function () {
@@ -558,9 +550,7 @@ describe(contractName, function () {
 			const amountETH = parseEther('10');
 			const amountETHtx = undoFee(ethToEthtx(gasPrice, amountETH));
 
-			expect(await contract.ethtxForEthAtRedemption(amountETH)).to.eq(
-				amountETHtx,
-			);
+			expect(await contract.ethtxToExactEth(amountETH)).to.eq(amountETHtx);
 		});
 
 		it('should use maxGasPrice cap', async function () {
@@ -581,9 +571,7 @@ describe(contractName, function () {
 			const amountETH = parseEther('10');
 			const amountETHtx = undoFee(ethToEthtx(maxGasPrice, amountETH));
 
-			expect(await contract.ethtxForEthAtRedemption(amountETH)).to.eq(
-				amountETHtx,
-			);
+			expect(await contract.ethtxToExactEth(amountETH)).to.eq(amountETHtx);
 		});
 	});
 

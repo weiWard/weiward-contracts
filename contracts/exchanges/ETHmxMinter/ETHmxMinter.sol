@@ -172,7 +172,7 @@ contract ETHmxMinter is
 		require(amount != 0, "ETHmxMinter: cannot mint with zero amount");
 
 		IETHtxAMM ammHandle = IETHtxAMM(ethtxAMM());
-		uint256 amountETHIn = ammHandle.ethForEthtx(amount);
+		uint256 amountETHIn = ammHandle.ethToExactEthtx(amount);
 		require(
 			ammHandle.ethNeeded() >= amountETHIn,
 			"ETHmxMinter: ETHtx value burnt exceeds ETH needed"
@@ -335,8 +335,7 @@ contract ETHmxMinter is
 		override
 		returns (uint256)
 	{
-		uint256 amountETHIn = IETHtxAMM(ethtxAMM()).ethForEthtx(amountETHtxIn);
-		return amountETHIn;
+		return IETHtxAMM(ethtxAMM()).ethToExactEthtx(amountETHtxIn);
 	}
 
 	function ethtx() public view virtual override returns (address) {
@@ -460,7 +459,7 @@ contract ETHmxMinter is
 		}
 
 		uint256 ethtxToLp = ethtxTotal.mul(lpShareNum).div(lpShareDen).div(numLps);
-		uint256 ethToLp = IETHtxAMM(ethtxAMM()).ethForEthtx(ethtxToLp);
+		uint256 ethToLp = IETHtxAMM(ethtxAMM()).ethToExactEthtx(ethtxToLp);
 		address ethtx_ = ethtx();
 		address weth_ = weth();
 		address to = lpRecipient();

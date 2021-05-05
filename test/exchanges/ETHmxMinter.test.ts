@@ -478,7 +478,7 @@ describe(contractName, function () {
 			const { contract, ethtxAMM } = fixture;
 
 			const amountEthtx = parseETHtx('10000');
-			const amountEth = await ethtxAMM.ethForEthtx(amountEthtx);
+			const amountEth = await ethtxAMM.ethToExactEthtx(amountEthtx);
 
 			expect(await contract.ethmxFromEthtx(amountEthtx)).to.eq(amountEth);
 		});
@@ -880,7 +880,7 @@ describe(contractName, function () {
 			const { contract, deployer, deployerSigner, ethmx, ethtxAMM } = fixture;
 
 			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
-			const amountETH = (await ethtxAMM.ethForEthtx(amount))
+			const amountETH = (await ethtxAMM.ethToExactEthtx(amount))
 				.mul(targetNum)
 				.div(targetDen)
 				.sub(1);
@@ -900,7 +900,7 @@ describe(contractName, function () {
 			const { contract, deployer, deployerSigner, ethmx, ethtxAMM } = fixture;
 
 			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
-			const amountETH = (await ethtxAMM.ethForEthtx(amount))
+			const amountETH = (await ethtxAMM.ethToExactEthtx(amount))
 				.mul(targetNum)
 				.div(targetDen)
 				.sub(1);
@@ -920,7 +920,7 @@ describe(contractName, function () {
 			const { contract, deployerSigner, ethtxAMM } = fixture;
 
 			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
-			const amountETH = (await ethtxAMM.ethForEthtx(amount))
+			const amountETH = (await ethtxAMM.ethToExactEthtx(amount))
 				.mul(targetNum)
 				.div(targetDen)
 				.sub(1);
@@ -929,13 +929,6 @@ describe(contractName, function () {
 				to: ethtxAMM.address,
 				value: amountETH,
 			});
-
-			// const needed = await ethtxAMM.ethNeeded();
-			// console.log(`needed: ${needed.toString()}`);
-			// const neededInEthtx = await ethtxAMM.ethtxFromEth(needed);
-			// console.log(`neededInEthtx: ${neededInEthtx.toString()}`);
-			// const neededBackInETh = await ethtxAMM.ethForEthtx(neededInEthtx);
-			// console.log(`neededBackInETh: ${neededBackInETh.toString()}`);
 
 			await expect(contract.mintWithETHtx(239 + 238)).to.be.revertedWith(
 				'ETHtx value burnt exceeds ETH needed',
@@ -946,7 +939,7 @@ describe(contractName, function () {
 			const { contract, deployerSigner, ethtxAMM } = fixture;
 
 			const [targetNum, targetDen] = await ethtxAMM.targetCRatio();
-			const amountETH = (await ethtxAMM.ethForEthtx(amount))
+			const amountETH = (await ethtxAMM.ethToExactEthtx(amount))
 				.mul(targetNum)
 				.div(targetDen);
 
