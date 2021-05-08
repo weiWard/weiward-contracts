@@ -105,9 +105,31 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	}
 	const valuePerSushi = await deployments.get('ValuePerSushi');
 
+	const ethmxMinterArgs = {
+		ethmx: ethmx.address,
+		ethtx: ethtx.address,
+		ethtxAMM: ethtxAmm.address,
+		weth: wethAddr,
+		ethmxMintParams: {
+			earlyThreshold: parseEther('3000'),
+			cCapNum: 10,
+			cCapDen: 1,
+			zetaFloorNum: 2,
+			zetaFloorDen: 1,
+			zetaCeilNum: 4,
+			zetaCeilDen: 1,
+		},
+		mintGasPrice: parseGwei('1000'),
+		lpShareNumerator: 25,
+		lpShareDenominator: 100,
+		lps: [sushiRouterAddr],
+		lpRecipient: deployer,
+	};
+
 	if (migrations['postInitv0.3.0']) {
 		console.log('Migrating variables from v0.3.0...');
 		await ethtx.setFeeLogic(feeLogic.address);
+		await ethmxMinter.postInit(ethmxMinterArgs);
 		console.log('Completed migration to v0.4.0.');
 		return true;
 	}
@@ -127,20 +149,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		targetCRatioDen: 1,
 	});
 
-	await ethmxMinter.postInit({
-		ethmx: ethmx.address,
-		ethtx: ethtx.address,
-		ethtxAMM: ethtxAmm.address,
-		weth: wethAddr,
-		mintGasPrice: parseGwei('1000'),
-		roiNumerator: 5,
-		roiDenominator: 1,
-		earlyThreshold: parseEther('1000'),
-		lpShareNumerator: 25,
-		lpShareDenominator: 100,
-		lps: [sushiRouterAddr],
-		lpRecipient: deployer,
-	});
+	await ethmxMinter.postInit(ethmxMinterArgs);
 
 	await ethmxRewards.postInit({
 		ethmx: ethmx.address,

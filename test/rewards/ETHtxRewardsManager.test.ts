@@ -40,8 +40,6 @@ const mintGasPrice = parseGwei('1000');
 const ethmxAccrualUpdateInterval = 3600; // 1 hour
 const feeNumerator = 75;
 const feeDenominator = 1000;
-const roiNumerator = 5;
-const roiDenominator = 1;
 const targetCRatioNumerator = 2;
 const targetCRatioDenominator = 1;
 const oracleUpdateInterval = 3600;
@@ -114,9 +112,15 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtxAMM: ethtxAMM.address,
 			weth: weth.address,
 			mintGasPrice,
-			roiNumerator,
-			roiDenominator,
-			earlyThreshold: 0,
+			ethmxMintParams: {
+				earlyThreshold: parseEther('3000'),
+				cCapNum: 10,
+				cCapDen: 1,
+				zetaFloorNum: 2,
+				zetaFloorDen: 1,
+				zetaCeilNum: 4,
+				zetaCeilDen: 1,
+			},
 			lpShareNumerator: 25,
 			lpShareDenominator: 100,
 			lps: [],

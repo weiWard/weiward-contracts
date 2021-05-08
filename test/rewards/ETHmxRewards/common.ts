@@ -7,8 +7,8 @@ import { parseGwei } from '../../helpers/conversions';
 import {
 	MockETHmxRewards,
 	MockETHmxRewards__factory,
-	ETHmx,
-	ETHmx__factory,
+	MockETHmx,
+	MockETHmx__factory,
 	ETHmxMinter,
 	ETHmxMinter__factory,
 	MockETHtx,
@@ -20,20 +20,15 @@ import {
 	FeeLogic,
 	ETHtxAMM__factory,
 } from '../../../build/types/ethers-v5';
+import { parseEther } from '@ethersproject/units';
 
+export const defaultGasPrice = parseGwei('200');
 export const mintGasPrice = parseGwei('1000');
 export const roiNumerator = 5;
 export const roiDenominator = 1;
 export const feeRecipient = zeroPadAddress('0x1');
 export const roundingFactor = BigNumber.from(10).pow(36);
 export const accrualUpdateInterval = 3600; // 1 hour
-
-export function ethToEthmx(amountETH: BigNumber): BigNumber {
-	return amountETH.mul(roiNumerator).div(roiDenominator);
-}
-export function ethmxToEth(amountETHmx: BigNumber): BigNumber {
-	return amountETHmx.mul(roiDenominator).div(roiNumerator);
-}
 
 export interface Fixture {
 	deployer: string;
@@ -43,7 +38,7 @@ export interface Fixture {
 	contract: MockETHmxRewards;
 	contractImpl: MockETHmxRewards;
 	testerContract: MockETHmxRewards;
-	ethmx: ETHmx;
+	ethmx: MockETHmx;
 	ethmxMinter: ETHmxMinter;
 	ethtx: MockETHtx;
 	feeLogic: FeeLogic;
@@ -66,7 +61,7 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		);
 
 		const oracle = await new SimpleGasPrice__factory(deployerSigner).deploy(
-			parseGwei('200'),
+			defaultGasPrice,
 		);
 
 		const weth = await new WETH9__factory(deployerSigner).deploy();
@@ -87,7 +82,9 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		});
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
+		const ethmx = await new MockETHmx__factory(deployerSigner).deploy(
+			deployer,
+		);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,
@@ -98,9 +95,15 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtxAMM: ethtxAMM.address,
 			weth: weth.address,
 			mintGasPrice,
-			roiNumerator,
-			roiDenominator,
-			earlyThreshold: 0,
+			ethmxMintParams: {
+				earlyThreshold: parseEther('3000'),
+				cCapNum: 10,
+				cCapDen: 1,
+				zetaFloorNum: 2,
+				zetaFloorDen: 1,
+				zetaCeilNum: 4,
+				zetaCeilDen: 1,
+			},
 			lpShareNumerator: 25,
 			lpShareDenominator: 100,
 			lps: [],
@@ -171,14 +174,13 @@ export async function stake(
 	amountETHmx: BigNumber,
 	signer?: JsonRpcSigner,
 ): Promise<void> {
-	let { contract, ethmx, ethmxMinter } = fixture;
+	let { contract, ethmx } = fixture;
 	if (signer) {
 		contract = contract.connect(signer);
-		ethmxMinter = ethmxMinter.connect(signer);
 		ethmx = ethmx.connect(signer);
 	}
 
-	await ethmxMinter.mint({ value: ethmxToEth(amountETHmx) });
+	await ethmx.mockMint(await ethmx.signer.getAddress(), amountETHmx);
 	await ethmx.increaseAllowance(contract.address, amountETHmx);
 	await contract.stake(amountETHmx);
 }

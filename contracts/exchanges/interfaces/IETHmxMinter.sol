@@ -17,13 +17,27 @@
  */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 interface IETHmxMinter {
+	/* Types */
+
+	struct ETHmxMintParams {
+		// Uses a single 32 byte slot and avoids stack too deep errors
+		uint160 earlyThreshold;
+		uint16 cCapNum;
+		uint16 cCapDen;
+		uint16 zetaFloorNum;
+		uint16 zetaFloorDen;
+		uint16 zetaCeilNum;
+		uint16 zetaCeilDen;
+	}
+
 	/* Views */
 
-	function earlyThreshold() external view returns (uint256);
-
 	function ethmx() external view returns (address);
+
+	function ethmxMintParams() external view returns (ETHmxMintParams memory);
 
 	function ethmxFromEth(uint256 amountETHIn) external view returns (uint256);
 
@@ -51,11 +65,6 @@ interface IETHmxMinter {
 
 	function mintGasPrice() external view returns (uint256);
 
-	function roi()
-		external
-		view
-		returns (uint128 numerator, uint128 denominator);
-
 	function totalGiven() external view returns (uint256);
 
 	function weth() external view returns (address);
@@ -80,9 +89,9 @@ interface IETHmxMinter {
 
 	function removeLp(address pool) external;
 
-	function setEarlyThreshold(uint256 value) external;
-
 	function setEthmx(address addr) external;
+
+	function setEthmxMintParams(ETHmxMintParams memory mp) external;
 
 	function setEthtx(address addr) external;
 
@@ -94,16 +103,14 @@ interface IETHmxMinter {
 
 	function setMintGasPrice(uint256 value) external;
 
-	function setRoi(uint128 numerator, uint128 denominator) external;
-
 	function setWeth(address addr) external;
 
 	function unpause() external;
 
 	/* Events */
 
-	event EarlyThresholdSet(address indexed author, uint256 value);
 	event EthmxSet(address indexed author, address indexed addr);
+	event EthmxMintParamsSet(address indexed author, ETHmxMintParams mp);
 	event EthtxSet(address indexed author, address indexed addr);
 	event EthtxAMMSet(address indexed author, address indexed addr);
 	event LpAdded(address indexed author, address indexed account);
@@ -121,6 +128,5 @@ interface IETHmxMinter {
 		address indexed to,
 		uint256 amount
 	);
-	event RoiSet(address indexed author, uint128 numerator, uint128 denominator);
 	event WethSet(address indexed author, address indexed addr);
 }

@@ -6,6 +6,8 @@ import {
 	DeployResult,
 } from 'hardhat-deploy/types';
 import { Contract } from '@ethersproject/contracts';
+import fs from 'fs';
+import path from 'path';
 
 export function getVersionTag(): string {
 	const version = process.env.npm_package_version;
@@ -109,4 +111,26 @@ export async function deployOrUpgrade(
 	console.log(`Upgraded proxy implementation for ${contractName}`);
 
 	return result;
+}
+
+export function readMigrations(
+	hre: HardhatRuntimeEnvironment,
+): Record<string, number> {
+	let migrations: Record<string, number> = {};
+	try {
+		migrations = JSON.parse(
+			fs
+				.readFileSync(
+					path.join(
+						hre.config.paths.deployments,
+						hre.network.name,
+						'.migrations.json',
+					),
+				)
+				.toString(),
+		);
+		// eslint-disable-next-line no-empty
+	} catch (e) {}
+
+	return migrations;
 }

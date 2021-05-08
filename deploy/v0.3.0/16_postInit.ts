@@ -19,6 +19,7 @@ import {
 	FeeLogic__factory,
 	LPRewards__factory,
 } from '../../build/types/ethers-v5';
+import { Contract } from '@ethersproject/contracts';
 
 const version = 'v0.3.0';
 
@@ -101,7 +102,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		targetCRatioDen: 1,
 	});
 
-	await ethmxMinter.postInit({
+	await (ethmxMinter as Contract).postInit({
 		ethmx: ethmx.address,
 		ethtx: ethtx.address,
 		ethtxAMM: ethtxAmm.address,

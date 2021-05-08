@@ -65,16 +65,16 @@ contract ETHmxMinter is
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
+	using SafeMath for uint160;
+	using SafeMath for uint16;
 
 	struct ETHmxMinterArgs {
 		address ethmx;
 		address ethtx;
 		address ethtxAMM;
 		address weth;
+		ETHmxMintParams ethmxMintParams;
 		uint256 mintGasPrice;
-		uint128 roiNumerator;
-		uint128 roiDenominator;
-		uint256 earlyThreshold;
 		uint128 lpShareNumerator;
 		uint128 lpShareDenominator;
 		address[] lps;
@@ -98,10 +98,6 @@ contract ETHmxMinter is
 	function postInit(ETHmxMinterArgs memory _args) external virtual onlyOwner {
 		address sender = _msgSender();
 
-		// Set early threshold
-		_earlyThreshold = _args.earlyThreshold;
-		emit EarlyThresholdSet(sender, _args.earlyThreshold);
-
 		_ethmx = _args.ethmx;
 		emit EthmxSet(sender, _args.ethmx);
 
@@ -114,12 +110,11 @@ contract ETHmxMinter is
 		_weth = _args.weth;
 		emit WethSet(sender, _args.weth);
 
+		_ethmxMintParams = _args.ethmxMintParams;
+		emit EthmxMintParamsSet(sender, _args.ethmxMintParams);
+
 		_mintGasPrice = _args.mintGasPrice;
 		emit MintGasPriceSet(sender, _args.mintGasPrice);
-
-		_roiNum = _args.roiNumerator;
-		_roiDen = _args.roiDenominator;
-		emit RoiSet(sender, _args.roiNumerator, _args.roiDenominator);
 
 		_lpShareNum = _args.lpShareNumerator;
 		_lpShareDen = _args.lpShareDenominator;
@@ -223,14 +218,19 @@ contract ETHmxMinter is
 		emit LpRemoved(_msgSender(), pool);
 	}
 
-	function setEarlyThreshold(uint256 value) public virtual override onlyOwner {
-		_earlyThreshold = value;
-		emit EarlyThresholdSet(_msgSender(), value);
-	}
-
 	function setEthmx(address addr) public virtual override onlyOwner {
 		_ethmx = addr;
 		emit EthmxSet(_msgSender(), addr);
+	}
+
+	function setEthmxMintParams(ETHmxMintParams memory mp)
+		public
+		virtual
+		override
+		onlyOwner
+	{
+		_ethmxMintParams = mp;
+		emit EthmxMintParamsSet(_msgSender(), mp);
 	}
 
 	function setEthtx(address addr) public virtual override onlyOwner {
@@ -271,17 +271,6 @@ contract ETHmxMinter is
 		emit MintGasPriceSet(_msgSender(), value);
 	}
 
-	function setRoi(uint128 numerator, uint128 denominator)
-		public
-		virtual
-		override
-		onlyOwner
-	{
-		_roiNum = numerator;
-		_roiDen = denominator;
-		emit RoiSet(_msgSender(), numerator, denominator);
-	}
-
 	function setWeth(address addr) public virtual override onlyOwner {
 		_weth = addr;
 		emit WethSet(_msgSender(), addr);
@@ -293,12 +282,18 @@ contract ETHmxMinter is
 
 	/* Public Views */
 
-	function earlyThreshold() public view virtual override returns (uint256) {
-		return _earlyThreshold;
-	}
-
 	function ethmx() public view virtual override returns (address) {
 		return _ethmx;
+	}
+
+	function ethmxMintParams()
+		public
+		view
+		virtual
+		override
+		returns (ETHmxMintParams memory)
+	{
+		return _ethmxMintParams;
 	}
 
 	function ethmxFromEth(uint256 amountETHIn)
@@ -308,24 +303,10 @@ contract ETHmxMinter is
 		override
 		returns (uint256)
 	{
-		// Gas savings
-		uint256 totalGiven_ = totalGiven();
-		uint256 earlyThreshold_ = earlyThreshold();
-
-		// Check for early-bird rewards (will repeat after ~1e59 ETH given)
-		if (totalGiven_ < earlyThreshold_) {
-			uint256 currentLeft = earlyThreshold_ - totalGiven_;
-			if (amountETHIn < currentLeft) {
-				amountETHIn = (2 *
-					amountETHIn -
-					(2 * totalGiven_ * amountETHIn + amountETHIn**2) /
-					(2 * earlyThreshold_));
-			} else {
-				amountETHIn += (currentLeft * currentLeft) / (2 * earlyThreshold_);
-			}
-		}
-
-		return _ethmxFromEth(amountETHIn);
+		ETHmxMintParams memory mp = _ethmxMintParams;
+		uint256 amountOut = _ethmxCurve(amountETHIn, mp);
+		amountOut = _earlyCurve(amountETHIn, amountOut, mp.earlyThreshold);
+		return amountOut;
 	}
 
 	function ethmxFromEthtx(uint256 amountETHtxIn)
@@ -398,10 +379,6 @@ contract ETHmxMinter is
 		return _mintGasPrice;
 	}
 
-	function roi() public view virtual override returns (uint128, uint128) {
-		return (_roiNum, _roiDen);
-	}
-
 	function totalGiven() public view virtual override returns (uint256) {
 		return _totalGiven;
 	}
@@ -412,14 +389,161 @@ contract ETHmxMinter is
 
 	/* Internal Views */
 
-	function _ethmxFromEth(uint256 amountETHIn)
+	function _earlyCurve(
+		uint256 amountETHIn,
+		uint256 amountOut,
+		uint256 earlyThreshold
+	) internal view virtual returns (uint256) {
+		// Scale for output
+		uint256 totalGiven_ = _totalGiven.mul(amountOut).div(amountETHIn);
+		earlyThreshold = earlyThreshold.mul(amountOut).div(amountETHIn);
+
+		// Check for early-bird rewards (will repeat after ~1e59 ETH given)
+		if (totalGiven_ < earlyThreshold) {
+			uint256 currentLeft = earlyThreshold - totalGiven_;
+			if (amountOut < currentLeft) {
+				amountOut = (2 *
+					amountOut -
+					(2 * totalGiven_ * amountOut + amountOut**2) /
+					(2 * earlyThreshold));
+			} else {
+				amountOut += (currentLeft * currentLeft) / (2 * earlyThreshold);
+			}
+		}
+
+		return amountOut;
+	}
+
+	function _ethmxCurve(uint256 amountETHIn, ETHmxMintParams memory mp)
 		internal
 		view
 		virtual
 		returns (uint256)
 	{
-		(uint128 roiNum, uint128 roiDen) = roi();
-		return amountETHIn.mul(roiNum).div(roiDen);
+		uint256 cRatioNum;
+		uint256 cRatioDen;
+		uint256 cTargetNum;
+		uint256 cTargetDen;
+		{
+			IETHtxAMM ammHandle = IETHtxAMM(_ethtxAMM);
+			(cRatioNum, cRatioDen) = ammHandle.cRatio();
+
+			if (cRatioDen == 0) {
+				// cRatio > cCap
+				return amountETHIn.mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+			}
+
+			(cTargetNum, cTargetDen) = ammHandle.targetCRatio();
+		}
+
+		uint256 ethEnd = cRatioNum.add(amountETHIn);
+		uint256 ethTarget = cRatioDen.mul(cTargetNum).div(cTargetDen);
+		uint256 ethCap = cRatioDen.mul(mp.cCapNum).div(mp.cCapDen);
+		if (cRatioNum >= ethCap) {
+			// cRatio >= cCap
+			return amountETHIn.mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+		}
+
+		if (cRatioNum < ethTarget) {
+			// cRatio < cTarget
+			if (ethEnd > ethCap) {
+				// Add definite integral
+				uint256 curveAmt =
+					_ethmxDefiniteIntegral(
+						ethCap - ethTarget,
+						mp,
+						cTargetNum,
+						cTargetDen,
+						ethTarget,
+						cRatioDen
+					);
+
+				// Add amount past cap
+				uint256 pastCapAmt =
+					(ethEnd - ethCap).mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+
+				// add initial amount
+				uint256 flatAmt =
+					(ethTarget - cRatioNum).mul(mp.zetaCeilNum).div(mp.zetaCeilDen);
+
+				return flatAmt.add(curveAmt).add(pastCapAmt);
+			} else if (ethEnd > ethTarget) {
+				// Add definite integral for partial amount
+				uint256 ethOver = ethEnd - ethTarget;
+				uint256 curveAmt =
+					_ethmxDefiniteIntegral(
+						ethOver,
+						mp,
+						cTargetNum,
+						cTargetDen,
+						ethTarget,
+						cRatioDen
+					);
+
+				uint256 ethBeforeCurve = amountETHIn - ethOver;
+				uint256 flatAmt =
+					ethBeforeCurve.mul(mp.zetaCeilNum).div(mp.zetaCeilDen);
+				return flatAmt.add(curveAmt);
+			}
+
+			return amountETHIn.mul(mp.zetaCeilNum).div(mp.zetaCeilDen);
+		}
+
+		// cTarget < cRatio < cCap
+		if (ethEnd > ethCap) {
+			uint256 ethOver = ethEnd - ethCap;
+			uint256 curveAmt =
+				_ethmxDefiniteIntegral(
+					amountETHIn - ethOver,
+					mp,
+					cTargetNum,
+					cTargetDen,
+					cRatioNum,
+					cRatioDen
+				);
+
+			uint256 flatAmt = ethOver.mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+
+			return curveAmt.add(flatAmt);
+		}
+
+		return
+			_ethmxDefiniteIntegral(
+				amountETHIn,
+				mp,
+				cTargetNum,
+				cTargetDen,
+				cRatioNum,
+				cRatioDen
+			);
+	}
+
+	function _ethmxDefiniteIntegral(
+		uint256 amountETHIn,
+		ETHmxMintParams memory mp,
+		uint256 cTargetNum,
+		uint256 cTargetDen,
+		uint256 initCollateral,
+		uint256 liability
+	) internal pure virtual returns (uint256) {
+		uint256 fctMulNum = mp.zetaFloorNum.mul(mp.zetaCeilDen).mul(cTargetDen);
+		uint256 fctMulDen = mp.zetaFloorDen.mul(mp.zetaCeilNum).mul(cTargetNum);
+
+		// prettier-ignore
+		uint256 first =
+			amountETHIn
+			.mul(fctMulNum.mul(mp.cCapNum))
+			.div(fctMulDen.mul(mp.cCapDen));
+
+		uint256 second = amountETHIn.mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+
+		uint256 tNum = fctMulNum.mul(amountETHIn);
+		uint256 tDen = fctMulDen.mul(2).mul(liability);
+		uint256 third = initCollateral.mul(2).add(amountETHIn);
+		// avoids stack too deep error
+		third = third.mul(tNum).div(tDen);
+
+		return first.add(second).sub(third);
 	}
 
 	/* Internal Mutators */

@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
+import { BigNumber } from '@ethersproject/bignumber';
 import { JsonRpcSigner } from '@ethersproject/providers';
-import { MaxUint256, Zero } from '@ethersproject/constants';
+import { MaxUint256, One, Zero } from '@ethersproject/constants';
 
 import { zeroAddress, zeroPadAddress } from '../helpers/address';
 import {
@@ -11,6 +11,9 @@ import {
 	parseETHtx,
 	ethToEthtx,
 	ethtxToEth,
+	sendWETH,
+	ethmxFromEth as ethmxFromEthOrig,
+	IETHmxMintParams,
 } from '../helpers/conversions';
 import {
 	sushiswapRouterFixture,
@@ -37,22 +40,33 @@ import { Contract } from 'ethers';
 const contractName = 'ETHmxMinter';
 
 const defaultGasPrice = parseGwei('200');
+const ethmxMintParams: IETHmxMintParams = {
+	earlyThreshold: parseEther('3000'),
+	cCapNum: 10,
+	cCapDen: 1,
+	zetaFloorNum: 2,
+	zetaFloorDen: 1,
+	zetaCeilNum: 4,
+	zetaCeilDen: 1,
+};
 const mintGasPrice = parseGwei('1000');
-const roiNumerator = 5;
-const roiDenominator = 1;
 const feeRecipient = zeroPadAddress('0x1');
 const feeNum = 75;
 const feeDen = 1000;
-const earlyThreshold = parseEther('1000');
-const earlyMultiplier = 2;
 const lpShareNumerator = 25;
 const lpShareDenominator = 100;
 const lpRecipient = zeroPadAddress('0x2');
+const cTargetNum = 2;
+const cTargetDen = 1;
 
-function ethmxFromEthIntegral(amountETH: BigNumber): BigNumber {
-	return amountETH
-		.mul(earlyMultiplier)
-		.sub(amountETH.mul(amountETH).div(earlyThreshold.mul(2)));
+function ethmxFromEth(
+	totalGiven: BigNumber,
+	amountETH: BigNumber,
+	cRatio: { num: BigNumber; den: BigNumber },
+	cTarget = { num: cTargetNum, den: cTargetDen },
+	mp = ethmxMintParams,
+): BigNumber {
+	return ethmxFromEthOrig(totalGiven, amountETH, cRatio, cTarget, mp);
 }
 
 function calcFee(amount: BigNumber): BigNumber {
@@ -61,37 +75,6 @@ function calcFee(amount: BigNumber): BigNumber {
 
 function applyFee(amount: BigNumber): BigNumber {
 	return amount.sub(calcFee(amount));
-}
-
-function ethmxFromEth(
-	totalGiven: BigNumber,
-	amountETH: BigNumber,
-	roiNum: BigNumberish = roiNumerator,
-	roiDen: BigNumberish = roiDenominator,
-): BigNumber {
-	if (totalGiven.lt(earlyThreshold)) {
-		const start = ethmxFromEthIntegral(totalGiven);
-
-		const currentLeft = earlyThreshold.sub(totalGiven);
-		if (amountETH.lt(currentLeft)) {
-			const end = ethmxFromEthIntegral(totalGiven.add(amountETH));
-			amountETH = end.sub(start);
-		} else {
-			const end = ethmxFromEthIntegral(earlyThreshold);
-			const added = end.sub(start).sub(currentLeft);
-			amountETH = amountETH.add(added);
-		}
-	}
-
-	return ethmxFromEthRaw(amountETH, roiNum, roiDen);
-}
-
-function ethmxFromEthRaw(
-	amountETH: BigNumber,
-	roiNum: BigNumberish = roiNumerator,
-	roiDen: BigNumberish = roiDenominator,
-): BigNumber {
-	return amountETH.mul(roiNum).div(roiDen);
 }
 
 interface Fixture {
@@ -145,8 +128,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtx: ethtx.address,
 			gasOracle: oracle.address,
 			weth: weth.address,
-			targetCRatioNum: 2,
-			targetCRatioDen: 1,
+			targetCRatioNum: cTargetNum,
+			targetCRatioDen: cTargetDen,
 		});
 		await feeLogic.setExempt(ethtxAMM.address, true);
 
@@ -183,10 +166,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtx: ethtx.address,
 			ethtxAMM: ethtxAMM.address,
 			weth: weth.address,
+			ethmxMintParams,
 			mintGasPrice,
-			roiNumerator,
-			roiDenominator,
-			earlyThreshold,
 			lpShareNumerator,
 			lpShareDenominator,
 			lps: [],
@@ -275,9 +256,25 @@ describe(contractName, function () {
 
 			expect(await contract.totalGiven(), 'totalGiven mismatch').to.eq(0);
 
-			const [roiNum, roiDen] = await contract.roi();
-			expect(roiNum, 'roi numerator mismatch').to.eq(roiNumerator);
-			expect(roiDen, 'roi denominator mismatch').to.eq(roiDenominator);
+			const [
+				earlyThreshold,
+				cCapNum,
+				cCapDen,
+				zetaFloorNum,
+				zetaFloorDen,
+				zetaCeilNum,
+				zetaCeilDen,
+			] = await contract.ethmxMintParams();
+			const mp = ethmxMintParams;
+			expect(earlyThreshold, 'earlyThreshold mismatch').to.eq(
+				mp.earlyThreshold,
+			);
+			expect(cCapNum, 'cCapNum mismatch').to.eq(mp.cCapNum);
+			expect(cCapDen, 'cCapDen mismatch').to.eq(mp.cCapDen);
+			expect(zetaFloorNum, 'zetaFloorNum mismatch').to.eq(mp.zetaFloorNum);
+			expect(zetaFloorDen, 'zetaFloorDen mismatch').to.eq(mp.zetaFloorDen);
+			expect(zetaCeilNum, 'zetaCeilNum mismatch').to.eq(mp.zetaCeilNum);
+			expect(zetaCeilDen, 'zetaCeilDen mismatch').to.eq(mp.zetaCeilDen);
 
 			const [lpShareNum, lpShareDen] = await contract.lpShare();
 			expect(lpShareNum, 'lpShare numerator mismatch').to.eq(lpShareNumerator);
@@ -324,10 +321,8 @@ describe(contractName, function () {
 					ethtx: zeroAddress,
 					ethtxAMM: zeroAddress,
 					weth: zeroAddress,
+					ethmxMintParams,
 					mintGasPrice: 0,
-					roiNumerator: 0,
-					roiDenominator: 0,
-					earlyThreshold: 0,
 					lpShareNumerator: 0,
 					lpShareDenominator: 0,
 					lps: [],
@@ -351,125 +346,455 @@ describe(contractName, function () {
 
 	describe('ethmxFromEth', function () {
 		describe('should be correct', function () {
-			it('when totalGiven == 0', async function () {
-				const { contract } = fixture;
+			describe('without early bonus', function () {
+				const mp = {
+					...ethmxMintParams,
+					earlyThreshold: Zero,
+				};
+				const cTarget = { num: cTargetNum, den: cTargetDen };
 
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(Zero, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('99.75'), // 10x amount - 2.5x amount/1000
-				);
+				beforeEach(async function () {
+					const { contract } = fixture;
+					await contract.setEthmxMintParams(mp);
+				});
 
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				it('when liabilities == 0 (cRatio > cCap)', async function () {
+					const { contract } = fixture;
+					const amtEth = parseEther('1');
+					const expected = amtEth.mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+					expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+				});
+
+				describe('when cRatioBefore < cTarget', function () {
+					const collat = parseEther('10');
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const customEthmxFromEth = (amountETH: BigNumber): BigNumber =>
+						ethmxFromEth(
+							Zero,
+							amountETH,
+							{
+								num: collat,
+								den: liabilityEth,
+							},
+							cTarget,
+							mp,
+						);
+
+					beforeEach(async function () {
+						const { ethtxAMM, ethtx, tester, weth } = fixture;
+
+						await sendWETH(weth, ethtxAMM.address, collat);
+						await ethtx.mockMint(tester, liabilityEthtx);
+					});
+
+					it('and amountIn == 1wei', async function () {
+						const { contract } = fixture;
+						const amtEth = One;
+						const expected = amtEth.mul(mp.zetaCeilNum).div(mp.zetaCeilDen);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter < cTarget', async function () {
+						const { contract } = fixture;
+						const amtEth = parseEther('1');
+						const expected = amtEth.mul(mp.zetaCeilNum).div(mp.zetaCeilDen);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter == cTarget', async function () {
+						const { contract, ethtxAMM } = fixture;
+						const amtEth = parseEther('30').sub(2);
+						expect(await ethtxAMM.ethNeeded(), 'ethNeeded mismatch').to.eq(
+							amtEth,
+						);
+						const expected = amtEth.mul(mp.zetaCeilNum).div(mp.zetaCeilDen);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter > cTarget', async function () {
+						const { contract } = fixture;
+						const amtEth = parseEther('35');
+						const expected = parseEther('139.84375');
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter == cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = parseEther('190').sub(10);
+						const expected = parseEther('600').sub(32);
+						expect(amtEth.add(collat)).to.eq(
+							liabilityEth.mul(mp.cCapNum).div(mp.cCapDen),
+							'capEth mismatch',
+						);
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter > cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = parseEther('220');
+						const expected = parseEther('660').sub(12);
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+				});
+
+				describe('when cTarget == cRatioBefore', function () {
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const collat = liabilityEth.mul(cTarget.num).div(cTarget.den);
+					const customEthmxFromEth = (amountETH: BigNumber): BigNumber =>
+						ethmxFromEth(
+							Zero,
+							amountETH,
+							{
+								num: collat,
+								den: liabilityEth,
+							},
+							cTarget,
+							mp,
+						);
+
+					beforeEach(async function () {
+						const { ethtxAMM, ethtx, tester, weth } = fixture;
+
+						await sendWETH(weth, ethtxAMM.address, collat);
+						await ethtx.mockMint(tester, liabilityEthtx);
+					});
+
+					it('with amountIn == 1wei', async function () {
+						const { contract } = fixture;
+						const amtEth = One;
+						const expected = 4;
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter < cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = parseEther('10');
+						const expected = parseEther('39.375');
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter == cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = liabilityEth
+							.mul(mp.cCapNum)
+							.div(mp.cCapDen)
+							.sub(collat);
+						const expected = parseEther('480').sub(24);
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter > cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = liabilityEth
+							.mul(mp.cCapNum)
+							.div(mp.cCapDen)
+							.sub(collat)
+							.add(parseEther('5'))
+							.add(12);
+						const expected = parseEther('490');
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+				});
+
+				describe('when cTarget < cRatioBefore < cCap', function () {
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const collat = liabilityEth
+						.mul(cTarget.num)
+						.div(cTarget.den)
+						.add(parseEther('80'));
+					const customEthmxFromEth = (amountETH: BigNumber): BigNumber =>
+						ethmxFromEth(
+							Zero,
+							amountETH,
+							{
+								num: collat,
+								den: liabilityEth,
+							},
+							cTarget,
+							mp,
+						);
+
+					beforeEach(async function () {
+						const { ethtxAMM, ethtx, tester, weth } = fixture;
+
+						await sendWETH(weth, ethtxAMM.address, collat);
+						await ethtx.mockMint(tester, liabilityEthtx);
+					});
+
+					it('with amountIn == 1wei', async function () {
+						const { contract } = fixture;
+						const amtEth = One;
+						const expected = 3;
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter < cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = parseEther('5');
+						const expected = parseEther('14.84375');
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter == cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = liabilityEth
+							.mul(mp.cCapNum)
+							.div(mp.cCapDen)
+							.sub(collat);
+						const expected = parseEther('200').sub(21);
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+
+					it('and cRatioAfter > cCap', async function () {
+						const { contract } = fixture;
+						const amtEth = liabilityEth
+							.mul(mp.cCapNum)
+							.div(mp.cCapDen)
+							.sub(collat)
+							.add(parseEther('5'))
+							.add(10);
+						const expected = parseEther('210').sub(1);
+						expect(customEthmxFromEth(amtEth), 'ts impl mismatch').to.eq(
+							expected,
+						);
+						expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+					});
+				});
+
+				it('when cRatioBefore == cCap', async function () {
+					const { contract } = fixture;
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const collat = liabilityEth.mul(mp.cCapNum).div(mp.cCapDen);
+
+					const amtEth = parseEther('5');
+					const expected = parseEther('10');
+					expect(
+						ethmxFromEth(
+							Zero,
+							amtEth,
+							{
+								num: collat,
+								den: liabilityEth,
+							},
+							cTarget,
+							mp,
+						),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+				});
+
+				it('when cRatioBefore > cCap', async function () {
+					const { contract } = fixture;
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const collat = liabilityEth
+						.mul(mp.cCapNum)
+						.div(mp.cCapDen)
+						.add('50');
+
+					const amtEth = parseEther('5');
+					const expected = parseEther('10');
+					expect(
+						ethmxFromEth(
+							Zero,
+							amtEth,
+							{
+								num: collat,
+								den: liabilityEth,
+							},
+							cTarget,
+							mp,
+						),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amtEth)).to.eq(expected);
+				});
 			});
 
-			it('when totalGiven == earlyThreshold / 4', async function () {
-				const { contract } = fixture;
+			describe('with early bonus', function () {
+				it('when amountIn == 1wei', async function () {
+					const { contract } = fixture;
 
-				const ethGiven = earlyThreshold.div(4);
-				await contract.mint({ value: ethGiven });
+					const amount = One;
+					const expected = BigNumber.from(4);
+					expect(
+						ethmxFromEth(Zero, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
 
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('87.25'), // 8.75x amount - 2.5x amount/1000
-				);
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
 
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				it('when totalGiven == 0', async function () {
+					const { contract } = fixture;
+
+					const amount = parseEther('10');
+					const expected = parseUnits('39966666666666666667', 'wei');
+					expect(
+						ethmxFromEth(Zero, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when totalGiven == earlyThreshold / 4', async function () {
+					const { contract } = fixture;
+
+					const ethGiven = ethmxMintParams.earlyThreshold.div(4);
+					await contract.mint({ value: ethGiven });
+
+					const amount = parseEther('10');
+					const expected = parseUnits('34966666666666666667', 'wei');
+					expect(
+						ethmxFromEth(ethGiven, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when totalGiven == earlyThreshold / 2', async function () {
+					const { contract } = fixture;
+
+					const ethGiven = ethmxMintParams.earlyThreshold.div(2);
+					await contract.mint({ value: ethGiven });
+
+					const amount = parseEther('10');
+					const expected = parseUnits('29966666666666666667', 'wei');
+					expect(
+						ethmxFromEth(ethGiven, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when totalGiven == earlyThreshold * 3 / 4', async function () {
+					const { contract } = fixture;
+
+					const ethGiven = ethmxMintParams.earlyThreshold.mul(3).div(4);
+					await contract.mint({ value: ethGiven });
+
+					const amount = parseEther('10');
+					const expected = parseUnits('24966666666666666667', 'wei');
+					expect(
+						ethmxFromEth(ethGiven, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when totalGiven == earlyThreshold', async function () {
+					const { contract } = fixture;
+
+					const ethGiven = ethmxMintParams.earlyThreshold;
+					await contract.mint({ value: ethGiven });
+
+					const amount = parseEther('10');
+					const expected = parseEther('20');
+					expect(
+						ethmxFromEth(ethGiven, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when totalGiven > earlyThreshold', async function () {
+					const { contract } = fixture;
+
+					const ethGiven = ethmxMintParams.earlyThreshold.add(1);
+					await contract.mint({ value: ethGiven });
+
+					const amount = parseEther('10');
+					const expected = parseEther('20');
+					expect(
+						ethmxFromEth(ethGiven, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when amountEthIn > earlyThreshold - totalGiven', async function () {
+					const { contract } = fixture;
+
+					const amount = parseEther('10');
+					const ethGiven = ethmxMintParams.earlyThreshold.sub(amount.div(2));
+					await contract.mint({ value: ethGiven });
+
+					const expected = parseUnits('20008333333333333333', 'wei');
+					expect(
+						ethmxFromEth(ethGiven, amount, {
+							num: Zero,
+							den: Zero,
+						}),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
 			});
-
-			it('when totalGiven == earlyThreshold / 2', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold.div(2);
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('74.75'), // 7.5x amount - 2.5x amount/1000
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven == earlyThreshold * 3 / 4', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold.mul(3).div(4);
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('62.25'), // 6.25x amount - 2.5x amount/1000
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven == earlyThreshold', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold;
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('50'), // 5x amount
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when totalGiven > earlyThreshold', async function () {
-				const { contract } = fixture;
-
-				const ethGiven = earlyThreshold.add(1);
-				await contract.mint({ value: ethGiven });
-
-				const amount = parseEther('10');
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('50'), // 5x amount
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-
-			it('when amountEthIn > earlyThreshold - totalGiven', async function () {
-				const { contract } = fixture;
-
-				const amount = parseEther('10');
-				const ethGiven = earlyThreshold.sub(amount.div(2));
-				await contract.mint({ value: ethGiven });
-
-				const expected = ethmxFromEth(ethGiven, amount);
-				expect(expected, 'test calculation mismatch').to.eq(
-					parseEther('50.0625'),
-				);
-
-				expect(await contract.ethmxFromEth(amount)).to.eq(expected);
-			});
-		});
-
-		it('should change with roi', async function () {
-			const { contract } = fixture;
-
-			const roiNum = 7;
-			const roiDen = 5;
-			expect(roiNum, 'roi numerator will not change').to.not.eq(roiNumerator);
-			expect(roiDen, 'roi denominator will not change').to.not.eq(
-				roiDenominator,
-			);
-
-			const amount = parseEther('10');
-			const expected = ethmxFromEth(Zero, amount, roiNum, roiDen);
-
-			await contract.setRoi(roiNum, roiDen);
-
-			expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 		});
 	});
 
@@ -575,7 +900,7 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount', async function () {
 				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -632,7 +957,7 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount to sender', async function () {
 				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -717,8 +1042,12 @@ describe(contractName, function () {
 			});
 
 			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const { deployer, ethmx, ethtxAMM } = fixture;
+				const [collat, liability] = await ethtxAMM.cRatio();
+				const expected = ethmxFromEth(Zero, amount, {
+					num: collat,
+					den: liability,
+				});
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -799,7 +1128,7 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount to sender', async function () {
 				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -993,7 +1322,7 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount', async function () {
 				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -1054,7 +1383,7 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount to sender', async function () {
 				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -1140,8 +1469,12 @@ describe(contractName, function () {
 			});
 
 			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const { deployer, ethmx, ethtxAMM } = fixture;
+				const [collat, liability] = await ethtxAMM.cRatio();
+				const expected = ethmxFromEth(Zero, amount, {
+					num: collat,
+					den: liability,
+				});
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -1225,7 +1558,7 @@ describe(contractName, function () {
 
 			it('correct ETHmx amount to sender', async function () {
 				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount);
+				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
@@ -1371,31 +1704,6 @@ describe(contractName, function () {
 			await expect(contract.removeLp(address))
 				.to.emit(contract, 'LpRemoved')
 				.withArgs(deployer, address);
-		});
-	});
-
-	describe('setEarlyThreshold', function () {
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			const value = 1;
-			await expect(testerContract.setEarlyThreshold(value)).to.be.revertedWith(
-				'caller is not the owner',
-			);
-		});
-
-		it('should set earlyThreshold', async function () {
-			const { contract } = fixture;
-			const value = 1;
-			await contract.setEarlyThreshold(value);
-			expect(await contract.earlyThreshold()).to.eq(value);
-		});
-
-		it('should emit EarlyThresholdSet event', async function () {
-			const { contract, deployer } = fixture;
-			const value = 1;
-			await expect(contract.setEarlyThreshold(value))
-				.to.emit(contract, 'EarlyThresholdSet')
-				.withArgs(deployer, value);
 		});
 	});
 
@@ -1556,42 +1864,6 @@ describe(contractName, function () {
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
 			await expect(testerContract.setMintGasPrice(5)).to.be.revertedWith(
-				'caller is not the owner',
-			);
-		});
-	});
-
-	describe('setRoi', function () {
-		const roiNum = 7;
-		const roiDen = 5;
-
-		before(function () {
-			expect(roiNum, 'roi numerator will not change').to.not.eq(roiNumerator);
-			expect(roiDen, 'roi denominator will not change').to.not.eq(
-				roiDenominator,
-			);
-		});
-
-		it('should set roi', async function () {
-			const { contract } = fixture;
-			await contract.setRoi(roiNum, roiDen);
-
-			const [num, den] = await contract.roi();
-			expect(num, 'roi numerator mismatch').to.eq(roiNum);
-			expect(den, 'roi denominator mismatch').to.eq(roiDen);
-		});
-
-		it('should emit RoiSet event', async function () {
-			const { contract, deployer } = fixture;
-
-			await expect(contract.setRoi(roiNum, roiDen))
-				.to.emit(contract, 'RoiSet')
-				.withArgs(deployer, roiNum, roiDen);
-		});
-
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			await expect(testerContract.setRoi(roiNum, roiDen)).to.be.revertedWith(
 				'caller is not the owner',
 			);
 		});

@@ -20,20 +20,30 @@ pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
+import "../interfaces/IETHmxMinter.sol";
+
 abstract contract ETHmxMinterData {
-	uint256 internal _earlyThreshold;
 	address internal _ethmx;
 	address internal _ethtx;
 	address internal _ethtxAMM;
-	uint256 internal _mintGasPrice;
-	uint128 internal _roiNum;
-	uint128 internal _roiDen;
-	uint256 internal _totalGiven;
 	address internal _weth;
+
+	// ETHmx minting
+	uint256 internal _totalGiven;
+	IETHmxMinter.ETHmxMintParams internal _ethmxMintParams;
+
+	// ETHtx minting
+	// TODO Remove mintGasPrice
+	uint256 internal _mintGasPrice;
+	uint128 internal _minGasPrice;
+	uint64 internal _minGasPriceMultNum;
+	uint64 internal _minGasPriceMultDen;
+
+	// Liquidity pool distribution
 	uint128 internal _lpShareNum;
 	uint128 internal _lpShareDen;
 	EnumerableSet.AddressSet internal _lps;
 	address internal _lpRecipient;
 
-	uint256[37] private __gap;
+	uint256[40] private __gap;
 }

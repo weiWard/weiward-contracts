@@ -37,8 +37,6 @@ const contractName = 'ETHtxAMM';
 
 const defaultGasPrice = parseGwei('200');
 const mintGasPrice = parseGwei('1000');
-const roiNumerator = 5;
-const roiDenominator = 1;
 const feeRecipient = zeroPadAddress('0x1');
 const targetCRatioNumerator = 2;
 const targetCRatioDenominator = 1;
@@ -156,9 +154,15 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtxAMM: contract.address,
 			weth: weth.address,
 			mintGasPrice,
-			roiNumerator,
-			roiDenominator,
-			earlyThreshold: 0,
+			ethmxMintParams: {
+				earlyThreshold: parseEther('3000'),
+				cCapNum: 10,
+				cCapDen: 1,
+				zetaFloorNum: 2,
+				zetaFloorDen: 1,
+				zetaCeilNum: 4,
+				zetaCeilDen: 1,
+			},
 			lpShareNumerator: 25,
 			lpShareDenominator: 100,
 			lps: [],
