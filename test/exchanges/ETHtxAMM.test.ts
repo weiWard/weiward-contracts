@@ -36,7 +36,6 @@ import {
 const contractName = 'ETHtxAMM';
 
 const defaultGasPrice = parseGwei('200');
-const mintGasPrice = parseGwei('1000');
 const feeRecipient = zeroPadAddress('0x1');
 const targetCRatioNumerator = 2;
 const targetCRatioDenominator = 1;
@@ -153,7 +152,11 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtx: ethtx.address,
 			ethtxAMM: contract.address,
 			weth: weth.address,
-			mintGasPrice,
+			ethtxMintParams: {
+				minMintPrice: parseGwei('50'),
+				mu: 5,
+				lambda: 4,
+			},
 			ethmxMintParams: {
 				earlyThreshold: parseEther('3000'),
 				cCapNum: 10,

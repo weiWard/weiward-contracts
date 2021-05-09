@@ -94,7 +94,11 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtx: ethtx.address,
 			ethtxAMM: ethtxAMM.address,
 			weth: weth.address,
-			mintGasPrice,
+			ethtxMintParams: {
+				minMintPrice: parseGwei('50'),
+				mu: 5,
+				lambda: 4,
+			},
 			ethmxMintParams: {
 				earlyThreshold: parseEther('3000'),
 				cCapNum: 10,

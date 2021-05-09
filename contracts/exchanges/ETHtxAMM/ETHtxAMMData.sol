@@ -25,5 +25,5 @@ abstract contract ETHtxAMMData {
 	address internal _ethtx;
 	address internal _weth;
 
-	uint256[45] private __gap;
+	uint256[46] private __gap;
 }

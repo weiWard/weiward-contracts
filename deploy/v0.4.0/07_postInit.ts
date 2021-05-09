@@ -110,6 +110,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		ethtx: ethtx.address,
 		ethtxAMM: ethtxAmm.address,
 		weth: wethAddr,
+		ethtxMintParams: {
+			minMintPrice: parseGwei('50'),
+			mu: 5,
+			lambda: 4,
+		},
 		ethmxMintParams: {
 			earlyThreshold: parseEther('3000'),
 			cCapNum: 10,

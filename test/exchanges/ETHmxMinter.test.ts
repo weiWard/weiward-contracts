@@ -14,6 +14,7 @@ import {
 	sendWETH,
 	ethmxFromEth as ethmxFromEthOrig,
 	IETHmxMintParams,
+	IETHtxMintParams,
 } from '../helpers/conversions';
 import {
 	sushiswapRouterFixture,
@@ -48,6 +49,11 @@ const ethmxMintParams: IETHmxMintParams = {
 	zetaFloorDen: 1,
 	zetaCeilNum: 4,
 	zetaCeilDen: 1,
+};
+const ethtxMintParams: IETHtxMintParams = {
+	minMintPrice: parseGwei('50'),
+	mu: 5,
+	lambda: 4,
 };
 const mintGasPrice = parseGwei('1000');
 const feeRecipient = zeroPadAddress('0x1');
@@ -167,7 +173,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtxAMM: ethtxAMM.address,
 			weth: weth.address,
 			ethmxMintParams,
-			mintGasPrice,
+			ethtxMintParams,
 			lpShareNumerator,
 			lpShareDenominator,
 			lps: [],
@@ -250,10 +256,6 @@ describe(contractName, function () {
 				weth.address,
 			);
 
-			expect(await contract.mintGasPrice(), 'mintGasPrice mismatch').to.eq(
-				mintGasPrice,
-			);
-
 			expect(await contract.totalGiven(), 'totalGiven mismatch').to.eq(0);
 
 			const [
@@ -275,6 +277,12 @@ describe(contractName, function () {
 			expect(zetaFloorDen, 'zetaFloorDen mismatch').to.eq(mp.zetaFloorDen);
 			expect(zetaCeilNum, 'zetaCeilNum mismatch').to.eq(mp.zetaCeilNum);
 			expect(zetaCeilDen, 'zetaCeilDen mismatch').to.eq(mp.zetaCeilDen);
+
+			const [minMintPrice, mu, lambda] = await contract.ethtxMintParams();
+			const txmp = ethtxMintParams;
+			expect(minMintPrice, 'minMintPrice mismatch').to.eq(txmp.minMintPrice);
+			expect(mu, 'mu mismatch').to.eq(txmp.mu);
+			expect(lambda, 'lambda mismatch').to.eq(txmp.lambda);
 
 			const [lpShareNum, lpShareDen] = await contract.lpShare();
 			expect(lpShareNum, 'lpShare numerator mismatch').to.eq(lpShareNumerator);
@@ -322,7 +330,7 @@ describe(contractName, function () {
 					ethtxAMM: zeroAddress,
 					weth: zeroAddress,
 					ethmxMintParams,
-					mintGasPrice: 0,
+					ethtxMintParams,
 					lpShareNumerator: 0,
 					lpShareDenominator: 0,
 					lps: [],
@@ -810,31 +818,306 @@ describe(contractName, function () {
 	});
 
 	describe('ethtxFromEth', function () {
-		it('should be correct', async function () {
-			const { contract, ethtxAMM } = fixture;
+		const basePrice = defaultGasPrice
+			.mul(ethtxMintParams.mu)
+			.add(ethtxMintParams.minMintPrice);
 
-			const amount = parseEther('10');
-			const num = amount.mul(parseUnits('1', 18));
-			const den = mintGasPrice.mul(await ethtxAMM.gasPerETHtx());
-			const expected = num.div(den);
+		describe('should be correct', function () {
+			describe('after genesis', async function () {
+				it('when amountETHIn == 0', async function () {
+					const { contract } = fixture;
+					expect(await contract.ethtxFromEth(0)).to.eq(0);
+				});
 
-			expect(await contract.ethtxFromEth(amount)).to.eq(expected);
-		});
+				it('when liability == 0', async function () {
+					const { contract } = fixture;
+					const amtEth = parseEther('10');
+					const expected = ethToEthtx(basePrice, amtEth);
+					expect(await contract.ethtxFromEth(amtEth)).to.eq(expected);
+				});
 
-		it('should change with mintGasPrice', async function () {
-			const { contract, ethtxAMM } = fixture;
+				it('when liability == 0 and amountETHIn == 1wei', async function () {
+					const { contract } = fixture;
+					const amtEth = One;
+					const expected = ethToEthtx(basePrice, amtEth);
+					expect(await contract.ethtxFromEth(amtEth)).to.eq(expected);
+				});
 
-			const newMintPrice = parseGwei('600');
-			expect(newMintPrice).to.not.eq(mintGasPrice);
+				describe('when collateral < target', function () {
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const target = liabilityEth.mul(cTargetNum).div(cTargetDen);
+					const collat = parseEther('10');
 
-			await contract.setMintGasPrice(newMintPrice);
+					beforeEach(async function () {
+						const { ethtx, ethtxAMM, tester, weth } = fixture;
+						await sendWETH(weth, ethtxAMM.address, collat);
+						await ethtx.mockMint(tester, liabilityEthtx);
+					});
 
-			const amount = parseEther('10');
-			const num = amount.mul(parseUnits('1', 18));
-			const den = newMintPrice.mul(await ethtxAMM.gasPerETHtx());
-			const expected = num.div(den);
+					it('and collateral after < target', async function () {
+						const { contract } = fixture;
+						expect(await contract.ethtxFromEth(parseEther('5'))).to.eq(0);
+					});
 
-			expect(await contract.ethtxFromEth(amount)).to.eq(expected);
+					it('and collateral after == target', async function () {
+						const { contract } = fixture;
+						const amtEth = target.sub(collat);
+						expect(await contract.ethtxFromEth(amtEth)).to.eq(0);
+					});
+
+					it('and collateral after > target', async function () {
+						const { contract } = fixture;
+						const amtEth = target.sub(collat).add(parseEther('5'));
+						const expected = parseETHtx('135.061740263758361131');
+						expect(await contract.ethtxFromEth(amtEth)).to.eq(expected);
+					});
+				});
+
+				describe('when collateral == target', function () {
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const target = liabilityEth.mul(cTargetNum).div(cTargetDen);
+					const collat = target;
+
+					beforeEach(async function () {
+						const { ethtx, ethtxAMM, tester, weth } = fixture;
+						await sendWETH(weth, ethtxAMM.address, collat);
+						await ethtx.mockMint(tester, liabilityEthtx);
+					});
+
+					const tests = [
+						{ amtEth: One, expected: BigNumber.from(45) },
+						{
+							amtEth: parseEther('5'),
+							expected: parseETHtx('135.061740263758361131'),
+						},
+						{
+							amtEth: parseEther('10'),
+							expected: parseETHtx('280.877280019784588627'),
+						},
+						{
+							amtEth: parseEther('100'),
+							expected: parseETHtx('3605.720923472083764650'),
+						},
+						{
+							amtEth: parseEther('3000'),
+							expected: parseETHtx('132975.070578625643384842'),
+						},
+					];
+
+					tests.forEach(({ amtEth, expected }) => {
+						it(`takes ${amtEth} and returns ${expected}`, async function () {
+							const { contract } = fixture;
+							expect(await contract.ethtxFromEth(amtEth)).to.eq(expected);
+						});
+					});
+				});
+
+				describe('when collateral > target', function () {
+					const liabilityEthtx = ethToEthtx(defaultGasPrice, parseEther('20'));
+					const liabilityEth = ethtxToEth(defaultGasPrice, liabilityEthtx);
+					const target = liabilityEth.mul(cTargetNum).div(cTargetDen);
+
+					const tests = [
+						{
+							by: 1.5,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('166.874684246653085069'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('338.527081069078317422'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('3821.059710866408037180'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('133281.185213906067490388'),
+								},
+							],
+						},
+						{
+							by: 2,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('182.293425407744574972'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('367.275570023945100015'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('3950.855999038055243825'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('133490.220119094695624704'),
+								},
+							],
+						},
+						{
+							by: 3,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('197.405189031869133442'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('396.006440067498090317'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('4103.405193443096139790'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('133775.921921560683073129'),
+								},
+							],
+						},
+						{
+							by: 4,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('204.849917568763735407'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('410.373031971388626198'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('4191.521931745361860032'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('133973.015992921276903419'),
+								},
+							],
+						},
+						{
+							by: 6,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('212.222560773486305151'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('424.744535768793076170'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('4290.340765639912821521'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('134242.947668522979911547'),
+								},
+							],
+						},
+						{
+							by: 8,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('215.882306937748607710'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('431.933101905171810215'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('4344.741091132640419489'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('134428.363926187236109183'),
+								},
+							],
+						},
+						{
+							by: 10,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('218.069753463840749811'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('436.247366611653668157'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('4379.276334671573443912'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('134568.178252807119392969'),
+								},
+							],
+						},
+						{
+							by: 100,
+							cases: [
+								{ amtEth: One, expected: BigNumber.from(45) },
+								{
+									amtEth: parseEther('5'),
+									expected: parseETHtx('225.893043147336815289'),
+								},
+								{
+									amtEth: parseEther('10'),
+									expected: parseETHtx('451.787165963979399201'),
+								},
+								{
+									amtEth: parseEther('100'),
+									expected: parseETHtx('4518.062977022543751561'),
+								},
+								{
+									amtEth: parseEther('3000'),
+									expected: parseETHtx('135667.335125135223494328'),
+								},
+							],
+						},
+					];
+
+					tests.forEach(({ by, cases }) => {
+						describe(`by ${by}`, function () {
+							const collat = target.mul(by * 100).div(100);
+
+							beforeEach(async function () {
+								const { ethtx, ethtxAMM, tester, weth } = fixture;
+								await sendWETH(weth, ethtxAMM.address, collat);
+								await ethtx.mockMint(tester, liabilityEthtx);
+							});
+
+							cases.forEach(({ amtEth, expected }) => {
+								it(`takes ${amtEth} and returns ${expected}`, async function () {
+									const { contract } = fixture;
+									expect(await contract.ethtxFromEth(amtEth)).to.eq(expected);
+								});
+							});
+						});
+					});
+				});
+			});
 		});
 	});
 
@@ -911,16 +1194,18 @@ describe(contractName, function () {
 		});
 
 		describe('should mint with one LP target', function () {
-			const amountEthtx = ethToEthtx(mintGasPrice, amount);
-			const ethtxToLp = amountEthtx
-				.mul(lpShareNumerator)
-				.div(lpShareDenominator);
-			const ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+			let amountEthtx: BigNumber;
+			let ethtxToLp: BigNumber;
+			let ethToLp: BigNumber;
 
 			beforeEach(async function () {
-				const { contract, uniRouter } = fixture;
+				const { contract, ethtx, uniRouter } = fixture;
 				await contract.addLp(uniRouter.address);
 				await contract.mint({ value: amount });
+
+				amountEthtx = await ethtx.totalSupply();
+				ethtxToLp = amountEthtx.mul(lpShareNumerator).div(lpShareDenominator);
+				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
 			});
 
 			it('and wrap and transfer correct WETH amount to AMM', async function () {
@@ -967,7 +1252,7 @@ describe(contractName, function () {
 			});
 		});
 
-		describe('should mint with one LP target and different price', function () {
+		describe.skip('should mint with one LP target and different price', function () {
 			const amountEthtx = ethToEthtx(mintGasPrice, amount);
 			const reserveEth = amount;
 			const reserveEthtxBeforeFee = amountEthtx.div(2);
@@ -1058,18 +1343,22 @@ describe(contractName, function () {
 		});
 
 		describe('should mint with multiple LP targets', function () {
-			const amountEthtx = ethToEthtx(mintGasPrice, amount);
-			const ethtxToLp = amountEthtx
-				.mul(lpShareNumerator)
-				.div(lpShareDenominator)
-				.div(2);
-			const ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+			let amountEthtx: BigNumber;
+			let ethtxToLp: BigNumber;
+			let ethToLp: BigNumber;
 
 			beforeEach(async function () {
-				const { contract, sushiRouter, uniRouter } = fixture;
+				const { contract, ethtx, sushiRouter, uniRouter } = fixture;
 				await contract.addLp(uniRouter.address);
 				await contract.addLp(sushiRouter.address);
 				await contract.mint({ value: amount });
+
+				amountEthtx = await ethtx.totalSupply();
+				ethtxToLp = amountEthtx
+					.mul(lpShareNumerator)
+					.div(lpShareDenominator)
+					.div(2);
+				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
 			});
 
 			it('and wrap and transfer correct WETH amount to AMM', async function () {
@@ -1333,20 +1622,22 @@ describe(contractName, function () {
 		});
 
 		describe('should mint with one LP target', function () {
-			const amountEthtx = ethToEthtx(mintGasPrice, amount);
-			const ethtxToLp = amountEthtx
-				.mul(lpShareNumerator)
-				.div(lpShareDenominator);
-			const ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+			let amountEthtx: BigNumber;
+			let ethtxToLp: BigNumber;
+			let ethToLp: BigNumber;
 
 			beforeEach(async function () {
-				const { contract, uniRouter, weth } = fixture;
+				const { contract, ethtx, uniRouter, weth } = fixture;
 
 				await contract.addLp(uniRouter.address);
 
 				await weth.deposit({ value: amount });
 				await weth.approve(contract.address, amount);
 				await contract.mintWithWETH(amount);
+
+				amountEthtx = await ethtx.totalSupply();
+				ethtxToLp = amountEthtx.mul(lpShareNumerator).div(lpShareDenominator);
+				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
 			});
 
 			it('and wrap and transfer correct WETH amount to AMM', async function () {
@@ -1393,7 +1684,7 @@ describe(contractName, function () {
 			});
 		});
 
-		describe('should mint with one LP target and different price', function () {
+		describe.skip('should mint with one LP target and different price', function () {
 			const amountEthtx = ethToEthtx(mintGasPrice, amount);
 			const reserveEth = amount;
 			const reserveEthtxBeforeFee = amountEthtx.div(2);
@@ -1485,21 +1776,25 @@ describe(contractName, function () {
 		});
 
 		describe('should mint with multiple LP targets', function () {
-			const amountEthtx = ethToEthtx(mintGasPrice, amount);
-			const ethtxToLp = amountEthtx
-				.mul(lpShareNumerator)
-				.div(lpShareDenominator)
-				.div(2);
-			const ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+			let amountEthtx: BigNumber;
+			let ethtxToLp: BigNumber;
+			let ethToLp: BigNumber;
 
 			beforeEach(async function () {
-				const { contract, sushiRouter, uniRouter, weth } = fixture;
+				const { contract, ethtx, sushiRouter, uniRouter, weth } = fixture;
 				await contract.addLp(uniRouter.address);
 				await contract.addLp(sushiRouter.address);
 
 				await weth.deposit({ value: amount });
 				await weth.approve(contract.address, amount);
 				await contract.mintWithWETH(amount);
+
+				amountEthtx = await ethtx.totalSupply();
+				ethtxToLp = amountEthtx
+					.mul(lpShareNumerator)
+					.div(lpShareDenominator)
+					.div(2);
+				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
 			});
 
 			it('and wrap and transfer correct WETH amount to AMM', async function () {
@@ -1842,30 +2137,6 @@ describe(contractName, function () {
 			await expect(contract.setLpShare(newNum, newDen))
 				.to.emit(contract, 'LpShareSet')
 				.withArgs(deployer, newNum, newDen);
-		});
-	});
-
-	describe('setMintGasPrice', function () {
-		it('should set mintGasPrice', async function () {
-			const { contract } = fixture;
-			const value = 5;
-			await contract.setMintGasPrice(value);
-			expect(await contract.mintGasPrice()).to.eq(value);
-		});
-
-		it('should emit MintGasPriceSet event', async function () {
-			const { contract, deployer } = fixture;
-			const value = 5;
-			await expect(contract.setMintGasPrice(value))
-				.to.emit(contract, 'MintGasPriceSet')
-				.withArgs(deployer, value);
-		});
-
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			await expect(testerContract.setMintGasPrice(5)).to.be.revertedWith(
-				'caller is not the owner',
-			);
 		});
 	});
 

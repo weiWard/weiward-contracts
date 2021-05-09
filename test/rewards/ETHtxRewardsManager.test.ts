@@ -36,7 +36,6 @@ const contractName = 'ETHtxRewardsManager';
 
 const defaultRecipient = zeroPadAddress('0x1');
 const defaultGasPrice = parseGwei('200');
-const mintGasPrice = parseGwei('1000');
 const ethmxAccrualUpdateInterval = 3600; // 1 hour
 const feeNumerator = 75;
 const feeDenominator = 1000;
@@ -111,7 +110,11 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtx: ethtx.address,
 			ethtxAMM: ethtxAMM.address,
 			weth: weth.address,
-			mintGasPrice,
+			ethtxMintParams: {
+				minMintPrice: parseGwei('50'),
+				mu: 5,
+				lambda: 4,
+			},
 			ethmxMintParams: {
 				earlyThreshold: parseEther('3000'),
 				cCapNum: 10,

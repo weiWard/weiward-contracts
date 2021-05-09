@@ -18,30 +18,16 @@
 
 pragma solidity 0.7.6;
 
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "../UintLog.sol";
 
-import "../interfaces/IETHmxMinter.sol";
+contract MockUintLog {
+	using UintLog for uint256;
 
-abstract contract ETHmxMinterData {
-	address internal _ethmx;
-	address internal _ethtx;
-	address internal _ethtxAMM;
-	address internal _weth;
+	function ln(uint256 x) external pure returns (uint256) {
+		return x.ln();
+	}
 
-	// ETHmx minting
-	uint256 internal _totalGiven;
-	IETHmxMinter.ETHmxMintParams internal _ethmxMintParams;
-
-	// ETHtx minting
-	uint128 internal _minMintPrice;
-	uint64 internal _mu;
-	uint64 internal _lambda;
-
-	// Liquidity pool distribution
-	uint128 internal _lpShareNum;
-	uint128 internal _lpShareDen;
-	EnumerableSet.AddressSet internal _lps;
-	address internal _lpRecipient;
-
-	uint256[40] private __gap;
+	function blog2(uint256 x) external pure returns (uint256) {
+		return x.blog2();
+	}
 }

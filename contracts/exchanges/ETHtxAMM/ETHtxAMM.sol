@@ -440,7 +440,7 @@ contract ETHtxAMM is
 		virtual
 		returns (uint256)
 	{
-		return gasPrice_.mul(amountETHtx).mul(gasPerETHtx()).div(1e18);
+		return gasPrice_.mul(amountETHtx).mul(gasPerETHtx()) / 1e18;
 	}
 
 	function _ethToEthtx(uint256 gasPrice_, uint256 amountETH)
@@ -450,9 +450,7 @@ contract ETHtxAMM is
 		returns (uint256)
 	{
 		require(gasPrice_ != 0, "ETHtxAMM: gasPrice is zero");
-		uint256 numerator = amountETH.mul(1e18);
-		uint256 denominator = gasPrice_.mul(gasPerETHtx());
-		return numerator.div(denominator);
+		return amountETH.mul(1e18) / gasPrice_.mul(gasPerETHtx());
 	}
 
 	/* Internal Mutators */

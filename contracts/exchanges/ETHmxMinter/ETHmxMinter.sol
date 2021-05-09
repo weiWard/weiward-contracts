@@ -34,6 +34,7 @@ import "../../tokens/interfaces/IETHtx.sol";
 import "../interfaces/IETHtxAMM.sol";
 import "../../tokens/interfaces/IWETH.sol";
 import "../../access/OwnableUpgradeable.sol";
+import "../../libraries/UintLog.sol";
 
 interface IPool {
 	function addLiquidity(
@@ -67,6 +68,7 @@ contract ETHmxMinter is
 	using SafeMath for uint256;
 	using SafeMath for uint160;
 	using SafeMath for uint16;
+	using UintLog for uint256;
 
 	struct ETHmxMinterArgs {
 		address ethmx;
@@ -74,12 +76,14 @@ contract ETHmxMinter is
 		address ethtxAMM;
 		address weth;
 		ETHmxMintParams ethmxMintParams;
-		uint256 mintGasPrice;
+		ETHtxMintParams ethtxMintParams;
 		uint128 lpShareNumerator;
 		uint128 lpShareDenominator;
 		address[] lps;
 		address lpRecipient;
 	}
+
+	uint256 internal constant _GAS_PER_ETHTX = 21000; // per 1e18
 
 	/* Constructor */
 
@@ -113,8 +117,10 @@ contract ETHmxMinter is
 		_ethmxMintParams = _args.ethmxMintParams;
 		emit EthmxMintParamsSet(sender, _args.ethmxMintParams);
 
-		_mintGasPrice = _args.mintGasPrice;
-		emit MintGasPriceSet(sender, _args.mintGasPrice);
+		_minMintPrice = _args.ethtxMintParams.minMintPrice;
+		_mu = _args.ethtxMintParams.mu;
+		_lambda = _args.ethtxMintParams.lambda;
+		emit EthtxMintParamsSet(sender, _args.ethtxMintParams);
 
 		_lpShareNum = _args.lpShareNumerator;
 		_lpShareDen = _args.lpShareDenominator;
@@ -233,6 +239,18 @@ contract ETHmxMinter is
 		emit EthmxMintParamsSet(_msgSender(), mp);
 	}
 
+	function setEthtxMintParams(ETHtxMintParams memory mp)
+		public
+		virtual
+		override
+		onlyOwner
+	{
+		_minMintPrice = mp.minMintPrice;
+		_mu = mp.mu;
+		_lambda = mp.lambda;
+		emit EthtxMintParamsSet(_msgSender(), mp);
+	}
+
 	function setEthtx(address addr) public virtual override onlyOwner {
 		_ethtx = addr;
 		emit EthtxSet(_msgSender(), addr);
@@ -264,11 +282,6 @@ contract ETHmxMinter is
 		_lpShareNum = numerator;
 		_lpShareDen = denominator;
 		emit LpShareSet(_msgSender(), numerator, denominator);
-	}
-
-	function setMintGasPrice(uint256 value) public virtual override onlyOwner {
-		_mintGasPrice = value;
-		emit MintGasPriceSet(_msgSender(), value);
 	}
 
 	function setWeth(address addr) public virtual override onlyOwner {
@@ -303,8 +316,23 @@ contract ETHmxMinter is
 		override
 		returns (uint256)
 	{
+		if (amountETHIn == 0) {
+			return 0;
+		}
+
 		ETHmxMintParams memory mp = _ethmxMintParams;
 		uint256 amountOut = _ethmxCurve(amountETHIn, mp);
+		// TODO if in genesis, apply flat 2x up to threshold
+		// TODO exit genesis if past genesis
+		// if (inGenesis) {
+		// 	uint256 totalEnd = totalGiven.add(amountETHIn);
+		// 	if (totalEnd > genesisAmount) {
+		// 		uint256 amtOver = totalEnd - genesisAmount;
+		// 		amtOver = amtOver.mul(amountOut).div(amountETHIn);
+		// 		return amountOut.add(amtOver);
+		// 	}
+		// 	return amountOut.mul(2);
+		// }
 		amountOut = _earlyCurve(amountETHIn, amountOut, mp.earlyThreshold);
 		return amountOut;
 	}
@@ -323,6 +351,16 @@ contract ETHmxMinter is
 		return _ethtx;
 	}
 
+	function ethtxMintParams()
+		public
+		view
+		virtual
+		override
+		returns (ETHtxMintParams memory)
+	{
+		return ETHtxMintParams(_minMintPrice, _mu, _lambda);
+	}
+
 	function ethtxAMM() public view virtual override returns (address) {
 		return _ethtxAMM;
 	}
@@ -334,9 +372,69 @@ contract ETHmxMinter is
 		override
 		returns (uint256)
 	{
-		uint256 numerator = amountETHIn.mul(1e18);
-		uint256 denominator =
-			mintGasPrice().mul(IETHtxAMM(ethtxAMM()).gasPerETHtx());
+		if (amountETHIn == 0) {
+			return 0;
+		}
+
+		IETHtxAMM ammHandle = IETHtxAMM(_ethtxAMM);
+		(uint256 collat, uint256 liability) = ammHandle.cRatio();
+		uint256 gasPrice = ammHandle.gasPrice();
+
+		uint256 basePrice;
+		uint256 lambda_;
+		{
+			uint256 minMintPrice_ = _minMintPrice;
+			uint256 mu_ = _mu;
+			lambda_ = _lambda;
+
+			basePrice = mu_.mul(gasPrice).add(minMintPrice_);
+		}
+
+		if (liability == 0) {
+			// TODO if in genesis, flat 2x on minting price up to threshold
+			// if (exitingGenesis) {
+			// 	uint256 totalEnd = totalGiven.add(amountETHIn);
+			// 	if (totalEnd > genesisAmount) {
+			// 		uint256 amtOver = totalEnd - genesisAmount;
+			// 		uint256 amtOut =
+			// 			_ethToEthtx(basePrice.mul(2), amountETHIn - amtOver);
+			// 		return amtOut.add(_ethToEthtx(basePrice, amtOver));
+			// 	}
+			// 	return _ethToEthtx(basePrice.mul(2), amountETHIn);
+			// }
+			return _ethToEthtx(basePrice, amountETHIn);
+		}
+
+		uint256 ethTarget;
+		{
+			(uint256 cTargetNum, uint256 cTargetDen) = ammHandle.targetCRatio();
+			ethTarget = liability.mul(cTargetNum).div(cTargetDen);
+		}
+
+		if (collat < ethTarget) {
+			uint256 ethEnd = collat.add(amountETHIn);
+			if (ethEnd <= ethTarget) {
+				return 0;
+			}
+			amountETHIn = ethEnd - ethTarget;
+			collat = ethTarget;
+		}
+
+		uint256 firstTerm = basePrice.mul(amountETHIn);
+
+		uint256 collatDiff = collat - liability;
+		uint256 coeffA = lambda_.mul(liability).mul(gasPrice);
+
+		uint256 secondTerm =
+			basePrice.mul(collatDiff).add(coeffA).mul(1e18).ln().mul(coeffA);
+		secondTerm /= 1e18;
+
+		uint256 thirdTerm = basePrice.mul(collatDiff.add(amountETHIn));
+		// avoids stack too deep error
+		thirdTerm = thirdTerm.add(coeffA).mul(1e18).ln().mul(coeffA) / 1e18;
+
+		uint256 numerator = firstTerm.add(secondTerm).sub(thirdTerm).mul(1e18);
+		uint256 denominator = _GAS_PER_ETHTX.mul(basePrice).mul(basePrice);
 		return numerator.div(denominator);
 	}
 
@@ -373,10 +471,6 @@ contract ETHmxMinter is
 	{
 		numerator = _lpShareNum;
 		denominator = _lpShareDen;
-	}
-
-	function mintGasPrice() public view virtual override returns (uint256) {
-		return _mintGasPrice;
 	}
 
 	function totalGiven() public view virtual override returns (uint256) {
@@ -544,6 +638,16 @@ contract ETHmxMinter is
 		third = third.mul(tNum).div(tDen);
 
 		return first.add(second).sub(third);
+	}
+
+	function _ethToEthtx(uint256 gasPrice, uint256 amountETH)
+		internal
+		pure
+		virtual
+		returns (uint256)
+	{
+		require(gasPrice != 0, "ETHmxMinter: gasPrice is zero");
+		return amountETH.mul(1e18) / gasPrice.mul(_GAS_PER_ETHTX);
 	}
 
 	/* Internal Mutators */

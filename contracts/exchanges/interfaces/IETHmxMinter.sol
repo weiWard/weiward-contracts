@@ -33,6 +33,12 @@ interface IETHmxMinter {
 		uint16 zetaCeilDen;
 	}
 
+	struct ETHtxMintParams {
+		uint128 minMintPrice;
+		uint64 mu;
+		uint64 lambda;
+	}
+
 	/* Views */
 
 	function ethmx() external view returns (address);
@@ -48,6 +54,8 @@ interface IETHmxMinter {
 
 	function ethtx() external view returns (address);
 
+	function ethtxMintParams() external view returns (ETHtxMintParams memory);
+
 	function ethtxAMM() external view returns (address);
 
 	function ethtxFromEth(uint256 amountETHIn) external view returns (uint256);
@@ -62,8 +70,6 @@ interface IETHmxMinter {
 		external
 		view
 		returns (uint128 numerator, uint128 denominator);
-
-	function mintGasPrice() external view returns (uint256);
 
 	function totalGiven() external view returns (uint256);
 
@@ -93,6 +99,8 @@ interface IETHmxMinter {
 
 	function setEthmxMintParams(ETHmxMintParams memory mp) external;
 
+	function setEthtxMintParams(ETHtxMintParams memory mp) external;
+
 	function setEthtx(address addr) external;
 
 	function setEthtxAMM(address addr) external;
@@ -100,8 +108,6 @@ interface IETHmxMinter {
 	function setLpRecipient(address account) external;
 
 	function setLpShare(uint128 numerator, uint128 denominator) external;
-
-	function setMintGasPrice(uint256 value) external;
 
 	function setWeth(address addr) external;
 
@@ -111,6 +117,7 @@ interface IETHmxMinter {
 
 	event EthmxSet(address indexed author, address indexed addr);
 	event EthmxMintParamsSet(address indexed author, ETHmxMintParams mp);
+	event EthtxMintParamsSet(address indexed author, ETHtxMintParams mp);
 	event EthtxSet(address indexed author, address indexed addr);
 	event EthtxAMMSet(address indexed author, address indexed addr);
 	event LpAdded(address indexed author, address indexed account);
@@ -121,7 +128,6 @@ interface IETHmxMinter {
 		uint128 numerator,
 		uint128 denominator
 	);
-	event MintGasPriceSet(address indexed author, uint256 value);
 	event Recovered(
 		address indexed author,
 		address indexed token,

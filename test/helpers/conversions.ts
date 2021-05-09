@@ -1,7 +1,9 @@
 import { parseUnits } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
+import { ContractTransaction } from '@ethersproject/contracts';
+import { Zero } from '@ethersproject/constants';
+
 import { WETH9 } from '@contracts/ethers-v5';
-import { ContractTransaction } from 'ethers';
 
 export const GAS_PER_ETHTX = 21000;
 
@@ -13,6 +15,12 @@ export interface IETHmxMintParams {
 	zetaFloorDen: BigNumberish;
 	zetaCeilNum: BigNumberish;
 	zetaCeilDen: BigNumberish;
+}
+
+export interface IETHtxMintParams {
+	minMintPrice: BigNumber;
+	mu: BigNumberish;
+	lambda: BigNumberish;
 }
 
 export function parseETHmx(value: string): BigNumber {
@@ -65,6 +73,10 @@ export function ethmxFromEth(
 	cTarget: { num: BigNumberish; den: BigNumberish },
 	mp: IETHmxMintParams,
 ): BigNumber {
+	if (amountETH.isZero()) {
+		return Zero;
+	}
+
 	let amtOut = ethmxCurve(amountETH, cRatio, cTarget, mp);
 
 	// Scale for output
@@ -222,3 +234,53 @@ function ethmxCurveDefiniteIntegral(
 
 	return first.add(second).sub(third);
 }
+
+// function mintedEthtxFromEth(
+// 	amountETH: BigNumber,
+// 	gasPrice: BigNumber,
+// 	initCollateral: BigNumber,
+// 	liability: BigNumber,
+// 	cTarget: { num: BigNumberish; den: BigNumberish },
+// 	mp: IETHtxMintParams,
+// ): BigNumber {
+// 	if (amountETH.isZero()) {
+// 		return Zero;
+// 	}
+
+// 	const basePrice = gasPrice.mul(mp.mu).add(mp.minMintPrice);
+
+// 	if (liability.isZero()) {
+// 		return ethToEthtx(basePrice, amountETH);
+// 	}
+
+// 	const ethTarget = liability.mul(cTarget.num).div(cTarget.den);
+
+// 	if (initCollateral.lt(ethTarget)) {
+// 		const ethEnd = initCollateral.add(amountETH);
+// 		if (ethEnd.lte(ethTarget)) {
+// 			return Zero;
+// 		}
+// 		amountETH = ethEnd.sub(ethTarget);
+// 		initCollateral = ethTarget;
+// 	}
+
+// 	const firstTerm = basePrice.mul(amountETH);
+
+// 	const collatDiff = initCollateral.sub(liability);
+// 	const coeffA = liability.mul(mp.lambda).mul(gasPrice);
+// 	const scale = BigNumber.from(10).pow(18);
+
+// 	const secondTerm = basePrice.mul(collatDiff).add(coeffA).mul(scale).ln().mul(coeffA).div(scale);
+
+// 	const thirdTerm = basePrice
+// 		.mul(collatDiff.add(amountETH))
+// 		.add(coeffA)
+// 		.mul(scale)
+// 		.ln()
+// 		.mul(coeffA)
+// 		.div(scale);
+
+// 	const numerator = firstTerm.add(secondTerm).sub(thirdTerm).mul(scale);
+// 	const denominator = basePrice.pow(2).mul(GAS_PER_ETHTX);
+// 	return numerator.div(denominator);
+// }
