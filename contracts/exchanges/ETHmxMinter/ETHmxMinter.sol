@@ -36,6 +36,8 @@ import "../../tokens/interfaces/IWETH.sol";
 import "../../access/OwnableUpgradeable.sol";
 import "../../libraries/UintLog.sol";
 
+/* solhint-disable not-rely-on-time */
+
 interface IPool {
 	function addLiquidity(
 		address tokenA,
@@ -66,8 +68,7 @@ contract ETHmxMinter is
 	using EnumerableSet for EnumerableSet.AddressSet;
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
-	using SafeMath for uint160;
-	using SafeMath for uint16;
+	using SafeMath for uint32;
 	using UintLog for uint256;
 
 	struct ETHmxMinterArgs {
@@ -84,6 +85,9 @@ contract ETHmxMinter is
 	}
 
 	uint256 internal constant _GAS_PER_ETHTX = 21000; // per 1e18
+	uint256 internal constant _GENESIS_START = 1620655200; // 05/10/2021 1400 UTC
+	uint256 internal constant _GENESIS_END = 1621260000; // 05/17/2021 1400 UTC
+	uint256 internal constant _GENESIS_AMOUNT = 3e21; // 3k ETH
 
 	/* Constructor */
 
@@ -117,6 +121,7 @@ contract ETHmxMinter is
 		_ethmxMintParams = _args.ethmxMintParams;
 		emit EthmxMintParamsSet(sender, _args.ethmxMintParams);
 
+		_inGenesis = block.timestamp <= _GENESIS_END;
 		_minMintPrice = _args.ethtxMintParams.minMintPrice;
 		_mu = _args.ethtxMintParams.mu;
 		_lambda = _args.ethtxMintParams.lambda;
@@ -148,6 +153,7 @@ contract ETHmxMinter is
 	}
 
 	function mint() external payable virtual override whenNotPaused {
+		require(block.timestamp >= _GENESIS_START, "ETHmxMinter: before genesis");
 		uint256 amountIn = msg.value;
 		require(amountIn != 0, "ETHmxMinter: cannot mint with zero amount");
 
@@ -155,13 +161,31 @@ contract ETHmxMinter is
 		address weth_ = weth();
 		IWETH(weth_).deposit{ value: amountIn }();
 
+		// Check if we're in genesis
+		bool exitingGenesis;
+		uint256 ethToMintEthtx = amountIn;
+		if (_inGenesis) {
+			uint256 totalGiven_ = _totalGiven.add(amountIn);
+			if (block.timestamp >= _GENESIS_END || totalGiven_ >= _GENESIS_AMOUNT) {
+				// Exiting genesis
+				ethToMintEthtx = totalGiven_;
+				exitingGenesis = true;
+			} else {
+				ethToMintEthtx = 0;
+			}
+		}
+
 		// Mint ETHtx and send ETHtx-WETH pair.
-		_mintEthtx(amountIn);
+		_mintEthtx(ethToMintEthtx);
 
 		// Mint ETHmx to sender.
 		uint256 amountOut = ethmxFromEth(amountIn);
 		_mint(_msgSender(), amountOut);
 		_totalGiven += amountIn;
+		// WARN this could cause re-entrancy if we ever called an unkown address
+		if (exitingGenesis) {
+			_inGenesis = false;
+		}
 	}
 
 	function mintWithETHtx(uint256 amount)
@@ -191,18 +215,37 @@ contract ETHmxMinter is
 		override
 		whenNotPaused
 	{
+		require(block.timestamp >= _GENESIS_START, "ETHmxMinter: before genesis");
 		require(amount != 0, "ETHmxMinter: cannot mint with zero amount");
 		address account = _msgSender();
 
 		// Need ownership for router
 		IERC20(weth()).safeTransferFrom(account, address(this), amount);
 
+		// Check if we're in genesis
+		bool exitingGenesis;
+		uint256 ethToMintEthtx = amount;
+		if (_inGenesis) {
+			uint256 totalGiven_ = _totalGiven.add(amount);
+			if (block.timestamp >= _GENESIS_END || totalGiven_ >= _GENESIS_AMOUNT) {
+				// Exiting genesis
+				ethToMintEthtx = totalGiven_;
+				exitingGenesis = true;
+			} else {
+				ethToMintEthtx = 0;
+			}
+		}
+
 		// Mint ETHtx and send ETHtx-WETH pair.
-		_mintEthtx(amount);
+		_mintEthtx(ethToMintEthtx);
 
 		uint256 amountOut = ethmxFromEth(amount);
 		_mint(account, amountOut);
 		_totalGiven += amount;
+		// WARN this could cause re-entrancy if we ever called an unkown address
+		if (exitingGenesis) {
+			_inGenesis = false;
+		}
 	}
 
 	function pause() external virtual override onlyOwner {
@@ -322,18 +365,23 @@ contract ETHmxMinter is
 
 		ETHmxMintParams memory mp = _ethmxMintParams;
 		uint256 amountOut = _ethmxCurve(amountETHIn, mp);
-		// TODO if in genesis, apply flat 2x up to threshold
-		// TODO exit genesis if past genesis
-		// if (inGenesis) {
-		// 	uint256 totalEnd = totalGiven.add(amountETHIn);
-		// 	if (totalEnd > genesisAmount) {
-		// 		uint256 amtOver = totalEnd - genesisAmount;
-		// 		amtOver = amtOver.mul(amountOut).div(amountETHIn);
-		// 		return amountOut.add(amtOver);
-		// 	}
-		// 	return amountOut.mul(2);
-		// }
-		amountOut = _earlyCurve(amountETHIn, amountOut, mp.earlyThreshold);
+
+		if (_inGenesis) {
+			uint256 totalGiven_ = _totalGiven;
+			uint256 totalEnd = totalGiven_.add(amountETHIn);
+
+			if (totalEnd > _GENESIS_AMOUNT) {
+				// Exiting genesis
+				uint256 amtUnder = _GENESIS_AMOUNT - totalGiven_;
+				amountOut -= amtUnder.mul(amountOut).div(amountETHIn);
+				uint256 added =
+					amtUnder.mul(2).mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+				return amountOut.add(added);
+			}
+
+			return amountOut.mul(2);
+		}
+
 		return amountOut;
 	}
 
@@ -391,17 +439,20 @@ contract ETHmxMinter is
 		}
 
 		if (liability == 0) {
-			// TODO if in genesis, flat 2x on minting price up to threshold
-			// if (exitingGenesis) {
-			// 	uint256 totalEnd = totalGiven.add(amountETHIn);
-			// 	if (totalEnd > genesisAmount) {
-			// 		uint256 amtOver = totalEnd - genesisAmount;
-			// 		uint256 amtOut =
-			// 			_ethToEthtx(basePrice.mul(2), amountETHIn - amtOver);
-			// 		return amtOut.add(_ethToEthtx(basePrice, amtOver));
-			// 	}
-			// 	return _ethToEthtx(basePrice.mul(2), amountETHIn);
-			// }
+			// If exiting genesis, flat 2x on minting price up to threshold
+			if (_inGenesis) {
+				uint256 totalGiven_ = _totalGiven;
+				uint256 totalEnd = totalGiven_.add(amountETHIn);
+
+				if (totalEnd > _GENESIS_AMOUNT) {
+					uint256 amtOver = totalEnd - _GENESIS_AMOUNT;
+					uint256 amtOut =
+						_ethToEthtx(basePrice.mul(2), amountETHIn - amtOver);
+					return amtOut.add(_ethToEthtx(basePrice, amtOver));
+				}
+				return _ethToEthtx(basePrice.mul(2), amountETHIn);
+			}
+
 			return _ethToEthtx(basePrice, amountETHIn);
 		}
 
@@ -436,6 +487,10 @@ contract ETHmxMinter is
 		uint256 numerator = firstTerm.add(secondTerm).sub(thirdTerm).mul(1e18);
 		uint256 denominator = _GAS_PER_ETHTX.mul(basePrice).mul(basePrice);
 		return numerator.div(denominator);
+	}
+
+	function inGenesis() external view virtual override returns (bool) {
+		return _inGenesis;
 	}
 
 	function numLiquidityPools()
@@ -482,31 +537,6 @@ contract ETHmxMinter is
 	}
 
 	/* Internal Views */
-
-	function _earlyCurve(
-		uint256 amountETHIn,
-		uint256 amountOut,
-		uint256 earlyThreshold
-	) internal view virtual returns (uint256) {
-		// Scale for output
-		uint256 totalGiven_ = _totalGiven.mul(amountOut).div(amountETHIn);
-		earlyThreshold = earlyThreshold.mul(amountOut).div(amountETHIn);
-
-		// Check for early-bird rewards (will repeat after ~1e59 ETH given)
-		if (totalGiven_ < earlyThreshold) {
-			uint256 currentLeft = earlyThreshold - totalGiven_;
-			if (amountOut < currentLeft) {
-				amountOut = (2 *
-					amountOut -
-					(2 * totalGiven_ * amountOut + amountOut**2) /
-					(2 * earlyThreshold));
-			} else {
-				amountOut += (currentLeft * currentLeft) / (2 * earlyThreshold);
-			}
-		}
-
-		return amountOut;
-	}
 
 	function _ethmxCurve(uint256 amountETHIn, ETHmxMintParams memory mp)
 		internal
@@ -659,6 +689,11 @@ contract ETHmxMinter is
 	function _mintEthtx(uint256 amountEthIn) internal virtual {
 		// Mint ETHtx.
 		uint256 ethtxToMint = ethtxFromEth(amountEthIn);
+
+		if (ethtxToMint == 0) {
+			return;
+		}
+
 		address ethtx_ = ethtx();
 		IETHtx(ethtx_).mint(address(this), ethtxToMint);
 

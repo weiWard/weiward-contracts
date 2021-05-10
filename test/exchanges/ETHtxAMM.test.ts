@@ -17,8 +17,8 @@ import {
 	parseETHmx,
 } from '../helpers/conversions';
 import {
-	ETHmx,
-	ETHmx__factory,
+	MockETHmx,
+	MockETHmx__factory,
 	ETHmxMinter,
 	ETHmxMinter__factory,
 	ETHtxAMM,
@@ -89,7 +89,7 @@ interface Fixture {
 	contractImpl: ETHtxAMM;
 	testerContract: ETHtxAMM;
 	ethtx: MockETHtx;
-	ethmx: ETHmx;
+	ethmx: MockETHmx;
 	ethmxMinter: ETHmxMinter;
 	feeLogic: FeeLogic;
 	oracle: MockGasPrice;
@@ -116,7 +116,9 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployer,
 		);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
+		const ethmx = await new MockETHmx__factory(deployerSigner).deploy(
+			deployer,
+		);
 
 		const result = await deploy('ETHtxAMMTest', {
 			contract: 'ETHtxAMM',
@@ -158,7 +160,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 				lambda: 4,
 			},
 			ethmxMintParams: {
-				earlyThreshold: parseEther('3000'),
 				cCapNum: 10,
 				cCapDen: 1,
 				zetaFloorNum: 2,
@@ -1451,11 +1452,10 @@ describe(contractName, function () {
 		});
 
 		it('should transfer amount', async function () {
-			const { contract, ethmx, ethmxMinter, tester } = fixture;
+			const { contract, ethmx, tester } = fixture;
 			const amount = parseETHmx('10');
 
-			await ethmxMinter.mint({ value: amount });
-			await ethmx.transfer(contract.address, amount);
+			await ethmx.mockMint(contract.address, amount);
 			await contract.recoverUnsupportedERC20(ethmx.address, tester, amount);
 
 			expect(
@@ -1468,11 +1468,10 @@ describe(contractName, function () {
 		});
 
 		it('should emit RecoveredUnsupported event', async function () {
-			const { contract, deployer, ethmx, ethmxMinter, tester } = fixture;
+			const { contract, deployer, ethmx, tester } = fixture;
 			const amount = parseEther('10');
 
-			await ethmxMinter.mint({ value: amount });
-			await ethmx.transfer(contract.address, amount);
+			await ethmx.mockMint(contract.address, amount);
 
 			await expect(
 				contract.recoverUnsupportedERC20(ethmx.address, tester, amount),

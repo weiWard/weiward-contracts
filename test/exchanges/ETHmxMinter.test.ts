@@ -1,9 +1,10 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
+import { parseEther } from 'ethers/lib/utils';
 import { BigNumber } from '@ethersproject/bignumber';
-import { JsonRpcSigner } from '@ethersproject/providers';
+import { JsonRpcProvider, JsonRpcSigner } from '@ethersproject/providers';
 import { MaxUint256, One, Zero } from '@ethersproject/constants';
+import FakeTimers from '@sinonjs/fake-timers';
 
 import { zeroAddress, zeroPadAddress } from '../helpers/address';
 import {
@@ -15,6 +16,9 @@ import {
 	ethmxFromEth as ethmxFromEthOrig,
 	IETHmxMintParams,
 	IETHtxMintParams,
+	GENESIS_AMOUNT,
+	GENESIS_START,
+	GENESIS_END,
 } from '../helpers/conversions';
 import {
 	sushiswapRouterFixture,
@@ -23,8 +27,8 @@ import {
 import {
 	ETHmx,
 	ETHmx__factory,
-	ETHmxMinter,
-	ETHmxMinter__factory,
+	MockETHmxMinter,
+	MockETHmxMinter__factory,
 	ETHtxAMM,
 	ETHtxAMM__factory,
 	MockETHtx,
@@ -37,12 +41,12 @@ import {
 	ERC20__factory,
 } from '../../build/types/ethers-v5';
 import { Contract } from 'ethers';
+import { mineBlock as mineBlockWithProvider } from '../helpers/timeTravel';
 
 const contractName = 'ETHmxMinter';
 
 const defaultGasPrice = parseGwei('200');
 const ethmxMintParams: IETHmxMintParams = {
-	earlyThreshold: parseEther('3000'),
 	cCapNum: 10,
 	cCapDen: 1,
 	zetaFloorNum: 2,
@@ -71,8 +75,16 @@ function ethmxFromEth(
 	cRatio: { num: BigNumber; den: BigNumber },
 	cTarget = { num: cTargetNum, den: cTargetDen },
 	mp = ethmxMintParams,
+	inGenesis = false,
 ): BigNumber {
-	return ethmxFromEthOrig(totalGiven, amountETH, cRatio, cTarget, mp);
+	return ethmxFromEthOrig(
+		totalGiven,
+		amountETH,
+		cRatio,
+		cTarget,
+		mp,
+		inGenesis,
+	);
 }
 
 function calcFee(amount: BigNumber): BigNumber {
@@ -83,14 +95,19 @@ function applyFee(amount: BigNumber): BigNumber {
 	return amount.sub(calcFee(amount));
 }
 
+async function mineBlock(fixture: Fixture): Promise<void> {
+	const { contract } = fixture;
+	await mineBlockWithProvider(contract.provider as JsonRpcProvider);
+}
+
 interface Fixture {
 	deployer: string;
 	deployerSigner: JsonRpcSigner;
 	tester: string;
 	testerSigner: JsonRpcSigner;
-	contract: ETHmxMinter;
-	contractImpl: ETHmxMinter;
-	testerContract: ETHmxMinter;
+	contract: MockETHmxMinter;
+	contractImpl: MockETHmxMinter;
+	testerContract: MockETHmxMinter;
 	ethmx: ETHmx;
 	ethtx: MockETHtx;
 	ethtxAMM: ETHtxAMM;
@@ -151,8 +168,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			router: uniRouter,
 		} = await uniswapRouterFixture(deployer, weth.address);
 
-		const result = await deploy('ETHmxMinterTest', {
-			contract: 'ETHmxMinter',
+		const result = await deploy('MockETHmxMinter', {
 			from: deployer,
 			log: true,
 			proxy: {
@@ -163,7 +179,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			},
 			args: [deployer],
 		});
-		const contract = ETHmxMinter__factory.connect(
+		const contract = MockETHmxMinter__factory.connect(
 			result.address,
 			deployerSigner,
 		);
@@ -180,8 +196,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			lpRecipient,
 		});
 
-		const contractImpl = ETHmxMinter__factory.connect(
-			(await deployments.get('ETHmxMinterTest_Implementation')).address,
+		const contractImpl = MockETHmxMinter__factory.connect(
+			(await deployments.get('MockETHmxMinter_Implementation')).address,
 			deployerSigner,
 		);
 
@@ -259,7 +275,6 @@ describe(contractName, function () {
 			expect(await contract.totalGiven(), 'totalGiven mismatch').to.eq(0);
 
 			const [
-				earlyThreshold,
 				cCapNum,
 				cCapDen,
 				zetaFloorNum,
@@ -268,9 +283,6 @@ describe(contractName, function () {
 				zetaCeilDen,
 			] = await contract.ethmxMintParams();
 			const mp = ethmxMintParams;
-			expect(earlyThreshold, 'earlyThreshold mismatch').to.eq(
-				mp.earlyThreshold,
-			);
 			expect(cCapNum, 'cCapNum mismatch').to.eq(mp.cCapNum);
 			expect(cCapDen, 'cCapDen mismatch').to.eq(mp.cCapDen);
 			expect(zetaFloorNum, 'zetaFloorNum mismatch').to.eq(mp.zetaFloorNum);
@@ -354,16 +366,43 @@ describe(contractName, function () {
 
 	describe('ethmxFromEth', function () {
 		describe('should be correct', function () {
-			describe('without early bonus', function () {
+			describe('after genesis', function () {
+				let clock: FakeTimers.InstalledClock;
 				const mp = {
 					...ethmxMintParams,
-					earlyThreshold: Zero,
 				};
 				const cTarget = { num: cTargetNum, den: cTargetDen };
 
 				beforeEach(async function () {
 					const { contract } = fixture;
 					await contract.setEthmxMintParams(mp);
+
+					clock = FakeTimers.install({
+						now: GENESIS_END * 1000,
+						shouldAdvanceTime: true,
+					});
+
+					// Remove bonus for first mint after genesis
+					await contract.setInGenesis(false);
+				});
+
+				afterEach(function () {
+					clock.uninstall();
+				});
+
+				it('should be after genesis', async function () {
+					const { contract } = fixture;
+					expect(clock.now / 1000, 'clock time mismatch').to.be.gte(
+						GENESIS_END,
+					);
+
+					// const blockNumber = await contract.provider.getBlockNumber();
+					// const block = await contract.provider.getBlock(blockNumber);
+					// expect(block.timestamp, 'block.timestamp < genesis end').to.be.gte(
+					// 	GENESIS_END,
+					// );
+
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.false;
 				});
 
 				it('when liabilities == 0 (cRatio > cCap)', async function () {
@@ -656,19 +695,86 @@ describe(contractName, function () {
 				});
 			});
 
-			describe('with early bonus', function () {
+			describe('before genesis', function () {
+				let clock: FakeTimers.InstalledClock;
+				const unixTime = GENESIS_START - 604800;
+				const customEthmxFromEth = (
+					totalGiven: BigNumber,
+					amountETH: BigNumber,
+					inGenesis = true,
+				): BigNumber => {
+					return ethmxFromEth(
+						totalGiven,
+						amountETH,
+						{
+							num: Zero,
+							den: Zero,
+						},
+						{ num: cTargetNum, den: cTargetDen },
+						ethmxMintParams,
+						inGenesis,
+					);
+				};
+
+				beforeEach(async function () {
+					clock = FakeTimers.install({
+						now: unixTime * 1000,
+						shouldAdvanceTime: true,
+					});
+					await mineBlock(fixture);
+				});
+
+				afterEach(function () {
+					clock.uninstall();
+				});
+
+				it('should be before genesis', async function () {
+					const { contract } = fixture;
+					expect(clock.now / 1000, 'clock time mismatch').to.be.lt(
+						GENESIS_START,
+					);
+
+					// const blockNumber = await contract.provider.getBlockNumber();
+					// const block = await contract.provider.getBlock(blockNumber);
+					// expect(block.timestamp, 'block.timestamp >= genesis start').to.be.lt(
+					// 	GENESIS_START,
+					// );
+
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.true;
+				});
+
 				it('when amountIn == 1wei', async function () {
 					const { contract } = fixture;
 
 					const amount = One;
 					const expected = BigNumber.from(4);
-					expect(
-						ethmxFromEth(Zero, amount, {
-							num: Zero,
-							den: Zero,
-						}),
-						'ts impl mismatch',
-					).to.eq(expected);
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when amountIn == GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const amount = GENESIS_AMOUNT;
+					const expected = GENESIS_AMOUNT.mul(4);
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when amountIn > GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const amount = GENESIS_AMOUNT.add(parseEther('10'));
+					const expected = GENESIS_AMOUNT.mul(4).add(parseEther('20'));
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
 
 					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 				});
@@ -677,126 +783,210 @@ describe(contractName, function () {
 					const { contract } = fixture;
 
 					const amount = parseEther('10');
-					const expected = parseUnits('39966666666666666667', 'wei');
-					expect(
-						ethmxFromEth(Zero, amount, {
+					const expected = parseEther('40');
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+			});
+
+			describe('during genesis', function () {
+				let clock: FakeTimers.InstalledClock;
+				const customEthmxFromEth = (
+					totalGiven: BigNumber,
+					amountETH: BigNumber,
+					inGenesis = true,
+				): BigNumber => {
+					return ethmxFromEth(
+						totalGiven,
+						amountETH,
+						{
 							num: Zero,
 							den: Zero,
-						}),
-						'ts impl mismatch',
-					).to.eq(expected);
+						},
+						{ num: cTargetNum, den: cTargetDen },
+						ethmxMintParams,
+						inGenesis,
+					);
+				};
+
+				beforeEach(async function () {
+					clock = FakeTimers.install({
+						now: GENESIS_START * 1000,
+						shouldAdvanceTime: true,
+					});
+					await mineBlock(fixture);
+				});
+
+				afterEach(function () {
+					clock.uninstall();
+				});
+
+				it('should be in genesis', async function () {
+					const { contract } = fixture;
+					expect(clock.now / 1000, 'clock time mismatch').to.be.gte(
+						GENESIS_START,
+					);
+					expect(clock.now / 1000, 'clock time mismatch').to.be.lt(
+						GENESIS_END,
+					);
+
+					// const blockNumber = await contract.provider.getBlockNumber();
+					// const block = await contract.provider.getBlock(blockNumber);
+					// expect(block.timestamp, 'block.timestamp < genesis start').to.be.gte(
+					// 	GENESIS_START,
+					// );
+					// expect(block.timestamp, 'block.timestamp > genesis end').to.be.lte(
+					// 	GENESIS_END,
+					// );
+
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.true;
+				});
+
+				it('when amountIn == 1wei', async function () {
+					const { contract } = fixture;
+
+					const amount = One;
+					const expected = BigNumber.from(4);
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
 
 					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 				});
 
-				it('when totalGiven == earlyThreshold / 4', async function () {
+				it('when amountIn == GENESIS_AMOUNT', async function () {
 					const { contract } = fixture;
 
-					const ethGiven = ethmxMintParams.earlyThreshold.div(4);
+					const amount = GENESIS_AMOUNT;
+					const expected = GENESIS_AMOUNT.mul(4);
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when amountIn > GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const amount = GENESIS_AMOUNT.add(parseEther('10'));
+					const expected = GENESIS_AMOUNT.mul(4).add(parseEther('20'));
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when totalGiven == 0', async function () {
+					const { contract } = fixture;
+
+					const amount = parseEther('10');
+					const expected = parseEther('40');
+					expect(customEthmxFromEth(Zero, amount), 'ts impl mismatch').to.eq(
+						expected,
+					);
+
+					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
+				});
+
+				it('when totalGiven == GENESIS_AMOUNT / 4', async function () {
+					const { contract } = fixture;
+
+					const ethGiven = GENESIS_AMOUNT.div(4);
 					await contract.mint({ value: ethGiven });
 
 					const amount = parseEther('10');
-					const expected = parseUnits('34966666666666666667', 'wei');
+					const expected = parseEther('40');
 					expect(
-						ethmxFromEth(ethGiven, amount, {
-							num: Zero,
-							den: Zero,
-						}),
+						customEthmxFromEth(ethGiven, amount),
 						'ts impl mismatch',
 					).to.eq(expected);
 
 					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 				});
 
-				it('when totalGiven == earlyThreshold / 2', async function () {
+				it('when totalGiven == GENESIS_AMOUNT / 2', async function () {
 					const { contract } = fixture;
 
-					const ethGiven = ethmxMintParams.earlyThreshold.div(2);
+					const ethGiven = GENESIS_AMOUNT.div(2);
 					await contract.mint({ value: ethGiven });
 
 					const amount = parseEther('10');
-					const expected = parseUnits('29966666666666666667', 'wei');
+					const expected = parseEther('40');
 					expect(
-						ethmxFromEth(ethGiven, amount, {
-							num: Zero,
-							den: Zero,
-						}),
+						customEthmxFromEth(ethGiven, amount),
 						'ts impl mismatch',
 					).to.eq(expected);
 
 					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 				});
 
-				it('when totalGiven == earlyThreshold * 3 / 4', async function () {
+				it('when totalGiven == GENESIS_AMOUNT * 3 / 4', async function () {
 					const { contract } = fixture;
 
-					const ethGiven = ethmxMintParams.earlyThreshold.mul(3).div(4);
+					const ethGiven = GENESIS_AMOUNT.mul(3).div(4);
 					await contract.mint({ value: ethGiven });
 
 					const amount = parseEther('10');
-					const expected = parseUnits('24966666666666666667', 'wei');
+					const expected = parseEther('40');
 					expect(
-						ethmxFromEth(ethGiven, amount, {
-							num: Zero,
-							den: Zero,
-						}),
+						customEthmxFromEth(ethGiven, amount),
 						'ts impl mismatch',
 					).to.eq(expected);
 
 					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 				});
 
-				it('when totalGiven == earlyThreshold', async function () {
+				it('when totalGiven == GENESIS_AMOUNT', async function () {
 					const { contract } = fixture;
 
-					const ethGiven = ethmxMintParams.earlyThreshold;
+					const ethGiven = GENESIS_AMOUNT;
 					await contract.mint({ value: ethGiven });
 
 					const amount = parseEther('10');
 					const expected = parseEther('20');
 					expect(
-						ethmxFromEth(ethGiven, amount, {
-							num: Zero,
-							den: Zero,
-						}),
+						customEthmxFromEth(ethGiven, amount, false),
 						'ts impl mismatch',
 					).to.eq(expected);
 
 					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 				});
 
-				it('when totalGiven > earlyThreshold', async function () {
+				it('when totalGiven > GENESIS_AMOUNT', async function () {
 					const { contract } = fixture;
 
-					const ethGiven = ethmxMintParams.earlyThreshold.add(1);
+					const ethGiven = GENESIS_AMOUNT.add(1);
 					await contract.mint({ value: ethGiven });
+
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.false;
 
 					const amount = parseEther('10');
 					const expected = parseEther('20');
 					expect(
-						ethmxFromEth(ethGiven, amount, {
-							num: Zero,
-							den: Zero,
-						}),
+						customEthmxFromEth(ethGiven, amount, false),
 						'ts impl mismatch',
 					).to.eq(expected);
 
 					expect(await contract.ethmxFromEth(amount)).to.eq(expected);
 				});
 
-				it('when amountEthIn > earlyThreshold - totalGiven', async function () {
+				it('when amountEthIn > GENESIS_AMOUNT - totalGiven', async function () {
 					const { contract } = fixture;
 
-					const amount = parseEther('10');
-					const ethGiven = ethmxMintParams.earlyThreshold.sub(amount.div(2));
+					const amount = parseEther('20');
+					const ethGiven = GENESIS_AMOUNT.sub(amount.div(4));
 					await contract.mint({ value: ethGiven });
 
-					const expected = parseUnits('20008333333333333333', 'wei');
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.true;
+
+					const expected = parseEther('50');
 					expect(
-						ethmxFromEth(ethGiven, amount, {
-							num: Zero,
-							den: Zero,
-						}),
+						customEthmxFromEth(ethGiven, amount),
 						'ts impl mismatch',
 					).to.eq(expected);
 
@@ -823,7 +1013,190 @@ describe(contractName, function () {
 			.add(ethtxMintParams.minMintPrice);
 
 		describe('should be correct', function () {
+			describe('before genesis', function () {
+				let clock: FakeTimers.InstalledClock;
+				const unixTime = GENESIS_START - 604800;
+				const basePrice = defaultGasPrice
+					.mul(ethtxMintParams.mu)
+					.add(ethtxMintParams.minMintPrice);
+
+				beforeEach(async function () {
+					clock = FakeTimers.install({
+						now: unixTime * 1000,
+						shouldAdvanceTime: true,
+					});
+					await mineBlock(fixture);
+				});
+
+				afterEach(function () {
+					clock.uninstall();
+				});
+
+				it('should be before genesis', async function () {
+					const { contract } = fixture;
+					expect(clock.now / 1000, 'clock time mismatch').to.be.lt(
+						GENESIS_START,
+					);
+
+					// const blockNumber = await contract.provider.getBlockNumber();
+					// const block = await contract.provider.getBlock(blockNumber);
+					// expect(block.timestamp, 'block.timestamp >= genesis start').to.be.lt(
+					// 	GENESIS_START,
+					// );
+
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.true;
+				});
+
+				it('when amountETHIn < GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const ethIn = parseEther('10');
+					const expected = parseETHtx('226.757369614512471655');
+					expect(
+						ethToEthtx(basePrice.mul(2), ethIn),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethtxFromEth(ethIn)).to.eq(expected);
+				});
+
+				it('when amountETHIn == GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const ethIn = GENESIS_AMOUNT;
+					const expected = parseETHtx('68027.210884353741496598');
+					expect(
+						ethToEthtx(basePrice.mul(2), ethIn),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethtxFromEth(ethIn)).to.eq(expected);
+				});
+
+				it('when amountETHIn > GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const ethOver = parseEther('10');
+					const ethIn = GENESIS_AMOUNT.add(ethOver);
+					const expected = parseETHtx('68480.725623582766439908');
+					const before = ethToEthtx(basePrice.mul(2), GENESIS_AMOUNT);
+					const after = ethToEthtx(basePrice, ethOver);
+					expect(before.add(after), 'ts impl mismatch').to.eq(expected);
+
+					expect(await contract.ethtxFromEth(ethIn)).to.eq(expected);
+				});
+			});
+
+			describe('during genesis', function () {
+				let clock: FakeTimers.InstalledClock;
+
+				beforeEach(async function () {
+					clock = FakeTimers.install({
+						now: GENESIS_START * 1000,
+						shouldAdvanceTime: true,
+					});
+					await mineBlock(fixture);
+				});
+
+				afterEach(function () {
+					clock.uninstall();
+				});
+
+				it('should be in genesis', async function () {
+					const { contract } = fixture;
+					expect(clock.now / 1000, 'clock time mismatch').to.be.gte(
+						GENESIS_START,
+					);
+					expect(clock.now / 1000, 'clock time mismatch').to.be.lt(
+						GENESIS_END,
+					);
+
+					// const blockNumber = await contract.provider.getBlockNumber();
+					// const block = await contract.provider.getBlock(blockNumber);
+					// expect(block.timestamp, 'block.timestamp < genesis start').to.be.gte(
+					// 	GENESIS_START,
+					// );
+					// expect(block.timestamp, 'block.timestamp > genesis end').to.be.lte(
+					// 	GENESIS_END,
+					// );
+
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.true;
+				});
+
+				it('when amountETHIn < GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const ethIn = parseEther('10');
+					const expected = parseETHtx('226.757369614512471655');
+					expect(
+						ethToEthtx(basePrice.mul(2), ethIn),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethtxFromEth(ethIn)).to.eq(expected);
+				});
+
+				it('when amountETHIn == GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const ethIn = GENESIS_AMOUNT;
+					const expected = parseETHtx('68027.210884353741496598');
+					expect(
+						ethToEthtx(basePrice.mul(2), ethIn),
+						'ts impl mismatch',
+					).to.eq(expected);
+
+					expect(await contract.ethtxFromEth(ethIn)).to.eq(expected);
+				});
+
+				it('when amountETHIn > GENESIS_AMOUNT', async function () {
+					const { contract } = fixture;
+
+					const ethOver = parseEther('10');
+					const ethIn = GENESIS_AMOUNT.add(ethOver);
+					const expected = parseETHtx('68480.725623582766439908');
+					const before = ethToEthtx(basePrice.mul(2), GENESIS_AMOUNT);
+					const after = ethToEthtx(basePrice, ethOver);
+					expect(before.add(after), 'ts impl mismatch').to.eq(expected);
+
+					expect(await contract.ethtxFromEth(ethIn)).to.eq(expected);
+				});
+			});
+
 			describe('after genesis', async function () {
+				let clock: FakeTimers.InstalledClock;
+
+				beforeEach(async function () {
+					const { contract } = fixture;
+
+					clock = FakeTimers.install({
+						now: GENESIS_END * 1000,
+						shouldAdvanceTime: true,
+					});
+
+					// Remove bonus for first mint after genesis
+					await contract.setInGenesis(false);
+				});
+
+				afterEach(function () {
+					clock.uninstall();
+				});
+
+				it('should be after genesis', async function () {
+					const { contract } = fixture;
+					expect(clock.now / 1000, 'clock time mismatch').to.be.gte(
+						GENESIS_END,
+					);
+
+					// const blockNumber = await contract.provider.getBlockNumber();
+					// const block = await contract.provider.getBlock(blockNumber);
+					// expect(block.timestamp, 'block.timestamp < genesis end').to.be.gte(
+					// 	GENESIS_END,
+					// );
+
+					expect(await contract.inGenesis(), 'inGenesis mismatch').to.be.false;
+				});
+
 				it('when amountETHIn == 0', async function () {
 					const { contract } = fixture;
 					expect(await contract.ethtxFromEth(0)).to.eq(0);
@@ -888,6 +1261,10 @@ describe(contractName, function () {
 
 					const tests = [
 						{ amtEth: One, expected: BigNumber.from(45) },
+						{
+							amtEth: parseEther('1'),
+							expected: parseEther('26.013141275649436735'),
+						},
 						{
 							amtEth: parseEther('5'),
 							expected: parseETHtx('135.061740263758361131'),
@@ -1164,274 +1541,403 @@ describe(contractName, function () {
 	describe('mint', function () {
 		const amount = parseEther('10');
 
-		describe('should mint', function () {
+		it('should revert before genesis', async function () {
+			const { contract } = fixture;
+			const unixTime = GENESIS_START - 604800;
+			const clock = FakeTimers.install({
+				now: unixTime * 1000,
+				shouldAdvanceTime: true,
+			});
+			await mineBlock(fixture);
+
+			await expect(contract.mint({ value: 1 })).to.be.revertedWith(
+				'before genesis',
+			);
+
+			clock.uninstall();
+		});
+
+		describe('should mint during genesis', function () {
+			let clock: FakeTimers.InstalledClock;
+
 			beforeEach(async function () {
+				clock = FakeTimers.install({
+					now: GENESIS_START * 1000,
+					shouldAdvanceTime: true,
+				});
+				await mineBlock(fixture);
+			});
+
+			afterEach(function () {
+				clock.uninstall();
+			});
+
+			it('should revert when sent is zero', async function () {
 				const { contract } = fixture;
+				await expect(contract.mint({ value: 0 })).to.be.revertedWith(
+					'cannot mint with zero amount',
+				);
+			});
+
+			it('zero ETHtx', async function () {
+				const { contract, ethtx } = fixture;
 				await contract.mint({ value: amount });
-			});
-
-			it('and wrap and transfer correct WETH amount', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(amount);
-			});
-
-			it('correct ETHtx amount', async function () {
-				const { contract, ethtxAMM } = fixture;
-				const expected = await contract.ethtxFromEth(amount);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				expect(await ethtx.totalSupply()).to.eq(0);
 			});
 
 			it('correct ETHmx amount', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
+				const { contract, deployer, ethmx } = fixture;
+				const expected = await contract.ethmxFromEth(amount);
+				await contract.mint({ value: amount });
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
+			it('correct ETHtx amount after genesis', async function () {
+				const { contract, ethtx } = fixture;
+
+				let expected = await contract.ethtxFromEth(amount);
+				await contract.mint({ value: amount });
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch before',
+				).to.be.true;
+
+				clock.setSystemTime(GENESIS_END * 1000);
+
+				expected = expected.add(await contract.ethtxFromEth(amount));
+				await contract.mint({ value: amount });
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch after',
+				).to.be.false;
+
+				expect(await ethtx.totalSupply()).to.eq(expected);
+			});
+
+			it('correct ETHmx amount after genesis', async function () {
+				const { contract, ethmx } = fixture;
+
+				let expected = await contract.ethmxFromEth(amount);
+				await contract.mint({ value: amount });
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch before',
+				).to.be.true;
+
+				clock.setSystemTime(GENESIS_END * 1000);
+
+				expected = expected.add(await contract.ethmxFromEth(amount));
+				await contract.mint({ value: amount });
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch after',
+				).to.be.false;
+
+				expect(await ethmx.totalSupply()).to.eq(expected);
 			});
 		});
 
-		describe('should mint with one LP target', function () {
-			let amountEthtx: BigNumber;
-			let ethtxToLp: BigNumber;
-			let ethToLp: BigNumber;
+		describe('should mint after genesis', function () {
+			let clock: FakeTimers.InstalledClock;
 
 			beforeEach(async function () {
-				const { contract, ethtx, uniRouter } = fixture;
-				await contract.addLp(uniRouter.address);
-				await contract.mint({ value: amount });
-
-				amountEthtx = await ethtx.totalSupply();
-				ethtxToLp = amountEthtx.mul(lpShareNumerator).div(lpShareDenominator);
-				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
-			});
-
-			it('and wrap and transfer correct WETH amount to AMM', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
-					amount.sub(ethToLp),
-				);
-			});
-
-			it('and wrap and transfer correct WETH amount to LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(ethToLp);
-			});
-
-			it('correct ETHtx amount to AMM', async function () {
-				const { ethtxAMM } = fixture;
-				const expected = amountEthtx.sub(ethtxToLp);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
-
-			it('correct ETHtx amount to LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
-			});
-
-			it('sent LP to lpRecipient', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pairAddr = await uniFactory.getPair(ethtx.address, weth.address);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
-
-			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
-				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
-			});
-
-			it('and increase totalGiven', async function () {
 				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
-
-		describe.skip('should mint with one LP target and different price', function () {
-			const amountEthtx = ethToEthtx(mintGasPrice, amount);
-			const reserveEth = amount;
-			const reserveEthtxBeforeFee = amountEthtx.div(2);
-			const reserveEthtx = applyFee(reserveEthtxBeforeFee);
-			const ethToLp = ethtxToEth(
-				defaultGasPrice,
-				amountEthtx.mul(lpShareNumerator).div(lpShareDenominator),
-			);
-			const ethtxToLp = ethToLp.mul(reserveEthtx).div(reserveEth);
-
-			beforeEach(async function () {
-				const { contract, deployer, ethtx, sushiRouter, weth } = fixture;
-
-				await contract.addLp(sushiRouter.address);
-
-				await weth.deposit({ value: reserveEth });
-				await ethtx.mockMint(deployer, reserveEthtxBeforeFee);
-
-				await weth.approve(sushiRouter.address, reserveEth);
-				await ethtx.increaseAllowance(
-					sushiRouter.address,
-					reserveEthtxBeforeFee,
-				);
-
-				await sushiRouter.addLiquidity(
-					ethtx.address,
-					weth.address,
-					reserveEthtxBeforeFee,
-					reserveEth,
-					0,
-					0,
-					deployer,
-					MaxUint256,
-				);
-
-				await contract.mint({ value: amount });
-			});
-
-			it('and wrap and transfer correct WETH amount to AMM', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
-					amount.sub(ethToLp),
-				);
-			});
-
-			it('and wrap and transfer correct WETH amount to LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(reserveEth.add(ethToLp));
-			});
-
-			it('correct ETHtx amount to AMM', async function () {
-				const { ethtxAMM } = fixture;
-				const expected = amountEthtx.sub(ethtxToLp);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
-
-			it('correct ETHtx amount to LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(reserveEthtx.add(ethtxToLp));
-			});
-
-			it('sent LP to lpRecipient', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pairAddr = await sushiFactory.getPair(
-					ethtx.address,
-					weth.address,
-				);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
-
-			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx, ethtxAMM } = fixture;
-				const [collat, liability] = await ethtxAMM.cRatio();
-				const expected = ethmxFromEth(Zero, amount, {
-					num: collat,
-					den: liability,
+				clock = FakeTimers.install({
+					now: GENESIS_END * 1000,
+					shouldAdvanceTime: true,
 				});
-				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				await contract.setInGenesis(false);
 			});
 
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
-
-		describe('should mint with multiple LP targets', function () {
-			let amountEthtx: BigNumber;
-			let ethtxToLp: BigNumber;
-			let ethToLp: BigNumber;
-
-			beforeEach(async function () {
-				const { contract, ethtx, sushiRouter, uniRouter } = fixture;
-				await contract.addLp(uniRouter.address);
-				await contract.addLp(sushiRouter.address);
-				await contract.mint({ value: amount });
-
-				amountEthtx = await ethtx.totalSupply();
-				ethtxToLp = amountEthtx
-					.mul(lpShareNumerator)
-					.div(lpShareDenominator)
-					.div(2);
-				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+			afterEach(function () {
+				clock.uninstall();
 			});
 
-			it('and wrap and transfer correct WETH amount to AMM', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
-					amount.sub(ethToLp.mul(2)),
+			describe('should mint', function () {
+				beforeEach(async function () {
+					const { contract } = fixture;
+					await contract.mint({ value: amount });
+				});
+
+				it('and wrap and transfer correct WETH amount', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(amount);
+				});
+
+				it('correct ETHtx amount', async function () {
+					const { contract, ethtxAMM } = fixture;
+					const expected = await contract.ethtxFromEth(amount);
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
+
+				it('correct ETHmx amount', async function () {
+					const { deployer, ethmx } = fixture;
+					const expected = ethmxFromEth(Zero, amount, {
+						num: Zero,
+						den: Zero,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
+			});
+
+			describe('should mint with one LP target', function () {
+				let amountEthtx: BigNumber;
+				let ethtxToLp: BigNumber;
+				let ethToLp: BigNumber;
+
+				beforeEach(async function () {
+					const { contract, ethtx, uniRouter } = fixture;
+					await contract.addLp(uniRouter.address);
+					await contract.mint({ value: amount });
+
+					amountEthtx = await ethtx.totalSupply();
+					ethtxToLp = amountEthtx
+						.mul(lpShareNumerator)
+						.div(lpShareDenominator);
+					ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+				});
+
+				it('and wrap and transfer correct WETH amount to AMM', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
+						amount.sub(ethToLp),
+					);
+				});
+
+				it('and wrap and transfer correct WETH amount to LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(ethToLp);
+				});
+
+				it('correct ETHtx amount to AMM', async function () {
+					const { ethtxAMM } = fixture;
+					const expected = amountEthtx.sub(ethtxToLp);
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
+
+				it('correct ETHtx amount to LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
+				});
+
+				it('sent LP to lpRecipient', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pairAddr = await uniFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('correct ETHmx amount to sender', async function () {
+					const { deployer, ethmx } = fixture;
+					const expected = ethmxFromEth(Zero, amount, {
+						num: Zero,
+						den: Zero,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
+			});
+
+			describe.skip('should mint with one LP target and different price', function () {
+				const amountEthtx = ethToEthtx(mintGasPrice, amount);
+				const reserveEth = amount;
+				const reserveEthtxBeforeFee = amountEthtx.div(2);
+				const reserveEthtx = applyFee(reserveEthtxBeforeFee);
+				const ethToLp = ethtxToEth(
+					defaultGasPrice,
+					amountEthtx.mul(lpShareNumerator).div(lpShareDenominator),
 				);
+				const ethtxToLp = ethToLp.mul(reserveEthtx).div(reserveEth);
+
+				beforeEach(async function () {
+					const { contract, deployer, ethtx, sushiRouter, weth } = fixture;
+
+					await contract.addLp(sushiRouter.address);
+
+					await weth.deposit({ value: reserveEth });
+					await ethtx.mockMint(deployer, reserveEthtxBeforeFee);
+
+					await weth.approve(sushiRouter.address, reserveEth);
+					await ethtx.increaseAllowance(
+						sushiRouter.address,
+						reserveEthtxBeforeFee,
+					);
+
+					await sushiRouter.addLiquidity(
+						ethtx.address,
+						weth.address,
+						reserveEthtxBeforeFee,
+						reserveEth,
+						0,
+						0,
+						deployer,
+						MaxUint256,
+					);
+
+					await contract.mint({ value: amount });
+				});
+
+				it('and wrap and transfer correct WETH amount to AMM', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
+						amount.sub(ethToLp),
+					);
+				});
+
+				it('and wrap and transfer correct WETH amount to LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(reserveEth.add(ethToLp));
+				});
+
+				it('correct ETHtx amount to AMM', async function () {
+					const { ethtxAMM } = fixture;
+					const expected = amountEthtx.sub(ethtxToLp);
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
+
+				it('correct ETHtx amount to LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(
+						reserveEthtx.add(ethtxToLp),
+					);
+				});
+
+				it('sent LP to lpRecipient', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pairAddr = await sushiFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('correct ETHmx amount to sender', async function () {
+					const { deployer, ethmx, ethtxAMM } = fixture;
+					const [collat, liability] = await ethtxAMM.cRatio();
+					const expected = ethmxFromEth(Zero, amount, {
+						num: collat,
+						den: liability,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
 			});
 
-			it('and wrap and transfer correct WETH amount to Sushi LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(ethToLp);
-			});
+			describe('should mint with multiple LP targets', function () {
+				let amountEthtx: BigNumber;
+				let ethtxToLp: BigNumber;
+				let ethToLp: BigNumber;
 
-			it('and wrap and transfer correct WETH amount to UNI LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(ethToLp);
-			});
+				beforeEach(async function () {
+					const { contract, ethtx, sushiRouter, uniRouter } = fixture;
+					await contract.addLp(uniRouter.address);
+					await contract.addLp(sushiRouter.address);
+					await contract.mint({ value: amount });
 
-			it('correct ETHtx amount to AMM', async function () {
-				const { ethtxAMM } = fixture;
-				const expected = amountEthtx.sub(ethtxToLp.mul(2));
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
+					amountEthtx = await ethtx.totalSupply();
+					ethtxToLp = amountEthtx
+						.mul(lpShareNumerator)
+						.div(lpShareDenominator)
+						.div(2);
+					ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+				});
 
-			it('correct ETHtx amount to Sushi LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
-			});
+				it('and wrap and transfer correct WETH amount to AMM', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
+						amount.sub(ethToLp.mul(2)),
+					);
+				});
 
-			it('correct ETHtx amount to UNI LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
-			});
+				it('and wrap and transfer correct WETH amount to Sushi LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(ethToLp);
+				});
 
-			it('sent Sushi LP to lpRecipient', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pairAddr = await sushiFactory.getPair(
-					ethtx.address,
-					weth.address,
-				);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
+				it('and wrap and transfer correct WETH amount to UNI LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(ethToLp);
+				});
 
-			it('sent UNI LP to lpRecipient', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pairAddr = await uniFactory.getPair(ethtx.address, weth.address);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
+				it('correct ETHtx amount to AMM', async function () {
+					const { ethtxAMM } = fixture;
+					const expected = amountEthtx.sub(ethtxToLp.mul(2));
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
 
-			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
-				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
-			});
+				it('correct ETHtx amount to Sushi LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
+				});
 
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
+				it('correct ETHtx amount to UNI LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
+				});
 
-		it('should revert when sent is zero', async function () {
-			const { contract } = fixture;
-			await expect(contract.mint({ value: 0 })).to.be.revertedWith(
-				'cannot mint with zero amount',
-			);
+				it('sent Sushi LP to lpRecipient', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pairAddr = await sushiFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('sent UNI LP to lpRecipient', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pairAddr = await uniFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('correct ETHmx amount to sender', async function () {
+					const { deployer, ethmx } = fixture;
+					const expected = ethmxFromEth(Zero, amount, {
+						num: Zero,
+						den: Zero,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
+			});
 		});
 
 		it('should revert when paused', async function () {
@@ -1590,284 +2096,417 @@ describe(contractName, function () {
 	describe('mintWithWETH', function () {
 		const amount = parseEther('10');
 
-		describe('should mint', function () {
+		it('should revert before genesis', async function () {
+			const { contract } = fixture;
+			const unixTime = GENESIS_START - 604800;
+			const clock = FakeTimers.install({
+				now: unixTime * 1000,
+				shouldAdvanceTime: true,
+			});
+			await mineBlock(fixture);
+
+			await expect(contract.mintWithWETH(1)).to.be.revertedWith(
+				'before genesis',
+			);
+
+			clock.uninstall();
+		});
+
+		describe('should mint during genesis', function () {
+			let clock: FakeTimers.InstalledClock;
+
 			beforeEach(async function () {
+				clock = FakeTimers.install({
+					now: GENESIS_START * 1000,
+					shouldAdvanceTime: true,
+				});
+				await mineBlock(fixture);
+
 				const { contract, weth } = fixture;
-				await weth.deposit({ value: amount });
-				await weth.approve(contract.address, amount);
+				await weth.deposit({ value: amount.mul(2) });
+				await weth.approve(contract.address, amount.mul(2));
+			});
+
+			afterEach(function () {
+				clock.uninstall();
+			});
+
+			it('should revert when amount is zero', async function () {
+				const { contract } = fixture;
+				await expect(contract.mintWithWETH(0)).to.be.revertedWith(
+					'cannot mint with zero amount',
+				);
+			});
+
+			it('zero ETHtx', async function () {
+				const { contract, ethtx } = fixture;
 				await contract.mintWithWETH(amount);
-			});
-
-			it('and transfer correct WETH amount', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(amount);
-			});
-
-			it('correct ETHtx amount', async function () {
-				const { contract, ethtxAMM } = fixture;
-				const expected = await contract.ethtxFromEth(amount);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				expect(await ethtx.totalSupply()).to.eq(0);
 			});
 
 			it('correct ETHmx amount', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
+				const { contract, deployer, ethmx } = fixture;
+				const expected = await contract.ethmxFromEth(amount);
+				await contract.mintWithWETH(amount);
 				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
 			});
 
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
+			it('correct ETHtx amount after genesis', async function () {
+				const { contract, ethtx } = fixture;
+
+				let expected = await contract.ethtxFromEth(amount);
+				await contract.mintWithWETH(amount);
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch before',
+				).to.be.true;
+
+				clock.setSystemTime(GENESIS_END * 1000);
+
+				expected = expected.add(await contract.ethtxFromEth(amount));
+				await contract.mintWithWETH(amount);
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch after',
+				).to.be.false;
+
+				expect(await ethtx.totalSupply()).to.eq(expected);
+			});
+
+			it('correct ETHmx amount after genesis', async function () {
+				const { contract, ethmx } = fixture;
+
+				let expected = await contract.ethmxFromEth(amount);
+				await contract.mintWithWETH(amount);
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch before',
+				).to.be.true;
+
+				clock.setSystemTime(GENESIS_END * 1000);
+
+				expected = expected.add(await contract.ethmxFromEth(amount));
+				await contract.mintWithWETH(amount);
+
+				expect(
+					await contract.inGenesis(),
+					'inGenesis mismatch after',
+				).to.be.false;
+
+				expect(await ethmx.totalSupply()).to.eq(expected);
 			});
 		});
 
-		describe('should mint with one LP target', function () {
-			let amountEthtx: BigNumber;
-			let ethtxToLp: BigNumber;
-			let ethToLp: BigNumber;
+		describe('should mint after genesis', function () {
+			let clock: FakeTimers.InstalledClock;
 
 			beforeEach(async function () {
-				const { contract, ethtx, uniRouter, weth } = fixture;
-
-				await contract.addLp(uniRouter.address);
-
-				await weth.deposit({ value: amount });
-				await weth.approve(contract.address, amount);
-				await contract.mintWithWETH(amount);
-
-				amountEthtx = await ethtx.totalSupply();
-				ethtxToLp = amountEthtx.mul(lpShareNumerator).div(lpShareDenominator);
-				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
-			});
-
-			it('and wrap and transfer correct WETH amount to AMM', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
-					amount.sub(ethToLp),
-				);
-			});
-
-			it('and wrap and transfer correct WETH amount to LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(ethToLp);
-			});
-
-			it('correct ETHtx amount to AMM', async function () {
-				const { ethtxAMM } = fixture;
-				const expected = amountEthtx.sub(ethtxToLp);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
-
-			it('correct ETHtx amount to LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
-			});
-
-			it('sent LP to lpRecipient', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pairAddr = await uniFactory.getPair(ethtx.address, weth.address);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
-
-			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
-				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
-			});
-
-			it('and increase totalGiven', async function () {
 				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
-
-		describe.skip('should mint with one LP target and different price', function () {
-			const amountEthtx = ethToEthtx(mintGasPrice, amount);
-			const reserveEth = amount;
-			const reserveEthtxBeforeFee = amountEthtx.div(2);
-			const reserveEthtx = applyFee(reserveEthtxBeforeFee);
-			const ethToLp = ethtxToEth(
-				defaultGasPrice,
-				amountEthtx.mul(lpShareNumerator).div(lpShareDenominator),
-			);
-			const ethtxToLp = ethToLp.mul(reserveEthtx).div(reserveEth);
-
-			beforeEach(async function () {
-				const { contract, deployer, ethtx, sushiRouter, weth } = fixture;
-
-				await contract.addLp(sushiRouter.address);
-
-				await weth.deposit({ value: reserveEth.add(amount) });
-				await ethtx.mockMint(deployer, reserveEthtxBeforeFee);
-
-				await weth.approve(sushiRouter.address, reserveEth);
-				await ethtx.increaseAllowance(
-					sushiRouter.address,
-					reserveEthtxBeforeFee,
-				);
-
-				await sushiRouter.addLiquidity(
-					ethtx.address,
-					weth.address,
-					reserveEthtxBeforeFee,
-					reserveEth,
-					0,
-					0,
-					deployer,
-					MaxUint256,
-				);
-
-				await weth.approve(contract.address, amount);
-				await contract.mintWithWETH(amount);
-			});
-
-			it('and wrap and transfer correct WETH amount to AMM', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
-					amount.sub(ethToLp),
-				);
-			});
-
-			it('and wrap and transfer correct WETH amount to LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(reserveEth.add(ethToLp));
-			});
-
-			it('correct ETHtx amount to AMM', async function () {
-				const { ethtxAMM } = fixture;
-				const expected = amountEthtx.sub(ethtxToLp);
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
-
-			it('correct ETHtx amount to LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(reserveEthtx.add(ethtxToLp));
-			});
-
-			it('sent LP to lpRecipient', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pairAddr = await sushiFactory.getPair(
-					ethtx.address,
-					weth.address,
-				);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
-
-			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx, ethtxAMM } = fixture;
-				const [collat, liability] = await ethtxAMM.cRatio();
-				const expected = ethmxFromEth(Zero, amount, {
-					num: collat,
-					den: liability,
+				clock = FakeTimers.install({
+					now: GENESIS_END * 1000,
+					shouldAdvanceTime: true,
 				});
-				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				await contract.setInGenesis(false);
 			});
 
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
-
-		describe('should mint with multiple LP targets', function () {
-			let amountEthtx: BigNumber;
-			let ethtxToLp: BigNumber;
-			let ethToLp: BigNumber;
-
-			beforeEach(async function () {
-				const { contract, ethtx, sushiRouter, uniRouter, weth } = fixture;
-				await contract.addLp(uniRouter.address);
-				await contract.addLp(sushiRouter.address);
-
-				await weth.deposit({ value: amount });
-				await weth.approve(contract.address, amount);
-				await contract.mintWithWETH(amount);
-
-				amountEthtx = await ethtx.totalSupply();
-				ethtxToLp = amountEthtx
-					.mul(lpShareNumerator)
-					.div(lpShareDenominator)
-					.div(2);
-				ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+			afterEach(function () {
+				clock.uninstall();
 			});
 
-			it('and wrap and transfer correct WETH amount to AMM', async function () {
-				const { ethtxAMM, weth } = fixture;
-				expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
-					amount.sub(ethToLp.mul(2)),
+			describe('should mint', function () {
+				beforeEach(async function () {
+					const { contract, weth } = fixture;
+					await weth.deposit({ value: amount });
+					await weth.approve(contract.address, amount);
+					await contract.mintWithWETH(amount);
+				});
+
+				it('and transfer correct WETH amount', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(amount);
+				});
+
+				it('correct ETHtx amount', async function () {
+					const { contract, ethtxAMM } = fixture;
+					const expected = await contract.ethtxFromEth(amount);
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
+
+				it('correct ETHmx amount', async function () {
+					const { deployer, ethmx } = fixture;
+					const expected = ethmxFromEth(Zero, amount, {
+						num: Zero,
+						den: Zero,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
+			});
+
+			describe('should mint with one LP target', function () {
+				let amountEthtx: BigNumber;
+				let ethtxToLp: BigNumber;
+				let ethToLp: BigNumber;
+
+				beforeEach(async function () {
+					const { contract, ethtx, uniRouter, weth } = fixture;
+
+					await contract.addLp(uniRouter.address);
+
+					await weth.deposit({ value: amount });
+					await weth.approve(contract.address, amount);
+					await contract.mintWithWETH(amount);
+
+					amountEthtx = await ethtx.totalSupply();
+					ethtxToLp = amountEthtx
+						.mul(lpShareNumerator)
+						.div(lpShareDenominator);
+					ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+				});
+
+				it('and wrap and transfer correct WETH amount to AMM', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
+						amount.sub(ethToLp),
+					);
+				});
+
+				it('and wrap and transfer correct WETH amount to LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(ethToLp);
+				});
+
+				it('correct ETHtx amount to AMM', async function () {
+					const { ethtxAMM } = fixture;
+					const expected = amountEthtx.sub(ethtxToLp);
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
+
+				it('correct ETHtx amount to LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
+				});
+
+				it('sent LP to lpRecipient', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pairAddr = await uniFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('correct ETHmx amount to sender', async function () {
+					const { deployer, ethmx } = fixture;
+					const expected = ethmxFromEth(Zero, amount, {
+						num: Zero,
+						den: Zero,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
+			});
+
+			describe.skip('should mint with one LP target and different price', function () {
+				const amountEthtx = ethToEthtx(mintGasPrice, amount);
+				const reserveEth = amount;
+				const reserveEthtxBeforeFee = amountEthtx.div(2);
+				const reserveEthtx = applyFee(reserveEthtxBeforeFee);
+				const ethToLp = ethtxToEth(
+					defaultGasPrice,
+					amountEthtx.mul(lpShareNumerator).div(lpShareDenominator),
 				);
+				const ethtxToLp = ethToLp.mul(reserveEthtx).div(reserveEth);
+
+				beforeEach(async function () {
+					const { contract, deployer, ethtx, sushiRouter, weth } = fixture;
+
+					await contract.addLp(sushiRouter.address);
+
+					await weth.deposit({ value: reserveEth.add(amount) });
+					await ethtx.mockMint(deployer, reserveEthtxBeforeFee);
+
+					await weth.approve(sushiRouter.address, reserveEth);
+					await ethtx.increaseAllowance(
+						sushiRouter.address,
+						reserveEthtxBeforeFee,
+					);
+
+					await sushiRouter.addLiquidity(
+						ethtx.address,
+						weth.address,
+						reserveEthtxBeforeFee,
+						reserveEth,
+						0,
+						0,
+						deployer,
+						MaxUint256,
+					);
+
+					await weth.approve(contract.address, amount);
+					await contract.mintWithWETH(amount);
+				});
+
+				it('and wrap and transfer correct WETH amount to AMM', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
+						amount.sub(ethToLp),
+					);
+				});
+
+				it('and wrap and transfer correct WETH amount to LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(reserveEth.add(ethToLp));
+				});
+
+				it('correct ETHtx amount to AMM', async function () {
+					const { ethtxAMM } = fixture;
+					const expected = amountEthtx.sub(ethtxToLp);
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
+
+				it('correct ETHtx amount to LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(
+						reserveEthtx.add(ethtxToLp),
+					);
+				});
+
+				it('sent LP to lpRecipient', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pairAddr = await sushiFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('correct ETHmx amount to sender', async function () {
+					const { deployer, ethmx, ethtxAMM } = fixture;
+					const [collat, liability] = await ethtxAMM.cRatio();
+					const expected = ethmxFromEth(Zero, amount, {
+						num: collat,
+						den: liability,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
 			});
 
-			it('and wrap and transfer correct WETH amount to Sushi LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(ethToLp);
-			});
+			describe('should mint with multiple LP targets', function () {
+				let amountEthtx: BigNumber;
+				let ethtxToLp: BigNumber;
+				let ethToLp: BigNumber;
 
-			it('and wrap and transfer correct WETH amount to UNI LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await weth.balanceOf(pair)).to.eq(ethToLp);
-			});
+				beforeEach(async function () {
+					const { contract, ethtx, sushiRouter, uniRouter, weth } = fixture;
+					await contract.addLp(uniRouter.address);
+					await contract.addLp(sushiRouter.address);
 
-			it('correct ETHtx amount to AMM', async function () {
-				const { ethtxAMM } = fixture;
-				const expected = amountEthtx.sub(ethtxToLp.mul(2));
-				expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
-			});
+					await weth.deposit({ value: amount });
+					await weth.approve(contract.address, amount);
+					await contract.mintWithWETH(amount);
 
-			it('correct ETHtx amount to Sushi LP', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pair = await sushiFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
-			});
+					amountEthtx = await ethtx.totalSupply();
+					ethtxToLp = amountEthtx
+						.mul(lpShareNumerator)
+						.div(lpShareDenominator)
+						.div(2);
+					ethToLp = ethtxToEth(defaultGasPrice, ethtxToLp);
+				});
 
-			it('correct ETHtx amount to UNI LP', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pair = await uniFactory.getPair(ethtx.address, weth.address);
-				expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
-			});
+				it('and wrap and transfer correct WETH amount to AMM', async function () {
+					const { ethtxAMM, weth } = fixture;
+					expect(await weth.balanceOf(ethtxAMM.address)).to.eq(
+						amount.sub(ethToLp.mul(2)),
+					);
+				});
 
-			it('sent Sushi LP to lpRecipient', async function () {
-				const { ethtx, sushiFactory, weth } = fixture;
-				const pairAddr = await sushiFactory.getPair(
-					ethtx.address,
-					weth.address,
-				);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
+				it('and wrap and transfer correct WETH amount to Sushi LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(ethToLp);
+				});
 
-			it('sent UNI LP to lpRecipient', async function () {
-				const { ethtx, uniFactory, weth } = fixture;
-				const pairAddr = await uniFactory.getPair(ethtx.address, weth.address);
-				const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
-				expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
-			});
+				it('and wrap and transfer correct WETH amount to UNI LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await weth.balanceOf(pair)).to.eq(ethToLp);
+				});
 
-			it('correct ETHmx amount to sender', async function () {
-				const { deployer, ethmx } = fixture;
-				const expected = ethmxFromEth(Zero, amount, { num: Zero, den: Zero });
-				expect(await ethmx.balanceOf(deployer)).to.eq(expected);
-			});
+				it('correct ETHtx amount to AMM', async function () {
+					const { ethtxAMM } = fixture;
+					const expected = amountEthtx.sub(ethtxToLp.mul(2));
+					expect(await ethtxAMM.ethtxAvailable()).to.eq(expected);
+				});
 
-			it('and increase totalGiven', async function () {
-				const { contract } = fixture;
-				expect(await contract.totalGiven()).to.eq(amount);
-			});
-		});
+				it('correct ETHtx amount to Sushi LP', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pair = await sushiFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
+				});
 
-		it('should revert when amount is zero', async function () {
-			const { contract } = fixture;
-			await expect(contract.mintWithWETH(0)).to.be.revertedWith(
-				'cannot mint with zero amount',
-			);
+				it('correct ETHtx amount to UNI LP', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pair = await uniFactory.getPair(ethtx.address, weth.address);
+					expect(await ethtx.balanceOf(pair)).to.eq(ethtxToLp);
+				});
+
+				it('sent Sushi LP to lpRecipient', async function () {
+					const { ethtx, sushiFactory, weth } = fixture;
+					const pairAddr = await sushiFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('sent UNI LP to lpRecipient', async function () {
+					const { ethtx, uniFactory, weth } = fixture;
+					const pairAddr = await uniFactory.getPair(
+						ethtx.address,
+						weth.address,
+					);
+					const pair = ERC20__factory.connect(pairAddr, ethtx.signer);
+					expect(await pair.balanceOf(lpRecipient)).to.not.eq(0);
+				});
+
+				it('correct ETHmx amount to sender', async function () {
+					const { deployer, ethmx } = fixture;
+					const expected = ethmxFromEth(Zero, amount, {
+						num: Zero,
+						den: Zero,
+					});
+					expect(await ethmx.balanceOf(deployer)).to.eq(expected);
+				});
+
+				it('and increase totalGiven', async function () {
+					const { contract } = fixture;
+					expect(await contract.totalGiven()).to.eq(amount);
+				});
+			});
 		});
 
 		it('should revert when paused', async function () {

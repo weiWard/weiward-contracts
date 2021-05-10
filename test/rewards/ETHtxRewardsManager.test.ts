@@ -116,7 +116,6 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 				lambda: 4,
 			},
 			ethmxMintParams: {
-				earlyThreshold: parseEther('3000'),
 				cCapNum: 10,
 				cCapDen: 1,
 				zetaFloorNum: 2,

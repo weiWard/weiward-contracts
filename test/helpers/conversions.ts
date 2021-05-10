@@ -1,4 +1,4 @@
-import { parseUnits } from 'ethers/lib/utils';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { ContractTransaction } from '@ethersproject/contracts';
 import { Zero } from '@ethersproject/constants';
@@ -6,9 +6,11 @@ import { Zero } from '@ethersproject/constants';
 import { WETH9 } from '@contracts/ethers-v5';
 
 export const GAS_PER_ETHTX = 21000;
+export const GENESIS_AMOUNT = parseEther('3000');
+export const GENESIS_START = 1620655200; // 05/10/2021 1400 UTC
+export const GENESIS_END = 1621260000; // 05/17/2021 1400 UTC
 
 export interface IETHmxMintParams {
-	earlyThreshold: BigNumber;
 	cCapNum: BigNumberish;
 	cCapDen: BigNumberish;
 	zetaFloorNum: BigNumberish;
@@ -72,6 +74,7 @@ export function ethmxFromEth(
 	cRatio: { num: BigNumber; den: BigNumber },
 	cTarget: { num: BigNumberish; den: BigNumberish },
 	mp: IETHmxMintParams,
+	inGenesis = false,
 ): BigNumber {
 	if (amountETH.isZero()) {
 		return Zero;
@@ -79,35 +82,20 @@ export function ethmxFromEth(
 
 	let amtOut = ethmxCurve(amountETH, cRatio, cTarget, mp);
 
-	// Scale for output
-	const et = BigNumber.from(mp.earlyThreshold).mul(amtOut).div(amountETH);
-	totalGiven = totalGiven.mul(amtOut).div(amountETH);
-
-	// Apply early-bird multiplier
-	if (totalGiven.lt(et)) {
-		const start = ethmxMinterEarlyMultIntegral(totalGiven, et);
-
-		const currentLeft = et.sub(totalGiven);
-		if (amtOut.lt(currentLeft)) {
-			const end = ethmxMinterEarlyMultIntegral(totalGiven.add(amtOut), et);
-			amtOut = end.sub(start);
-		} else {
-			const end = ethmxMinterEarlyMultIntegral(et, et);
-			const added = end.sub(start).sub(currentLeft);
-			amtOut = amtOut.add(added);
+	if (inGenesis) {
+		const totalEnd = totalGiven.add(amountETH);
+		if (totalEnd.gt(GENESIS_AMOUNT)) {
+			// Exiting genesis
+			const amtUnder = GENESIS_AMOUNT.sub(totalGiven);
+			amtOut = amtOut.sub(amtUnder.mul(amtOut).div(amountETH));
+			const added = amtUnder.mul(2).mul(mp.zetaFloorNum).div(mp.zetaFloorDen);
+			return amtOut.add(added);
 		}
+
+		return amtOut.mul(2);
 	}
 
 	return amtOut;
-}
-
-function ethmxMinterEarlyMultIntegral(
-	amountETH: BigNumber,
-	earlyThreshold: BigNumber,
-): BigNumber {
-	return amountETH
-		.mul(2)
-		.sub(amountETH.mul(amountETH).div(earlyThreshold.mul(2)));
 }
 
 function ethmxCurve(

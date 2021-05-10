@@ -24,13 +24,12 @@ interface IETHmxMinter {
 
 	struct ETHmxMintParams {
 		// Uses a single 32 byte slot and avoids stack too deep errors
-		uint160 earlyThreshold;
-		uint16 cCapNum;
-		uint16 cCapDen;
-		uint16 zetaFloorNum;
-		uint16 zetaFloorDen;
-		uint16 zetaCeilNum;
-		uint16 zetaCeilDen;
+		uint32 cCapNum;
+		uint32 cCapDen;
+		uint32 zetaFloorNum;
+		uint32 zetaFloorDen;
+		uint32 zetaCeilNum;
+		uint32 zetaCeilDen;
 	}
 
 	struct ETHtxMintParams {
@@ -59,6 +58,8 @@ interface IETHmxMinter {
 	function ethtxAMM() external view returns (address);
 
 	function ethtxFromEth(uint256 amountETHIn) external view returns (uint256);
+
+	function inGenesis() external view returns (bool);
 
 	function numLiquidityPools() external view returns (uint256);
 

@@ -20,7 +20,6 @@ import {
 	FeeLogic,
 	ETHtxAMM__factory,
 } from '../../../build/types/ethers-v5';
-import { parseEther } from '@ethersproject/units';
 
 export const defaultGasPrice = parseGwei('200');
 export const mintGasPrice = parseGwei('1000');
@@ -100,7 +99,6 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 				lambda: 4,
 			},
 			ethmxMintParams: {
-				earlyThreshold: parseEther('3000'),
 				cCapNum: 10,
 				cCapDen: 1,
 				zetaFloorNum: 2,
