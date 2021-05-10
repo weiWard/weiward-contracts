@@ -22,7 +22,7 @@ import {
 	LPRewards__factory,
 } from '../../build/types/ethers-v5';
 
-const version = 'v0.4.0';
+const version = 'v1.0.0';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// Skip this if already done
@@ -135,7 +135,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		console.log('Migrating variables from v0.3.0...');
 		await ethtx.setFeeLogic(feeLogic.address);
 		await ethmxMinter.postInit(ethmxMinterArgs);
-		console.log('Completed migration to v0.4.0.');
+		console.log('Completed migration to v1.0.0.');
 		return true;
 	}
 
@@ -205,18 +205,18 @@ func.tags = [id, version];
 func.id = id;
 func.dependencies = [
 	'ProxyAdminv0.3.0',
-	'WETHv0.4.0',
+	'WETHv1.0.0',
 	'GasPricev0.3.0',
 	'ETHtxv0.3.0',
 	'ETHmxv0.3.0',
-	'ETHtxAMMv0.4.0',
+	'ETHtxAMMv1.0.0',
 	'ETHmxMinterv0.3.0',
-	'ETHmxRewardsv0.4.0',
-	'LPRewardsv0.4.0',
+	'ETHmxRewardsv1.0.0',
+	'LPRewardsv1.0.0',
 	'ETHtxRewardsManagerv0.3.0',
 	'SushiV2Factoryv0.3.0',
 	'SushiV2Router02v0.3.0',
 	'SushiV2Pairv0.3.0',
-	'FeeLogicv0.4.0',
+	'FeeLogicv1.0.0',
 	'ValuePerSushiv0.3.0',
 ];

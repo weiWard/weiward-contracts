@@ -4,7 +4,7 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { salt } from '../../utils/create2';
 import { getDeployedSushiRouter } from '../../utils/sushi';
 
-const version = 'v0.4.0';
+const version = 'v1.0.0';
 const contractName = 'FeeLogic';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -55,7 +55,7 @@ export default func;
 func.tags = [id, version];
 func.id = id;
 func.dependencies = [
-	'ETHtxAMMv0.4.0',
+	'ETHtxAMMv1.0.0',
 	'ETHmxMinterv0.3.0',
 	'ETHtxRewardsManagerv0.3.0',
 	'SushiV2Router02v0.3.0',

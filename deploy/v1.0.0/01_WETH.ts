@@ -3,7 +3,7 @@ import { DeployFunction } from 'hardhat-deploy/types';
 
 import { getOrDeployWETH } from '../../utils/weth';
 
-const version = 'v0.4.0';
+const version = 'v1.0.0';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts, getChainId } = hre;
