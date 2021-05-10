@@ -257,6 +257,7 @@ contract ETHmxMinter is
 		address to,
 		uint256 amount
 	) external virtual override onlyOwner {
+		require(token != _weth, "ETHmxMinter: cannot recover WETH");
 		IERC20(token).safeTransfer(to, amount);
 		emit Recovered(_msgSender(), token, to, amount);
 	}
