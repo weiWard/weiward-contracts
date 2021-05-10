@@ -17,13 +17,32 @@
  */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 interface IETHmxMinter {
+	/* Types */
+
+	struct ETHmxMintParams {
+		// Uses a single 32 byte slot and avoids stack too deep errors
+		uint32 cCapNum;
+		uint32 cCapDen;
+		uint32 zetaFloorNum;
+		uint32 zetaFloorDen;
+		uint32 zetaCeilNum;
+		uint32 zetaCeilDen;
+	}
+
+	struct ETHtxMintParams {
+		uint128 minMintPrice;
+		uint64 mu;
+		uint64 lambda;
+	}
+
 	/* Views */
 
-	function earlyThreshold() external view returns (uint256);
-
 	function ethmx() external view returns (address);
+
+	function ethmxMintParams() external view returns (ETHmxMintParams memory);
 
 	function ethmxFromEth(uint256 amountETHIn) external view returns (uint256);
 
@@ -34,9 +53,13 @@ interface IETHmxMinter {
 
 	function ethtx() external view returns (address);
 
+	function ethtxMintParams() external view returns (ETHtxMintParams memory);
+
 	function ethtxAMM() external view returns (address);
 
 	function ethtxFromEth(uint256 amountETHIn) external view returns (uint256);
+
+	function inGenesis() external view returns (bool);
 
 	function numLiquidityPools() external view returns (uint256);
 
@@ -45,13 +68,6 @@ interface IETHmxMinter {
 	function lpRecipient() external view returns (address);
 
 	function lpShare()
-		external
-		view
-		returns (uint128 numerator, uint128 denominator);
-
-	function mintGasPrice() external view returns (uint256);
-
-	function roi()
 		external
 		view
 		returns (uint128 numerator, uint128 denominator);
@@ -80,9 +96,11 @@ interface IETHmxMinter {
 
 	function removeLp(address pool) external;
 
-	function setEarlyThreshold(uint256 value) external;
-
 	function setEthmx(address addr) external;
+
+	function setEthmxMintParams(ETHmxMintParams memory mp) external;
+
+	function setEthtxMintParams(ETHtxMintParams memory mp) external;
 
 	function setEthtx(address addr) external;
 
@@ -92,18 +110,15 @@ interface IETHmxMinter {
 
 	function setLpShare(uint128 numerator, uint128 denominator) external;
 
-	function setMintGasPrice(uint256 value) external;
-
-	function setRoi(uint128 numerator, uint128 denominator) external;
-
 	function setWeth(address addr) external;
 
 	function unpause() external;
 
 	/* Events */
 
-	event EarlyThresholdSet(address indexed author, uint256 value);
 	event EthmxSet(address indexed author, address indexed addr);
+	event EthmxMintParamsSet(address indexed author, ETHmxMintParams mp);
+	event EthtxMintParamsSet(address indexed author, ETHtxMintParams mp);
 	event EthtxSet(address indexed author, address indexed addr);
 	event EthtxAMMSet(address indexed author, address indexed addr);
 	event LpAdded(address indexed author, address indexed account);
@@ -114,13 +129,11 @@ interface IETHmxMinter {
 		uint128 numerator,
 		uint128 denominator
 	);
-	event MintGasPriceSet(address indexed author, uint256 value);
 	event Recovered(
 		address indexed author,
 		address indexed token,
 		address indexed to,
 		uint256 amount
 	);
-	event RoiSet(address indexed author, uint128 numerator, uint128 denominator);
 	event WethSet(address indexed author, address indexed addr);
 }

@@ -12,3 +12,11 @@ export async function mineBlocks(
 		await mineBlock(provider);
 	}
 }
+
+export async function setBlockTime(
+	provider: JsonRpcProvider,
+	timestamp: number,
+): Promise<void> {
+	await provider.send('evm_setNextBlockTimestamp', [timestamp]);
+	await mineBlock(provider);
+}

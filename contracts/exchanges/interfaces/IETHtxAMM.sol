@@ -28,20 +28,26 @@ interface IETHtxAMM {
 
 	function cRatioBelowTarget() external view returns (bool);
 
-	function ethForEthtx(uint256 amountETHtxOut) external view returns (uint256);
-
-	function ethFromEthtxAtRedemption(uint256 amountETHtxIn)
-		external
-		view
-		returns (uint256);
-
 	function ethNeeded() external view returns (uint256);
 
 	function ethtx() external view returns (address);
 
-	function ethtxFromEth(uint256 amountETHIn) external view returns (uint256);
+	function exactEthToEthtx(uint256 amountEthIn)
+		external
+		view
+		returns (uint256);
 
-	function ethtxForEthAtRedemption(uint256 amountETHOut)
+	function ethToExactEthtx(uint256 amountEthtxOut)
+		external
+		view
+		returns (uint256);
+
+	function exactEthtxToEth(uint256 amountEthtxIn)
+		external
+		view
+		returns (uint256);
+
+	function ethtxToExactEth(uint256 amountEthOut)
 		external
 		view
 		returns (uint256);

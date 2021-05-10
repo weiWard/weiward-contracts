@@ -18,12 +18,14 @@
 
 pragma solidity 0.7.6;
 
-abstract contract ETHtxAMMData {
-	address internal _gasOracle;
-	uint128 internal _targetCRatioNum;
-	uint128 internal _targetCRatioDen;
-	address internal _ethtx;
-	address internal _weth;
+import "../ETHmx/ETHmx.sol";
 
-	uint256[46] private __gap;
+contract MockETHmx is ETHmx {
+	constructor(address owner_) ETHmx(owner_) {
+		return;
+	}
+
+	function mockMint(address account, uint256 amount) external {
+		_mint(account, amount);
+	}
 }

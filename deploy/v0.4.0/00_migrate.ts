@@ -17,7 +17,7 @@ func.dependencies = [
 	'ETHtxv0.3.0',
 	'ETHmxv0.3.0',
 	'ETHtxAMMv0.4.0',
-	'ETHmxMinterv0.3.0',
+	'ETHmxMinterv0.4.0',
 	'ETHmxRewardsv0.4.0',
 	'LPRewardsv0.4.0',
 	'ETHtxRewardsManagerv0.3.0',

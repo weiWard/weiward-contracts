@@ -18,12 +18,16 @@
 
 pragma solidity 0.7.6;
 
-abstract contract ETHtxAMMData {
-	address internal _gasOracle;
-	uint128 internal _targetCRatioNum;
-	uint128 internal _targetCRatioDen;
-	address internal _ethtx;
-	address internal _weth;
+import "../UintLog.sol";
 
-	uint256[46] private __gap;
+contract MockUintLog {
+	using UintLog for uint256;
+
+	function ln(uint256 x) external pure returns (uint256) {
+		return x.ln();
+	}
+
+	function blog2(uint256 x) external pure returns (uint256) {
+		return x.blog2();
+	}
 }

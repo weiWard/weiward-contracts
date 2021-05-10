@@ -17,13 +17,16 @@
  */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-abstract contract ETHtxAMMData {
-	address internal _gasOracle;
-	uint128 internal _targetCRatioNum;
-	uint128 internal _targetCRatioDen;
-	address internal _ethtx;
-	address internal _weth;
+import "../ETHmxMinter/ETHmxMinter.sol";
 
-	uint256[46] private __gap;
+contract MockETHmxMinter is ETHmxMinter {
+	constructor(address owner_) ETHmxMinter(owner_) {
+		return;
+	}
+
+	function setInGenesis(bool val) external {
+		_inGenesis = val;
+	}
 }

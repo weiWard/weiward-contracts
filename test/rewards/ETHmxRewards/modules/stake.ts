@@ -2,13 +2,7 @@ import { expect } from 'chai';
 import { parseEther } from 'ethers/lib/utils';
 
 import { parseETHmx } from '../../../helpers/conversions';
-import {
-	Fixture,
-	loadFixture,
-	addRewards,
-	stake,
-	ethmxToEth,
-} from '../common';
+import { Fixture, loadFixture, addRewards, stake } from '../common';
 
 export default function run(): void {
 	let fixture: Fixture;
@@ -89,9 +83,9 @@ export default function run(): void {
 	});
 
 	it('should emit Staked event', async function () {
-		const { contract, deployer, ethmx, ethmxMinter } = fixture;
+		const { contract, deployer, ethmx } = fixture;
 
-		await ethmxMinter.mint({ value: ethmxToEth(stakeAmount) });
+		await ethmx.mockMint(deployer, stakeAmount);
 		await ethmx.increaseAllowance(contract.address, stakeAmount);
 
 		await expect(contract.stake(stakeAmount))
