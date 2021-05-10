@@ -17,8 +17,8 @@ import {
 	parseETHmx,
 } from '../helpers/conversions';
 import {
-	ETHmx,
-	ETHmx__factory,
+	MockETHmx,
+	MockETHmx__factory,
 	ETHmxMinter,
 	ETHmxMinter__factory,
 	ETHtxAMM,
@@ -36,9 +36,6 @@ import {
 const contractName = 'ETHtxAMM';
 
 const defaultGasPrice = parseGwei('200');
-const mintGasPrice = parseGwei('1000');
-const roiNumerator = 5;
-const roiDenominator = 1;
 const feeRecipient = zeroPadAddress('0x1');
 const targetCRatioNumerator = 2;
 const targetCRatioDenominator = 1;
@@ -92,7 +89,7 @@ interface Fixture {
 	contractImpl: ETHtxAMM;
 	testerContract: ETHtxAMM;
 	ethtx: MockETHtx;
-	ethmx: ETHmx;
+	ethmx: MockETHmx;
 	ethmxMinter: ETHmxMinter;
 	feeLogic: FeeLogic;
 	oracle: MockGasPrice;
@@ -119,7 +116,9 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployer,
 		);
 
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
+		const ethmx = await new MockETHmx__factory(deployerSigner).deploy(
+			deployer,
+		);
 
 		const result = await deploy('ETHtxAMMTest', {
 			contract: 'ETHtxAMM',
@@ -155,10 +154,19 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			ethtx: ethtx.address,
 			ethtxAMM: contract.address,
 			weth: weth.address,
-			mintGasPrice,
-			roiNumerator,
-			roiDenominator,
-			earlyThreshold: 0,
+			ethtxMintParams: {
+				minMintPrice: parseGwei('50'),
+				mu: 5,
+				lambda: 4,
+			},
+			ethmxMintParams: {
+				cCapNum: 10,
+				cCapDen: 1,
+				zetaFloorNum: 2,
+				zetaFloorDen: 1,
+				zetaCeilNum: 4,
+				zetaCeilDen: 1,
+			},
 			lpShareNumerator: 25,
 			lpShareDenominator: 100,
 			lps: [],
@@ -385,12 +393,12 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('ethForEthtx', function () {
+	describe('ethToExactEthtx', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 			const amountETHtx = parseETHtx('100');
 			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx);
-			expect(await contract.ethForEthtx(amountETHtx)).to.eq(amountETH);
+			expect(await contract.ethToExactEthtx(amountETHtx)).to.eq(amountETH);
 		});
 
 		it('should change with gas price', async function () {
@@ -402,11 +410,11 @@ describe(contractName, function () {
 
 			const amountETHtx = parseETHtx('100');
 			const amountETH = ethtxToEth(gasPrice, amountETHtx);
-			expect(await contract.ethForEthtx(amountETHtx)).to.eq(amountETH);
+			expect(await contract.ethToExactEthtx(amountETHtx)).to.eq(amountETH);
 		});
 	});
 
-	describe('ethFromEthtxAtRedemption', function () {
+	describe('exactEthtxToEth', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 
@@ -414,9 +422,7 @@ describe(contractName, function () {
 			const fee = calcFee(amountETHtx);
 			const amountETH = ethtxToEth(defaultGasPrice, amountETHtx.sub(fee));
 
-			expect(await contract.ethFromEthtxAtRedemption(amountETHtx)).to.eq(
-				amountETH,
-			);
+			expect(await contract.exactEthtxToEth(amountETHtx)).to.eq(amountETH);
 		});
 
 		it('should change with gas price', async function () {
@@ -430,9 +436,7 @@ describe(contractName, function () {
 			const fee = calcFee(amountETHtx);
 			const amountETH = ethtxToEth(gasPrice, amountETHtx.sub(fee));
 
-			expect(await contract.ethFromEthtxAtRedemption(amountETHtx)).to.eq(
-				amountETH,
-			);
+			expect(await contract.exactEthtxToEth(amountETHtx)).to.eq(amountETH);
 		});
 
 		it('should use maxGasPrice cap', async function () {
@@ -454,9 +458,7 @@ describe(contractName, function () {
 			const fee = calcFee(amountETHtx);
 			const amountETH = ethtxToEth(maxGasPrice, amountETHtx.sub(fee));
 
-			expect(await contract.ethFromEthtxAtRedemption(amountETHtx)).to.eq(
-				amountETH,
-			);
+			expect(await contract.exactEthtxToEth(amountETHtx)).to.eq(amountETH);
 		});
 	});
 
@@ -515,12 +517,12 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('ethtxFromEth', function () {
+	describe('exactEthToEthtx', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 			const amountETH = parseEther('10');
 			const amountETHtx = ethToEthtx(defaultGasPrice, amountETH);
-			expect(await contract.ethtxFromEth(amountETH)).to.eq(amountETHtx);
+			expect(await contract.exactEthToEthtx(amountETH)).to.eq(amountETHtx);
 		});
 
 		it('should change with gas price', async function () {
@@ -532,20 +534,18 @@ describe(contractName, function () {
 
 			const amountETH = parseEther('10');
 			const amountETHtx = ethToEthtx(gasPrice, amountETH);
-			expect(await contract.ethtxFromEth(amountETH)).to.eq(amountETHtx);
+			expect(await contract.exactEthToEthtx(amountETH)).to.eq(amountETHtx);
 		});
 	});
 
-	describe('ethtxForEthAtRedemption', function () {
+	describe('ethtxToExactEth', function () {
 		it('should be correct', async function () {
 			const { contract } = fixture;
 
 			const amountETH = parseEther('10');
 			const amountETHtx = undoFee(ethToEthtx(defaultGasPrice, amountETH));
 
-			expect(await contract.ethtxForEthAtRedemption(amountETH)).to.eq(
-				amountETHtx,
-			);
+			expect(await contract.ethtxToExactEth(amountETH)).to.eq(amountETHtx);
 		});
 
 		it('should change with gas price', async function () {
@@ -558,9 +558,7 @@ describe(contractName, function () {
 			const amountETH = parseEther('10');
 			const amountETHtx = undoFee(ethToEthtx(gasPrice, amountETH));
 
-			expect(await contract.ethtxForEthAtRedemption(amountETH)).to.eq(
-				amountETHtx,
-			);
+			expect(await contract.ethtxToExactEth(amountETH)).to.eq(amountETHtx);
 		});
 
 		it('should use maxGasPrice cap', async function () {
@@ -581,9 +579,7 @@ describe(contractName, function () {
 			const amountETH = parseEther('10');
 			const amountETHtx = undoFee(ethToEthtx(maxGasPrice, amountETH));
 
-			expect(await contract.ethtxForEthAtRedemption(amountETH)).to.eq(
-				amountETHtx,
-			);
+			expect(await contract.ethtxToExactEth(amountETH)).to.eq(amountETHtx);
 		});
 	});
 
@@ -1456,11 +1452,10 @@ describe(contractName, function () {
 		});
 
 		it('should transfer amount', async function () {
-			const { contract, ethmx, ethmxMinter, tester } = fixture;
+			const { contract, ethmx, tester } = fixture;
 			const amount = parseETHmx('10');
 
-			await ethmxMinter.mint({ value: amount });
-			await ethmx.transfer(contract.address, amount);
+			await ethmx.mockMint(contract.address, amount);
 			await contract.recoverUnsupportedERC20(ethmx.address, tester, amount);
 
 			expect(
@@ -1473,11 +1468,10 @@ describe(contractName, function () {
 		});
 
 		it('should emit RecoveredUnsupported event', async function () {
-			const { contract, deployer, ethmx, ethmxMinter, tester } = fixture;
+			const { contract, deployer, ethmx, tester } = fixture;
 			const amount = parseEther('10');
 
-			await ethmxMinter.mint({ value: amount });
-			await ethmx.transfer(contract.address, amount);
+			await ethmx.mockMint(contract.address, amount);
 
 			await expect(
 				contract.recoverUnsupportedERC20(ethmx.address, tester, amount),

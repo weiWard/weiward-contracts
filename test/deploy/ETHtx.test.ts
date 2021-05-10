@@ -12,6 +12,9 @@ import {
 } from '../../build/types/ethers-v5';
 import weth9Abi from '../../build/abi/WETH9.json';
 import ethtxAbi from '../../build/abi/ETHtx.json';
+import { getVersionTag } from '../../utils/deploy';
+
+const version = getVersionTag();
 
 interface Fixture {
 	deployer: string;
@@ -26,7 +29,7 @@ interface Fixture {
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
 	async ({ deployments, getNamedAccounts, ethers }) => {
-		await deployments.fixture();
+		await deployments.fixture(version);
 
 		const { deployer, tester } = await getNamedAccounts();
 		const deployerSigner = ethers.provider.getSigner(deployer);

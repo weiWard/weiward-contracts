@@ -14,16 +14,24 @@
 			"@contracts/*": ["../build/types/*"],
 			"@utils/*": ["utils/*"],
 			"@sinonjs/fake-timers": ["../node_modules/@types/sinonjs__fake-timers"]
-		}
+		},
+		"skipLibCheck": true
 	},
 	"include": [
 		"deploy/**/*",
 		"test/**/*",
 		"src/**/*",
-		"build/types/ethers/*",
+		"build/types/ethers-v5/**/*",
+		"build/types/web3-v1/**/*",
 	],
 	"files": [
 		"hardhat.config.ts",
 	],
+	"exclude": [
+    "node_modules",
+    "./node_modules",
+    "./node_modules/*",
+    "./node_modules/@types/node/index.d.ts",
+],
 	"compileOnSave": false
 }
