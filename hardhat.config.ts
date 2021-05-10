@@ -6,7 +6,7 @@ import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-deploy';
 import 'hardhat-abi-exporter';
 import { Deployment } from 'hardhat-deploy/dist/types';
-import { TASK_DEPLOY_MAIN } from 'hardhat-deploy';
+import { TASK_DEPLOY, TASK_DEPLOY_MAIN } from 'hardhat-deploy';
 import * as fs from 'fs';
 
 import { node_url, accounts, hardhatAccounts } from './utils/network';
@@ -48,6 +48,13 @@ task(
 
 		fs.writeFileSync('./build/addresses.json', stringRepresentation);
 	},
+);
+
+task(TASK_DEPLOY, 'Deploy contract').addOptionalParam(
+	'ignoreVersion',
+	'ignore the requirement to use the latest version in any tags',
+	false,
+	types.boolean,
 );
 
 subtask(TASK_DEPLOY_MAIN, 'deploy')
@@ -194,10 +201,18 @@ const config: HardhatUserConfig = {
 		tester: 1,
 		// Run scripts from this user
 		user: 2,
+		defaultRewardsRecipient: {
+			default: 0,
+			1: '0x884972C11cFDE35B4860903Db89D0545c924F453',
+		},
+		lpRecipient: {
+			default: 0,
+			1: '0x43B00A0b186435B07A26bCD70CF0A4b4FfD56563',
+		},
 		// Gas oracle service
 		gasOracleService: {
 			// mainnet
-			1: '',
+			1: '0x97D46CE03376a059C3Fb84c6c297080166b06E0b',
 			// ropsten
 			3: '0x97D46CE03376a059C3Fb84c6c297080166b06E0b',
 		},

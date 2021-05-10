@@ -18,7 +18,7 @@ const sushiPairAddresses = new Map([
 	['42', undefined], // kovan
 	['4', undefined], // rinkeby
 	['3', '0x6BD807AdCE1e9Ad7c4060891dFACAeA368787830'], // ropsten
-	['1', undefined], // mainnet
+	['1', '0xA2Aa2C632Dd676f501f92ABAeCbd09EeDF64C737'], // mainnet
 ]);
 
 const sushiRouterAddresses = new Map([
@@ -145,9 +145,6 @@ export async function getDeployedSushiPair(
 ): Promise<string | undefined> {
 	let address = sushiPairAddresses.get(chainId);
 	if (!address) {
-		if (chainId === '1') {
-			return undefined;
-		}
 		const factoryAddr = await getDeployedSushiFactory(deployments, chainId);
 		if (!factoryAddr) {
 			return undefined;

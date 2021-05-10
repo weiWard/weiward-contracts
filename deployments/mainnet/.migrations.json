@@ -1,0 +1,16 @@
+{
+  "GasPricev0.3.0": 1620649149,
+  "ProxyAdminv0.3.0": 1620654575,
+  "ETHtxv0.3.0": 1620654670,
+  "ETHmxv0.3.0": 1620656354,
+  "ETHtxAMMv1.0.0": 1620656754,
+  "ETHmxMinterv1.0.0": 1620656792,
+  "ETHmxRewardsv1.0.0": 1620657031,
+  "LPRewardsv1.0.0": 1620657318,
+  "ETHtxRewardsManagerv0.3.0": 1620659157,
+  "ETHmxMinterv0.3.0": 1620659697,
+  "FeeLogicv1.0.0": 1620660027,
+  "ValuePerSushiv0.3.0": 1620660068,
+  "postInitv1.0.0": 1620660769,
+  "migratev1.0.0": 1620660769
+}

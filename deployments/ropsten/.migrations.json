@@ -11,5 +11,12 @@
   "FeeLogicv0.3.0": 1618554224,
   "ValuePerSushiv0.3.0": 1618554429,
   "postInitv0.3.0": 1618554439,
-  "makeSushiRouterExemptv0.3.0": 1618960942
+  "makeSushiRouterExemptv0.3.0": 1618960942,
+  "ETHtxAMMv1.0.0": 1620661583,
+  "ETHmxMinterv1.0.0": 1620661641,
+  "ETHmxRewardsv1.0.0": 1620661678,
+  "LPRewardsv1.0.0": 1620661696,
+  "FeeLogicv1.0.0": 1620661709,
+  "postInitv1.0.0": 1620661711,
+  "migratev1.0.0": 1620661711
 }

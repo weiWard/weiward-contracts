@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { parseEther } from '@ethersproject/units';
 import fs from 'fs';
 import path from 'path';
 
@@ -44,7 +43,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const { deployments, getNamedAccounts, getChainId, ethers } = hre;
 
-	const { deployer } = await getNamedAccounts();
+	const {
+		deployer,
+		defaultRewardsRecipient,
+		lpRecipient,
+	} = await getNamedAccounts();
 
 	const deployerSigner = ethers.provider.getSigner(deployer);
 	const chainId = await getChainId();
@@ -110,13 +113,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		ethtx: ethtx.address,
 		ethtxAMM: ethtxAmm.address,
 		weth: wethAddr,
-		ethtxMintParams: {
-			minMintPrice: parseGwei('50'),
-			mu: 5,
-			lambda: 4,
-		},
 		ethmxMintParams: {
-			earlyThreshold: parseEther('3000'),
 			cCapNum: 10,
 			cCapDen: 1,
 			zetaFloorNum: 2,
@@ -124,11 +121,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			zetaCeilNum: 4,
 			zetaCeilDen: 1,
 		},
-		mintGasPrice: parseGwei('1000'),
+		ethtxMintParams: {
+			minMintPrice: parseGwei('50'),
+			mu: 5,
+			lambda: 4,
+		},
 		lpShareNumerator: 25,
 		lpShareDenominator: 100,
 		lps: [sushiRouterAddr],
-		lpRecipient: deployer,
+		lpRecipient,
 	};
 
 	if (migrations['postInitv0.3.0']) {
@@ -165,9 +166,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await lpRewards.setRewardsToken(wethAddr);
 	await lpRewards.addToken(sushiPairAddr, valuePerSushi.address);
 
-	const defaultRecipient = deployer;
 	await ethtxRewardsMgr.ethtxRewardsManagerPostInit({
-		defaultRecipient,
+		defaultRecipient: defaultRewardsRecipient,
 		rewardsToken: wethAddr,
 		ethmxRewards: ethmxRewards.address,
 		ethtx: ethtx.address,
@@ -175,7 +175,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		lpRewards: lpRewards.address,
 		shares: [
 			{
-				account: defaultRecipient,
+				account: defaultRewardsRecipient,
 				value: 10,
 				isActive: true,
 			},
