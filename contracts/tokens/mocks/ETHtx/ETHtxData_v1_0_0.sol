@@ -17,18 +17,10 @@
  */
 
 pragma solidity 0.7.6;
-pragma abicoder v2;
 
-import "../FeeLogic.sol";
+/* solhint-disable-next-line contract-name-camelcase */
+abstract contract ETHtxData_v1_0_0 {
+	address internal _minter;
 
-contract MockFeeLogic is FeeLogic {
-	event Notified(uint256 amount);
-
-	constructor(FeeLogic.FeeLogicArgs memory _args) FeeLogic(_args) {
-		return;
-	}
-
-	function notify(uint256 amount) external override {
-		emit Notified(amount);
-	}
+	uint256[49] private __gap;
 }

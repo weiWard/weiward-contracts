@@ -51,13 +51,17 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			feeRecipient,
-			75,
-			1000,
-			[],
-		);
+		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy({
+			owner: deployer,
+			recipient: feeRecipient,
+			feeRateNumerator: 75,
+			feeRateDenominator: 1000,
+			exemptions: [],
+			rebaseInterval: 0,
+			rebaseFeeRateNum: 0,
+			rebaseFeeRateDen: 1,
+			rebaseExemptions: [],
+		});
 
 		const oracle = await new SimpleGasPrice__factory(deployerSigner).deploy(
 			defaultGasPrice,
@@ -114,7 +118,8 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.postInit({
 			feeLogic: feeLogic.address,
-			minter: ethmxMinter.address,
+			minters: [ethmxMinter.address],
+			rebasers: [],
 		});
 
 		const result = await deploy('MockETHmxRewards', {

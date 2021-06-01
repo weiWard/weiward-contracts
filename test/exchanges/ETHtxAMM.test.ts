@@ -173,23 +173,28 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			lpRecipient: zeroAddress,
 		});
 
-		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			feeRecipient,
-			feeNumerator,
-			feeDenominator,
-			[
+		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy({
+			owner: deployer,
+			recipient: feeRecipient,
+			feeRateNumerator: feeNumerator,
+			feeRateDenominator: feeDenominator,
+			exemptions: [
 				{
 					account: contract.address,
 					isExempt: true,
 				},
 			],
-		);
+			rebaseInterval: 0,
+			rebaseFeeRateNum: 0,
+			rebaseFeeRateDen: 1,
+			rebaseExemptions: [],
+		});
 
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.postInit({
 			feeLogic: feeLogic.address,
-			minter: ethmxMinter.address,
+			minters: [ethmxMinter.address],
+			rebasers: [],
 		});
 		const testerContract = contract.connect(testerSigner);
 

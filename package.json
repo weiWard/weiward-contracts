@@ -1,6 +1,6 @@
 {
   "name": "@weiward/contracts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Smart contracts for the weiWard platform.",
   "author": "weiWard LLC",
   "license": "(Apache-2.0 OR MIT)",
@@ -12,8 +12,8 @@
     "export": "hardhat export --export build/abi.json",
     "export:all": "hardhat export --export-all build/abi.json",
     "gen-types": "run-p gen-types:*",
-    "gen-types:ethers": "typechain --target=ethers-v5 --outDir=build/types/ethers-v5 \"build/artifacts/contracts/**/+([a-zA-Z0-9]).json\"",
-    "gen-types:web3": "typechain --target=web3-v1 --outDir=build/types/web3-v1 \"build/artifacts/contracts/**/+([a-zA-Z0-9]).json\"",
+    "gen-types:ethers": "typechain --target=ethers-v5 --outDir=build/types/ethers-v5 \"build/artifacts/contracts/**/+([a-zA-Z0-9_]).json\"",
+    "gen-types:web3": "typechain --target=web3-v1 --outDir=build/types/web3-v1 \"build/artifacts/contracts/**/+([a-zA-Z0-9_]).json\"",
     "lint": "run-p lint:*",
     "lint:tsc": "tsc --noEmit",
     "lint:eslint": "eslint \"*/**/*.{js,jsx,ts,tsx}\"",

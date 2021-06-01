@@ -17,18 +17,16 @@
  */
 
 pragma solidity 0.7.6;
-pragma abicoder v2;
 
-import "../FeeLogic.sol";
-
-contract MockFeeLogic is FeeLogic {
-	event Notified(uint256 amount);
-
-	constructor(FeeLogic.FeeLogicArgs memory _args) FeeLogic(_args) {
-		return;
+abstract contract RbacFromOwnableData {
+	struct RoleData {
+		mapping(address => bool) members;
+		bytes32 adminRole;
 	}
 
-	function notify(uint256 amount) external override {
-		emit Notified(amount);
-	}
+	address internal _ownerDeprecated;
+
+	mapping(bytes32 => RoleData) internal _roles;
+
+	uint256[48] private __gap;
 }

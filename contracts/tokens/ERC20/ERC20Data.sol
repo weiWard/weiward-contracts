@@ -17,18 +17,10 @@
  */
 
 pragma solidity 0.7.6;
-pragma abicoder v2;
 
-import "../FeeLogic.sol";
-
-contract MockFeeLogic is FeeLogic {
-	event Notified(uint256 amount);
-
-	constructor(FeeLogic.FeeLogicArgs memory _args) FeeLogic(_args) {
-		return;
-	}
-
-	function notify(uint256 amount) external override {
-		emit Notified(amount);
-	}
+abstract contract ERC20Data {
+	mapping(address => uint256) internal _balances;
+	mapping(address => mapping(address => uint256)) internal _allowances;
+	uint256 internal _totalSupply;
+	uint256[47] private __gap;
 }

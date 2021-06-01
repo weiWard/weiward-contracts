@@ -1,8 +1,9 @@
+/* eslint-disable no-console */
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { parseEther } from '@ethersproject/units';
+import fs from 'fs';
+import path from 'path';
 
-import { getVersionedDeps } from '../../utils/deploy';
 import { getDeployedWETH } from '../../utils/weth';
 import {
 	getDeployedSushiPair,
@@ -19,14 +20,35 @@ import {
 	FeeLogic__factory,
 	LPRewards__factory,
 } from '../../build/types/ethers-v5';
-import { Contract } from '@ethersproject/contracts';
 
-const version = 'v0.3.0';
+const version = 'v1.1.0';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+	// Skip this if already done
+	let migrations: Record<string, number> = {};
+	try {
+		migrations = JSON.parse(
+			fs
+				.readFileSync(
+					path.join(
+						hre.config.paths.deployments,
+						hre.network.name,
+						'.migrations.json',
+					),
+				)
+				.toString(),
+		);
+		// eslint-disable-next-line no-empty
+	} catch (e) {}
+
 	const { deployments, getNamedAccounts, getChainId, ethers } = hre;
 
-	const { deployer } = await getNamedAccounts();
+	const {
+		deployer,
+		defaultRewardsRecipient,
+		lpRecipient,
+		gasOracleService,
+	} = await getNamedAccounts();
 
 	const deployerSigner = ethers.provider.getSigner(deployer);
 	const chainId = await getChainId();
@@ -87,10 +109,52 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	}
 	const valuePerSushi = await deployments.get('ValuePerSushi');
 
+	const ethmxMinterArgs = {
+		ethmx: ethmx.address,
+		ethtx: ethtx.address,
+		ethtxAMM: ethtxAmm.address,
+		weth: wethAddr,
+		ethmxMintParams: {
+			cCapNum: 10,
+			cCapDen: 1,
+			zetaFloorNum: 2,
+			zetaFloorDen: 1,
+			zetaCeilNum: 4,
+			zetaCeilDen: 1,
+		},
+		ethtxMintParams: {
+			minMintPrice: parseGwei('50'),
+			mu: 5,
+			lambda: 4,
+		},
+		lpShareNumerator: 25,
+		lpShareDenominator: 100,
+		lps: [sushiRouterAddr],
+		lpRecipient,
+	};
+
+	const ethtxRebasers = [];
+	if (gasOracleService && gasOracleService !== '') {
+		ethtxRebasers.push(gasOracleService);
+	}
+
+	if (migrations['postInitv1.0.0']) {
+		console.log('Migrating from v1.0.0...');
+		await ethtx.postUpgrade(feeLogic.address, ethtxRebasers);
+		console.log('Completed migration to v1.1.0.');
+		return true;
+	} else if (migrations['postInitv0.3.0']) {
+		console.log('Migrating from v0.3.0...');
+		await ethtx.postUpgrade(feeLogic.address, ethtxRebasers);
+		await ethmxMinter.postInit(ethmxMinterArgs);
+		console.log('Completed migration to v1.1.0.');
+		return true;
+	}
+
 	await ethtx.postInit({
 		feeLogic: feeLogic.address,
 		minters: [ethmxMinter.address],
-		rebasers: [],
+		rebasers: ethtxRebasers,
 	});
 
 	await ethmx.setMinter(ethmxMinter.address);
@@ -103,20 +167,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		targetCRatioDen: 1,
 	});
 
-	await (ethmxMinter as Contract).postInit({
-		ethmx: ethmx.address,
-		ethtx: ethtx.address,
-		ethtxAMM: ethtxAmm.address,
-		weth: wethAddr,
-		mintGasPrice: parseGwei('1000'),
-		roiNumerator: 5,
-		roiDenominator: 1,
-		earlyThreshold: parseEther('1000'),
-		lpShareNumerator: 25,
-		lpShareDenominator: 100,
-		lps: [sushiRouterAddr],
-		lpRecipient: deployer,
-	});
+	await ethmxMinter.postInit(ethmxMinterArgs);
 
 	await ethmxRewards.postInit({
 		ethmx: ethmx.address,
@@ -127,9 +178,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await lpRewards.setRewardsToken(wethAddr);
 	await lpRewards.addToken(sushiPairAddr, valuePerSushi.address);
 
-	const defaultRecipient = deployer;
 	await ethtxRewardsMgr.ethtxRewardsManagerPostInit({
-		defaultRecipient,
+		defaultRecipient: defaultRewardsRecipient,
 		rewardsToken: wethAddr,
 		ethmxRewards: ethmxRewards.address,
 		ethtx: ethtx.address,
@@ -137,7 +187,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		lpRewards: lpRewards.address,
 		shares: [
 			{
-				account: defaultRecipient,
+				account: defaultRewardsRecipient,
 				value: 10,
 				isActive: true,
 			},
@@ -154,7 +204,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		],
 	});
 
-	// eslint-disable-next-line no-console
 	console.log('Completed postInit script.');
 
 	// Never execute twice
@@ -166,22 +215,20 @@ const id = 'postInit' + version;
 export default func;
 func.tags = [id, version];
 func.id = id;
-func.dependencies = getVersionedDeps(
-	[
-		'ProxyAdmin',
-		'WETH',
-		'GasPrice',
-		'ETHtx',
-		'ETHmx',
-		'ETHtxAMM',
-		'ETHmxMinter',
-		'ETHmxRewards',
-		'LPRewards',
-		'ETHtxRewardsManager',
-		'SushiV2Router02',
-		'SushiV2Pair',
-		'FeeLogic',
-		'ValuePerSushi',
-	],
-	version,
-);
+func.dependencies = [
+	'ProxyAdminv0.3.0',
+	'WETHv1.0.0',
+	'GasPricev0.3.0',
+	'ETHtxv1.1.0',
+	'ETHmxv0.3.0',
+	'ETHtxAMMv1.0.0',
+	'ETHmxMinterv1.0.0',
+	'ETHmxRewardsv1.0.0',
+	'LPRewardsv1.0.0',
+	'ETHtxRewardsManagerv0.3.0',
+	'SushiV2Factoryv0.3.0',
+	'SushiV2Router02v0.3.0',
+	'SushiV2Pairv0.3.0',
+	'FeeLogicv1.1.0',
+	'ValuePerSushiv0.3.0',
+];

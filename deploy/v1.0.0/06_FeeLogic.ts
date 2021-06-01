@@ -56,7 +56,7 @@ func.tags = [id, version];
 func.id = id;
 func.dependencies = [
 	'ETHtxAMMv1.0.0',
-	'ETHmxMinterv0.3.0',
+	'ETHmxMinterv1.0.0',
 	'ETHtxRewardsManagerv0.3.0',
 	'SushiV2Router02v0.3.0',
 ];

@@ -35,10 +35,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	// eslint-disable-next-line no-console
 	console.log(`SushiV2Router02: ${sushiRouterAddr}`);
+
+	return true;
 };
 
 const id = 'SushiV2Router02' + version;
 
 export default func;
 func.tags = [id, version];
+func.id = id;
 func.dependencies = getVersionedDeps(['WETH', 'SushiV2Factory'], version);

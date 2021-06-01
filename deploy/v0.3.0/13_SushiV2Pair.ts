@@ -38,12 +38,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	// eslint-disable-next-line no-console
 	console.log(`SLP ETHtx-WETH: ${sushiPairAddr}`);
+
+	return true;
 };
 
 const id = 'SushiV2Pair' + version;
 
 export default func;
 func.tags = [id, version];
+func.id = id;
 func.dependencies = getVersionedDeps(
 	['WETH', 'ETHtx', 'SushiV2Factory'],
 	version,

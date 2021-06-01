@@ -21,6 +21,7 @@ pragma solidity 0.7.6;
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
+import "./ERC20TxFeeData.sol";
 import "../ERC20/ERC20Upgradeable.sol";
 import "../interfaces/IERC20TxFee.sol";
 import "../../rewards/interfaces/IFeeLogic.sol";
@@ -29,13 +30,10 @@ contract ERC20TxFeeUpgradeable is
 	Initializable,
 	ContextUpgradeable,
 	ERC20Upgradeable,
+	ERC20TxFeeData,
 	IERC20TxFee
 {
 	using SafeMath for uint256;
-
-	/* Mutable Internal State */
-
-	address internal _feeLogic;
 
 	// solhint-disable-next-line func-name-mixedcase
 	function __ERC20TxFee_init(address feeLogic_) internal initializer {
@@ -105,6 +103,4 @@ contract ERC20TxFeeUpgradeable is
 			feeHandler.notify(fee);
 		}
 	}
-
-	uint256[49] private __gap;
 }

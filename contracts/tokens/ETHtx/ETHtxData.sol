@@ -19,7 +19,12 @@
 pragma solidity 0.7.6;
 
 abstract contract ETHtxData {
-	address internal _minter;
+	address internal _minterDeprecated;
 
-	uint256[49] private __gap;
+	uint256 internal _sharesPerToken;
+	uint256 internal _totalShares;
+
+	uint256 internal _lastRebaseTime;
+
+	uint256[46] private __gap;
 }

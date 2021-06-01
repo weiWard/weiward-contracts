@@ -4,6 +4,7 @@
  * Based on https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0-solc-0.7/contracts/token/ERC20/ERC20.sol
  *
  * Changes:
+ * - Move state to abstract data contract
  * - Change _balances, _allowances, and _totalSupply from private to internal
  * - Replace name, symbol, and decimals state with virtual functions.
  * - Make all functions virtual
@@ -42,6 +43,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "./ERC20Data.sol";
+
 /**
  * @dev Implementation of the {IERC20} interface.
  *
@@ -66,16 +69,13 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20 {
+contract ERC20Upgradeable is
+	Initializable,
+	ContextUpgradeable,
+	ERC20Data,
+	IERC20
+{
 	using SafeMath for uint256;
-
-	/* Mutable Internal State */
-
-	mapping(address => uint256) internal _balances;
-
-	mapping(address => mapping(address => uint256)) internal _allowances;
-
-	uint256 internal _totalSupply;
 
 	// solhint-disable-next-line func-name-mixedcase
 	function __ERC20_init() internal initializer {
@@ -398,6 +398,4 @@ contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20 {
 	) internal virtual {
 		return;
 	}
-
-	uint256[47] private __gap;
 }

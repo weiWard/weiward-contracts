@@ -14,6 +14,9 @@ const contractName = 'FeeLogic';
 const feeRecipient = zeroPadAddress('0x1');
 const feeNumerator = 75;
 const feeDenominator = 1000;
+const rebaseInterval = 7200;
+const rebaseFeeNum = 1;
+const rebaseFeeDen = 100;
 
 function calcFee(amount: BigNumber): BigNumber {
 	return amount.mul(feeNumerator).div(feeDenominator);
@@ -38,13 +41,17 @@ const loadFixture = deployments.createFixture(
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const contract = await new MockFeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			feeRecipient,
-			feeNumerator,
-			feeDenominator,
-			[],
-		);
+		const contract = await new MockFeeLogic__factory(deployerSigner).deploy({
+			owner: deployer,
+			recipient: feeRecipient,
+			feeRateNumerator: feeNumerator,
+			feeRateDenominator: feeDenominator,
+			exemptions: [],
+			rebaseInterval,
+			rebaseFeeRateNum: rebaseFeeNum,
+			rebaseFeeRateDen: rebaseFeeDen,
+			rebaseExemptions: [],
+		});
 		const testerContract = contract.connect(testerSigner);
 
 		return {
@@ -81,6 +88,26 @@ describe(contractName, function () {
 
 			expect(await contract.exemptsLength(), 'exemptsLength mismatch').to.eq(
 				0,
+			);
+
+			const [
+				rebaseFeeRateNum,
+				rebaseFeeRateDen,
+			] = await contract.rebaseFeeRate();
+			expect(rebaseFeeRateNum, 'rebaseFeeRate numerator mismatch').to.eq(
+				rebaseFeeNum,
+			);
+			expect(rebaseFeeRateDen, 'rebaseFeeRate denominator mismatch').to.eq(
+				rebaseFeeDen,
+			);
+
+			expect(
+				await contract.rebaseExemptsLength(),
+				'rebaseExemptsLength mismatch',
+			).to.eq(0);
+
+			expect(await contract.rebaseInterval(), 'rebaseInterval mismatch').to.eq(
+				rebaseInterval,
 			);
 		});
 	});

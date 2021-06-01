@@ -39,13 +39,17 @@ const loadFixture = deployments.createFixture(
 		const deployerSigner = waffle.provider.getSigner(deployer);
 		const testerSigner = waffle.provider.getSigner(tester);
 
-		const feeLogic = await new MockFeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			feeRecipient,
-			feeNumerator,
-			feeDenominator,
-			[],
-		);
+		const feeLogic = await new MockFeeLogic__factory(deployerSigner).deploy({
+			owner: deployer,
+			recipient: feeRecipient,
+			feeRateNumerator: feeNumerator,
+			feeRateDenominator: feeDenominator,
+			exemptions: [],
+			rebaseInterval: 0,
+			rebaseFeeRateNum: 0,
+			rebaseFeeRateDen: 1,
+			rebaseExemptions: [],
+		});
 
 		const contract = await new MockERC20TxFee__factory(deployerSigner).deploy(
 			contractName,
