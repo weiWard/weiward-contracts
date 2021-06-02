@@ -700,7 +700,7 @@ describe(contractName, function () {
 				});
 			});
 
-			describe('before genesis', function () {
+			describe.skip('before genesis', function () {
 				let clock: FakeTimers.InstalledClock;
 				const unixTime = GENESIS_START - 604800;
 				const customEthmxFromEth = (
@@ -797,7 +797,7 @@ describe(contractName, function () {
 				});
 			});
 
-			describe('during genesis', function () {
+			describe.skip('during genesis', function () {
 				let clock: FakeTimers.InstalledClock;
 				const customEthmxFromEth = (
 					totalGiven: BigNumber,
@@ -1018,7 +1018,7 @@ describe(contractName, function () {
 			.add(ethtxMintParams.minMintPrice);
 
 		describe('should be correct', function () {
-			describe('before genesis', function () {
+			describe.skip('before genesis', function () {
 				let clock: FakeTimers.InstalledClock;
 				const unixTime = GENESIS_START - 604800;
 				const basePrice = defaultGasPrice
@@ -1092,7 +1092,7 @@ describe(contractName, function () {
 				});
 			});
 
-			describe('during genesis', function () {
+			describe.skip('during genesis', function () {
 				let clock: FakeTimers.InstalledClock;
 
 				beforeEach(async function () {
@@ -1546,7 +1546,7 @@ describe(contractName, function () {
 	describe('mint', function () {
 		const amount = parseEther('10');
 
-		it('should revert before genesis', async function () {
+		it.skip('should revert before genesis', async function () {
 			const { contract } = fixture;
 			const unixTime = GENESIS_START - 604800;
 			const clock = FakeTimers.install({
@@ -1562,7 +1562,7 @@ describe(contractName, function () {
 			clock.uninstall();
 		});
 
-		describe('should mint during genesis', function () {
+		describe.skip('should mint during genesis', function () {
 			let clock: FakeTimers.InstalledClock;
 
 			beforeEach(async function () {
@@ -2101,7 +2101,7 @@ describe(contractName, function () {
 	describe('mintWithWETH', function () {
 		const amount = parseEther('10');
 
-		it('should revert before genesis', async function () {
+		it.skip('should revert before genesis', async function () {
 			const { contract } = fixture;
 			const unixTime = GENESIS_START - 604800;
 			const clock = FakeTimers.install({
@@ -2117,7 +2117,7 @@ describe(contractName, function () {
 			clock.uninstall();
 		});
 
-		describe('should mint during genesis', function () {
+		describe.skip('should mint during genesis', function () {
 			let clock: FakeTimers.InstalledClock;
 
 			beforeEach(async function () {
