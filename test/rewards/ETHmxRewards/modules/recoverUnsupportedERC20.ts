@@ -40,7 +40,7 @@ export default function run(): void {
 		const { contract, deployer, ethtx } = fixture;
 		await expect(
 			contract.recoverUnsupportedERC20(ethtx.address, deployer, 1),
-		).to.be.revertedWith('transfer amount exceeds balance');
+		).to.be.revertedWith('amount exceeds balance');
 	});
 
 	it('should revert with ETHmx', async function () {

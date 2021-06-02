@@ -2549,7 +2549,7 @@ describe(contractName, function () {
 			const { contract, deployer, ethtx } = fixture;
 			await expect(
 				contract.recoverERC20(ethtx.address, deployer, 1),
-			).to.be.revertedWith('transfer amount exceeds balance');
+			).to.be.revertedWith('amount exceeds balance');
 		});
 
 		describe('should succeed', function () {

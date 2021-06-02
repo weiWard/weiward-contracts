@@ -107,7 +107,7 @@ export default function run(): void {
 	it('should revert when amount > balance', async function () {
 		const { contract } = fixture;
 		await expect(contract.stake(1)).to.be.revertedWith(
-			'transfer amount exceeds balance',
+			'amount exceeds balance',
 		);
 	});
 }

@@ -1453,7 +1453,7 @@ describe(contractName, function () {
 			const { contract, ethmx, tester } = fixture;
 			await expect(
 				contract.recoverUnsupportedERC20(ethmx.address, tester, 1),
-			).to.be.revertedWith('transfer amount exceeds balance');
+			).to.be.revertedWith('amount exceeds balance');
 		});
 
 		it('should transfer amount', async function () {
