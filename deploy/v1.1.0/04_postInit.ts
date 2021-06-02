@@ -19,7 +19,9 @@ import {
 	ETHtxRewardsManager__factory,
 	FeeLogic__factory,
 	LPRewards__factory,
+	GasPrice__factory,
 } from '../../build/types/ethers-v5';
+import { solidityKeccak256 } from 'ethers/lib/utils';
 
 const version = 'v1.1.0';
 
@@ -58,7 +60,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		throw new Error('WETH address undefined for current network');
 	}
 
-	const gasOracle = await deployments.get('GasPrice');
+	const gasOracle = GasPrice__factory.connect(
+		(await deployments.get('GasPrice')).address,
+		deployerSigner,
+	);
+	const policy = await deployments.get('Policy');
 	const feeLogic = FeeLogic__factory.connect(
 		(await deployments.get('FeeLogic')).address,
 		deployerSigner,
@@ -133,14 +139,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		lpRecipient,
 	};
 
-	const ethtxRebasers = [];
-	if (gasOracleService && gasOracleService !== '') {
-		ethtxRebasers.push(gasOracleService);
-	}
+	const gasOracleRole = solidityKeccak256(['string'], ['ORACLE_ROLE']);
+	const ethtxRebasers = [policy.address, gasOracleService];
 
 	if (migrations['postInitv1.0.0']) {
 		console.log('Migrating from v1.0.0...');
 		await ethtx.postUpgrade(feeLogic.address, ethtxRebasers);
+		await gasOracle.grantRole(gasOracleRole, policy.address);
 		console.log('Completed migration to v1.1.0.');
 		return true;
 	} else if (migrations['postInitv0.3.0']) {
@@ -150,6 +155,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		console.log('Completed migration to v1.1.0.');
 		return true;
 	}
+
+	await gasOracle.grantRole(gasOracleRole, policy.address);
 
 	await ethtx.postInit({
 		feeLogic: feeLogic.address,
@@ -231,4 +238,5 @@ func.dependencies = [
 	'SushiV2Pairv0.3.0',
 	'FeeLogicv1.1.0',
 	'ValuePerSushiv0.3.0',
+	'Policyv1.1.0',
 ];

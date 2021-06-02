@@ -26,6 +26,7 @@ func.dependencies = [
 	'SushiV2Pairv0.3.0',
 	'FeeLogicv1.1.0',
 	'ValuePerSushiv0.3.0',
+	'Policyv1.1.0',
 	'postInitv1.1.0',
 ];
 

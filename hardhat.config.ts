@@ -211,6 +211,7 @@ const config: HardhatUserConfig = {
 		},
 		// Gas oracle service
 		gasOracleService: {
+			default: 0,
 			// mainnet
 			1: '0x97D46CE03376a059C3Fb84c6c297080166b06E0b',
 			// ropsten
