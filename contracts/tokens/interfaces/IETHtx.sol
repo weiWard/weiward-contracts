@@ -21,7 +21,15 @@ pragma solidity 0.7.6;
 interface IETHtx {
 	/* Views */
 
-	function minter() external view returns (address);
+	function feeLogic() external view returns (address);
+
+	function lastRebaseTime() external view returns (uint256);
+
+	function sharesBalanceOf(address account) external view returns (uint256);
+
+	function sharesPerTokenX18() external view returns (uint256);
+
+	function totalShares() external view returns (uint256);
 
 	/* Mutators */
 
@@ -31,6 +39,8 @@ interface IETHtx {
 
 	function pause() external;
 
+	function rebase() external;
+
 	function recoverERC20(
 		address token,
 		address to,
@@ -39,14 +49,12 @@ interface IETHtx {
 
 	function setFeeLogic(address account) external;
 
-	function setMinter(address account) external;
-
 	function unpause() external;
 
 	/* Events */
 
 	event FeeLogicSet(address indexed author, address indexed account);
-	event MinterSet(address indexed author, address indexed account);
+	event Rebased(address indexed author, uint256 totalShares);
 	event Recovered(
 		address indexed author,
 		address indexed token,

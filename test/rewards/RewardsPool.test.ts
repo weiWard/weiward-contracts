@@ -410,7 +410,7 @@ describe.skip(contractName, function () {
 					deployer,
 					amount,
 				),
-			).to.be.revertedWith('transfer amount exceeds balance');
+			).to.be.revertedWith('amount exceeds balance');
 		});
 
 		it('should fail to recover rewards token', async function () {

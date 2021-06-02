@@ -173,23 +173,28 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			lpRecipient: zeroAddress,
 		});
 
-		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			feeRecipient,
-			feeNumerator,
-			feeDenominator,
-			[
+		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy({
+			owner: deployer,
+			recipient: feeRecipient,
+			feeRateNumerator: feeNumerator,
+			feeRateDenominator: feeDenominator,
+			exemptions: [
 				{
 					account: contract.address,
 					isExempt: true,
 				},
 			],
-		);
+			rebaseInterval: 0,
+			rebaseFeeRateNum: 0,
+			rebaseFeeRateDen: 1,
+			rebaseExemptions: [],
+		});
 
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.postInit({
 			feeLogic: feeLogic.address,
-			minter: ethmxMinter.address,
+			minters: [ethmxMinter.address],
+			rebasers: [],
 		});
 		const testerContract = contract.connect(testerSigner);
 
@@ -1448,7 +1453,7 @@ describe(contractName, function () {
 			const { contract, ethmx, tester } = fixture;
 			await expect(
 				contract.recoverUnsupportedERC20(ethmx.address, tester, 1),
-			).to.be.revertedWith('transfer amount exceeds balance');
+			).to.be.revertedWith('amount exceeds balance');
 		});
 
 		it('should transfer amount', async function () {

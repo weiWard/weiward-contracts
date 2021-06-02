@@ -28,10 +28,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	// eslint-disable-next-line no-console
 	console.log(`SushiV2Factory: ${sushiFactory.address}`);
+
+	return true;
 };
 
 const id = 'SushiV2Factory' + version;
 
 export default func;
 func.tags = [id, version];
+func.id = id;
 func.dependencies = [];

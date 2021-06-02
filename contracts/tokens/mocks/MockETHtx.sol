@@ -22,11 +22,31 @@ pragma abicoder v2;
 import "../ETHtx/ETHtx.sol";
 
 contract MockETHtx is ETHtx {
+	using SafeMath for uint256;
+
 	constructor(address owner_) ETHtx(owner_) {
 		return;
 	}
 
 	function mockMint(address account, uint256 amount) external {
 		_mint(account, amount);
+	}
+
+	function mockMintShares(address account, uint256 amount) external {
+		uint256 ts = _totalShares.add(amount);
+		_totalShares = ts;
+		_sharesPerToken = ts.mul(_SHARES_MULT).div(_totalSupply);
+		_balances[account] = _balances[account].add(amount);
+	}
+
+	function mockBurn(address account, uint256 amount) external {
+		_burn(account, amount);
+	}
+
+	function mockBurnShares(address account, uint256 amount) external {
+		_balances[account] = _balances[account].sub(amount);
+		uint256 ts = _totalShares.sub(amount);
+		_totalShares = ts;
+		_sharesPerToken = ts.mul(_SHARES_MULT).div(_totalSupply);
 	}
 }

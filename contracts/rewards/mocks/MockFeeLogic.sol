@@ -24,21 +24,7 @@ import "../FeeLogic.sol";
 contract MockFeeLogic is FeeLogic {
 	event Notified(uint256 amount);
 
-	constructor(
-		address owner_,
-		address recipient_,
-		uint128 feeRateNumerator,
-		uint128 feeRateDenominator,
-		ExemptData[] memory exemptions
-	)
-		FeeLogic(
-			owner_,
-			recipient_,
-			feeRateNumerator,
-			feeRateDenominator,
-			exemptions
-		)
-	{
+	constructor(FeeLogic.FeeLogicArgs memory _args) FeeLogic(_args) {
 		return;
 	}
 

@@ -89,7 +89,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethtx.postInit({
 		feeLogic: feeLogic.address,
-		minter: ethmxMinter.address,
+		minters: [ethmxMinter.address],
+		rebasers: [],
 	});
 
 	await ethmx.setMinter(ethmxMinter.address);

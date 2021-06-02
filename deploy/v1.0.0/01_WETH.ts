@@ -14,9 +14,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	if (!wethAddr) {
 		throw new Error('WETH address undefined for current network');
 	}
+
+	return true;
 };
 
 const id = 'WETH' + version;
 
 export default func;
 func.tags = [id, version];
+func.id = id;

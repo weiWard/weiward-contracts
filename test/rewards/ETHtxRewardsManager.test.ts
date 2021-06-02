@@ -71,13 +71,17 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const weth = await new WETH9__factory(deployerSigner).deploy();
 
-		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy(
-			deployer,
-			defaultRecipient,
-			feeNumerator,
-			feeDenominator,
-			[],
-		);
+		const feeLogic = await new FeeLogic__factory(deployerSigner).deploy({
+			owner: deployer,
+			recipient: defaultRecipient,
+			feeRateNumerator: feeNumerator,
+			feeRateDenominator: feeDenominator,
+			exemptions: [],
+			rebaseInterval: 0,
+			rebaseFeeRateNum: 0,
+			rebaseFeeRateDen: 1,
+			rebaseExemptions: [],
+		});
 
 		const oracle = await new MockGasPrice__factory(deployerSigner).deploy(
 			deployer,
@@ -131,7 +135,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 		await ethmx.setMinter(ethmxMinter.address);
 		await ethtx.postInit({
 			feeLogic: feeLogic.address,
-			minter: ethmxMinter.address,
+			minters: [ethmxMinter.address],
+			rebasers: [],
 		});
 
 		const ethmxRewards = await new MockETHmxRewards__factory(

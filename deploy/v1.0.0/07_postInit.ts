@@ -142,7 +142,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethtx.postInit({
 		feeLogic: feeLogic.address,
-		minter: ethmxMinter.address,
+		minters: [ethmxMinter.address],
+		rebasers: [],
 	});
 
 	await ethmx.setMinter(ethmxMinter.address);
@@ -210,7 +211,7 @@ func.dependencies = [
 	'ETHtxv0.3.0',
 	'ETHmxv0.3.0',
 	'ETHtxAMMv1.0.0',
-	'ETHmxMinterv0.3.0',
+	'ETHmxMinterv1.0.0',
 	'ETHmxRewardsv1.0.0',
 	'LPRewardsv1.0.0',
 	'ETHtxRewardsManagerv0.3.0',

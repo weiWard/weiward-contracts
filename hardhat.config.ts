@@ -106,7 +106,7 @@ const config: HardhatUserConfig = {
 			saveDeployments: false,
 			forking: {
 				url: ALCHEMY_URI,
-				blockNumber: 10093324,
+				blockNumber: 12546711,
 				enabled: false,
 			},
 		},
@@ -211,6 +211,7 @@ const config: HardhatUserConfig = {
 		},
 		// Gas oracle service
 		gasOracleService: {
+			default: 0,
 			// mainnet
 			1: '0x97D46CE03376a059C3Fb84c6c297080166b06E0b',
 			// ropsten
@@ -232,6 +233,7 @@ const config: HardhatUserConfig = {
 			'FeeLogic',
 			'GasPrice',
 			'LPRewards',
+			'Policy',
 			'ProxyAdmin',
 			'TransparentUpgradeableProxy',
 			'ValuePerUNIV2',

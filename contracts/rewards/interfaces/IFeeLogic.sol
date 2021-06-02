@@ -44,7 +44,22 @@ interface IFeeLogic {
 		uint256 amount
 	) external view returns (uint256);
 
+	function getRebaseFee(uint256 amount) external view returns (uint256);
+
 	function isExempt(address account) external view returns (bool);
+
+	function isRebaseExempt(address account) external view returns (bool);
+
+	function rebaseExemptsAt(uint256 index) external view returns (address);
+
+	function rebaseExemptsLength() external view returns (uint256);
+
+	function rebaseFeeRate()
+		external
+		view
+		returns (uint128 numerator, uint128 denominator);
+
+	function rebaseInterval() external view returns (uint256);
 
 	function recipient() external view returns (address);
 
@@ -53,6 +68,8 @@ interface IFeeLogic {
 		address recipient_,
 		uint256 amount
 	) external view returns (uint256);
+
+	function undoRebaseFee(uint256 amount) external view returns (uint256);
 
 	/* Mutators */
 
@@ -63,6 +80,14 @@ interface IFeeLogic {
 	function setExemptBatch(ExemptData[] memory batch) external;
 
 	function setFeeRate(uint128 numerator, uint128 denominator) external;
+
+	function setRebaseExempt(address account, bool isExempt_) external;
+
+	function setRebaseExemptBatch(ExemptData[] memory batch) external;
+
+	function setRebaseFeeRate(uint128 numerator, uint128 denominator) external;
+
+	function setRebaseInterval(uint256 interval) external;
 
 	function setRecipient(address account) external;
 
@@ -75,5 +100,13 @@ interface IFeeLogic {
 		uint128 numerator,
 		uint128 denominator
 	);
+	event RebaseExemptAdded(address indexed author, address indexed account);
+	event RebaseExemptRemoved(address indexed author, address indexed account);
+	event RebaseFeeRateSet(
+		address indexed author,
+		uint128 numerator,
+		uint128 denominator
+	);
+	event RebaseIntervalSet(address indexed author, uint256 interval);
 	event RecipientSet(address indexed author, address indexed account);
 }

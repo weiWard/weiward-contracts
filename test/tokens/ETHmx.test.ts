@@ -205,7 +205,7 @@ describe(contractName, function () {
 			const { contract, tester, testToken } = fixture;
 			await expect(
 				contract.recoverERC20(testToken.address, tester, 1),
-			).to.be.revertedWith('transfer amount exceeds balance');
+			).to.be.revertedWith('amount exceeds balance');
 		});
 
 		it('should transfer amount', async function () {
