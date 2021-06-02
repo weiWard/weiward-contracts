@@ -31,8 +31,8 @@ interface IETHtx {
 contract Policy is AccessControl {
 	bytes32 public constant POLICY_ROLE = keccak256("POLICY_ROLE");
 
-	address public ethtx;
-	address public gasOracle;
+	address public immutable ethtx;
+	address public immutable gasOracle;
 
 	constructor(
 		address admin,
