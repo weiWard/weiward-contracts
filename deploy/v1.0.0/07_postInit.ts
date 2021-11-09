@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import fs from 'fs';
 import path from 'path';
+import { Contract } from '@ethersproject/contracts';
 
 import { getDeployedWETH } from '../../utils/weth';
 import {
@@ -148,7 +149,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethmx.setMinter(ethmxMinter.address);
 
-	await ethtxAmm.postInit({
+	await (ethtxAmm as Contract).postInit({
 		ethtx: ethtx.address,
 		gasOracle: gasOracle.address,
 		weth: wethAddr,

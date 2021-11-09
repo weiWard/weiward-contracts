@@ -30,6 +30,8 @@ interface IETHtxAMM {
 
 	function ethNeeded() external view returns (uint256);
 
+	function ethmx() external view returns (address);
+
 	function ethtx() external view returns (address);
 
 	function exactEthToEthtx(uint256 amountEthIn)
@@ -69,6 +71,8 @@ interface IETHtxAMM {
 	function gasPrice() external view returns (uint256);
 
 	function gasPriceAtRedemption() external view returns (uint256);
+
+	function geth() external view returns (uint256);
 
 	function maxGasPrice() external view returns (uint256);
 
@@ -125,6 +129,8 @@ interface IETHtxAMM {
 		bool asWETH
 	) external;
 
+	function burnETHmx(uint256 amountIn, bool asWETH) external;
+
 	function pause() external;
 
 	function recoverUnsupportedERC20(
@@ -133,9 +139,13 @@ interface IETHtxAMM {
 		uint256 amount
 	) external;
 
+	function setEthmx(address account) external;
+
 	function setEthtx(address account) external;
 
 	function setGasOracle(address account) external;
+
+	function setGeth(uint256 amount) external;
 
 	function setTargetCRatio(uint128 numerator, uint128 denominator) external;
 
@@ -145,8 +155,11 @@ interface IETHtxAMM {
 
 	/* Events */
 
+	event BurnedETHmx(address indexed author, uint256 amount);
+	event ETHmxSet(address indexed author, address indexed account);
 	event ETHtxSet(address indexed author, address indexed account);
 	event GasOracleSet(address indexed author, address indexed account);
+	event GethSet(address indexed author, uint256 amount);
 	event RecoveredUnsupported(
 		address indexed author,
 		address indexed token,

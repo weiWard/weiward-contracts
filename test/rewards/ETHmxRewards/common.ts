@@ -73,6 +73,10 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployer,
 		);
 
+		const ethmx = await new MockETHmx__factory(deployerSigner).deploy(
+			deployer,
+		);
+
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
 			deployer,
 		);
@@ -82,12 +86,9 @@ export const loadFixture = deployments.createFixture<Fixture, unknown>(
 			weth: weth.address,
 			targetCRatioNum: 2,
 			targetCRatioDen: 1,
+			ethmx: ethmx.address,
 		});
 		await feeLogic.setExempt(ethtxAMM.address, true);
-
-		const ethmx = await new MockETHmx__factory(deployerSigner).deploy(
-			deployer,
-		);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,

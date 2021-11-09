@@ -65,7 +65,7 @@ export function ethtxToEth(
 export async function ethUsedOnGas(
 	tx: ContractTransaction,
 ): Promise<BigNumber> {
-	return (await tx.wait()).gasUsed.mul(tx.gasPrice);
+	return (await tx.wait()).gasUsed.mul(tx.gasPrice!);
 }
 
 export function ethmxFromEth(
