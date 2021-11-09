@@ -5,6 +5,8 @@ import '@nomiclabs/hardhat-ethers';
 
 import { ETHtxRewardsManager__factory } from '../build/types/ethers-v5';
 
+import { getGasPrice } from '../utils/blocknative';
+
 const { deployments, getNamedAccounts, getChainId, ethers } = hre;
 
 (async (): Promise<void> => {
@@ -30,7 +32,16 @@ const { deployments, getNamedAccounts, getChainId, ethers } = hre;
 		`Calling ETHtxRewardsManager.distributeRewards from ${user} at ${ethtxRewardsMgrAddr}`,
 	);
 	try {
-		await ethtxRewardsMgr.distributeRewards();
+		const gp = await getGasPrice();
+		if (!gp) {
+			console.log('Failed to get gas price, aborting...');
+			return;
+		}
+		await ethtxRewardsMgr.distributeRewards({
+			type: 2,
+			maxPriorityFeePerGas: gp.maxPriorityFeePerGas,
+			maxFeePerGas: gp.maxFeePerGas,
+		});
 	} catch (err) {
 		console.log(`Failed to call distributeRewards: ${err}`);
 		return;

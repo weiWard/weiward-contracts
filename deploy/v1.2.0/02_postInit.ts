@@ -3,13 +3,8 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import fs from 'fs';
 import path from 'path';
-import { Contract } from '@ethersproject/contracts';
 
 import { getDeployedWETH } from '../../utils/weth';
-import {
-	getDeployedSushiPair,
-	getDeployedSushiRouter,
-} from '../../utils/sushi';
 import { parseGwei } from '../../test/helpers/conversions';
 import {
 	ETHmx__factory,
@@ -19,12 +14,12 @@ import {
 	ETHtxAMM__factory,
 	ETHtxRewardsManager__factory,
 	FeeLogic__factory,
-	LPRewards__factory,
 	GasPrice__factory,
 } from '../../build/types/ethers-v5';
 import { solidityKeccak256 } from 'ethers/lib/utils';
+import { zeroAddress } from '../../test/helpers/address';
 
-const version = 'v1.1.0';
+const version = 'v1.2.0';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// Skip this if already done
@@ -90,31 +85,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		(await deployments.get('ETHmxRewards')).address,
 		deployerSigner,
 	);
-	const lpRewards = LPRewards__factory.connect(
-		(await deployments.get('LPRewards')).address,
-		deployerSigner,
-	);
 	const ethtxRewardsMgr = ETHtxRewardsManager__factory.connect(
 		(await deployments.get('ETHtxRewardsManager')).address,
 		deployerSigner,
 	);
-	// Sushi router
-	const sushiRouterAddr = await getDeployedSushiRouter(deployments, chainId);
-	if (!sushiRouterAddr) {
-		throw new Error('SushiV2Router02 address undefined for current network');
-	}
-	// Sushi pair
-	const sushiPairAddr = await getDeployedSushiPair(
-		deployments,
-		chainId,
-		deployerSigner,
-		ethtx.address,
-		wethAddr,
-	);
-	if (!sushiPairAddr) {
-		throw new Error('SushiV2Pair address undefined for current network');
-	}
-	const valuePerSushi = await deployments.get('ValuePerSushi');
 
 	const ethmxMinterArgs = {
 		ethmx: ethmx.address,
@@ -136,24 +110,37 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		},
 		lpShareNumerator: 25,
 		lpShareDenominator: 100,
-		lps: [sushiRouterAddr],
+		lps: [],
 		lpRecipient,
 	};
 
 	const gasOracleRole = solidityKeccak256(['string'], ['ORACLE_ROLE']);
 	const ethtxRebasers = [policy.address, gasOracleService];
+	const minterRole = solidityKeccak256(['string'], ['MINTER_ROLE']);
 
-	if (migrations['postInitv1.0.0']) {
+	async function migrateToV120(): Promise<void> {
+		await ethtxAmm.setEthmx(ethmx.address);
+		await ethtx.grantRole(minterRole, ethtxAmm.address);
+		console.log('Completed migration to v1.2.0.');
+	}
+
+	if (migrations['postInitv1.1.0']) {
+		console.log('Migrating from v1.1.0...');
+		await migrateToV120();
+		return true;
+	} else if (migrations['postInitv1.0.0']) {
 		console.log('Migrating from v1.0.0...');
 		await ethtx.postUpgrade(feeLogic.address, ethtxRebasers);
 		await gasOracle.grantRole(gasOracleRole, policy.address);
 		console.log('Completed migration to v1.1.0.');
+		await migrateToV120();
 		return true;
 	} else if (migrations['postInitv0.3.0']) {
 		console.log('Migrating from v0.3.0...');
 		await ethtx.postUpgrade(feeLogic.address, ethtxRebasers);
 		await ethmxMinter.postInit(ethmxMinterArgs);
 		console.log('Completed migration to v1.1.0.');
+		await migrateToV120();
 		return true;
 	}
 
@@ -161,18 +148,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethtx.postInit({
 		feeLogic: feeLogic.address,
-		minters: [ethmxMinter.address],
+		minters: [ethmxMinter.address, ethtxAmm.address],
 		rebasers: ethtxRebasers,
 	});
 
 	await ethmx.setMinter(ethmxMinter.address);
 
-	await (ethtxAmm as Contract).postInit({
+	await ethtxAmm.postInit({
 		ethtx: ethtx.address,
 		gasOracle: gasOracle.address,
 		weth: wethAddr,
 		targetCRatioNum: 2,
 		targetCRatioDen: 1,
+		ethmx: ethmx.address,
 	});
 
 	await ethmxMinter.postInit(ethmxMinterArgs);
@@ -183,30 +171,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		accrualUpdateInterval: 43200, // 12 hours
 	});
 
-	await lpRewards.setRewardsToken(wethAddr);
-	await lpRewards.addToken(sushiPairAddr, valuePerSushi.address);
-
 	await ethtxRewardsMgr.ethtxRewardsManagerPostInit({
 		defaultRecipient: defaultRewardsRecipient,
 		rewardsToken: wethAddr,
 		ethmxRewards: ethmxRewards.address,
 		ethtx: ethtx.address,
 		ethtxAMM: ethtxAmm.address,
-		lpRewards: lpRewards.address,
+		lpRewards: zeroAddress,
 		shares: [
 			{
 				account: defaultRewardsRecipient,
-				value: 10,
+				value: 20,
 				isActive: true,
 			},
 			{
 				account: ethmxRewards.address,
-				value: 45,
-				isActive: true,
-			},
-			{
-				account: lpRewards.address,
-				value: 20,
+				value: 80,
 				isActive: true,
 			},
 		],
@@ -229,15 +209,10 @@ func.dependencies = [
 	'GasPricev0.3.0',
 	'ETHtxv1.1.0',
 	'ETHmxv0.3.0',
-	'ETHtxAMMv1.0.0',
+	'ETHtxAMMv1.2.0',
 	'ETHmxMinterv1.0.0',
 	'ETHmxRewardsv1.0.0',
-	'LPRewardsv1.0.0',
 	'ETHtxRewardsManagerv0.3.0',
-	'SushiV2Factoryv0.3.0',
-	'SushiV2Router02v0.3.0',
-	'SushiV2Pairv0.3.0',
 	'FeeLogicv1.1.0',
-	'ValuePerSushiv0.3.0',
 	'Policyv1.1.0',
 ];

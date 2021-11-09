@@ -95,7 +95,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethmx.setMinter(ethmxMinter.address);
 
-	await ethtxAmm.postInit({
+	await (ethtxAmm as Contract).postInit({
 		ethtx: ethtx.address,
 		gasOracle: gasOracle.address,
 		weth: wethAddr,

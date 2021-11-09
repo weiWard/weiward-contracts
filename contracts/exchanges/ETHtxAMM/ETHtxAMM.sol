@@ -29,6 +29,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./ETHtxAMMData.sol";
 import "../interfaces/IETHtxAMM.sol";
+import "../../tokens/interfaces/IETHmx.sol";
 import "../../tokens/interfaces/IETHtx.sol";
 import "../../tokens/interfaces/IERC20TxFee.sol";
 import "../../tokens/interfaces/IWETH.sol";
@@ -55,6 +56,7 @@ contract ETHtxAMM is
 		address weth;
 		uint128 targetCRatioNum;
 		uint128 targetCRatioDen;
+		address ethmx;
 	}
 
 	/* Constructor */
@@ -86,6 +88,9 @@ contract ETHtxAMM is
 		_targetCRatioNum = _args.targetCRatioNum;
 		_targetCRatioDen = _args.targetCRatioDen;
 		emit TargetCRatioSet(sender, _args.targetCRatioNum, _args.targetCRatioDen);
+
+		_ethmx = _args.ethmx;
+		emit ETHmxSet(sender, _args.ethmx);
 	}
 
 	/* Fallbacks */
@@ -208,6 +213,42 @@ contract ETHtxAMM is
 		_swapEthtxForEth(_msgSender(), amountIn, amountOut, asWETH);
 	}
 
+	function burnETHmx(uint256 amount, bool asWETH)
+		external
+		virtual
+		override
+		whenNotPaused
+	{
+		address account = _msgSender();
+		uint256 ethmxSupply = IERC20(ethmx()).totalSupply();
+		require(ethmxSupply != 0, "ETHtxAMM: no ETHmx supply");
+		require(amount != 0, "ETHtxAMM: zero amount");
+
+		// Calculate percentage of ETH and ETHtx.
+		uint256 initETH = (ethSupply().sub(_geth)).mul(amount).div(ethmxSupply);
+		uint256 amountETH = initETH.mul(6).div(10);
+		_geth = _geth.add(initETH.sub(amountETH));
+		uint256 amountETHtx =
+			IERC20(ethtx()).totalSupply().mul(amount).div(ethmxSupply);
+
+		// Burn ETHmx (ETHmx doesn't have a burnFrom function)
+		IERC20(ethmx()).transferFrom(account, address(this), amount);
+		IETHmx(ethmx()).burn(amount);
+
+		// Burn ETHtx
+		IETHtx(ethtx()).burn(address(this), amountETHtx);
+
+		// Send ETH
+		if (asWETH) {
+			IERC20(weth()).safeTransfer(account, amountETH);
+		} else {
+			IWETH(weth()).withdraw(amountETH);
+			payable(account).sendValue(amountETH);
+		}
+
+		emit BurnedETHmx(account, amount);
+	}
+
 	function pause() external virtual override onlyOwner whenNotPaused {
 		_pause();
 	}
@@ -224,6 +265,12 @@ contract ETHtxAMM is
 		emit RecoveredUnsupported(_msgSender(), token, to, amount);
 	}
 
+	function setEthmx(address account) public virtual override onlyOwner {
+		require(account != address(0), "ETHtxAMM: ETHmx zero address");
+		_ethmx = account;
+		emit ETHmxSet(_msgSender(), account);
+	}
+
 	function setEthtx(address account) public virtual override onlyOwner {
 		require(account != address(0), "ETHtxAMM: ETHtx zero address");
 		_ethtx = account;
@@ -234,6 +281,11 @@ contract ETHtxAMM is
 		require(account != address(0), "ETHtxAMM: gasOracle zero address");
 		_gasOracle = account;
 		emit GasOracleSet(_msgSender(), account);
+	}
+
+	function setGeth(uint256 amount) public virtual override onlyOwner {
+		_geth = amount;
+		emit GethSet(_msgSender(), amount);
 	}
 
 	function setTargetCRatio(uint128 numerator, uint128 denominator)
@@ -303,6 +355,10 @@ contract ETHtxAMM is
 		}
 
 		return target - ethSupply_;
+	}
+
+	function ethmx() public view virtual override returns (address) {
+		return _ethmx;
 	}
 
 	function ethtx() public view virtual override returns (address) {
@@ -402,6 +458,10 @@ contract ETHtxAMM is
 			gasPrice_ = maxGasPrice_;
 		}
 		return gasPrice_;
+	}
+
+	function geth() public view virtual override returns (uint256) {
+		return _geth;
 	}
 
 	function maxGasPrice() public view virtual override returns (uint256) {
@@ -520,6 +580,11 @@ contract ETHtxAMM is
 	) internal virtual {
 		// Apply fee
 		IERC20(ethtx()).safeTransferFrom(account, address(this), amountIn);
+
+		uint256 ethLeft = ethSupply().sub(amountOut);
+		if (_geth > ethLeft) {
+			_geth = ethLeft;
+		}
 
 		if (asWETH) {
 			IERC20(weth()).safeTransfer(account, amountOut);

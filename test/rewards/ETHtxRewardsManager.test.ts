@@ -93,6 +93,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployer,
 		);
 
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
+
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
 			deployer,
 		);
@@ -102,9 +104,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			weth: weth.address,
 			targetCRatioNum: targetCRatioNumerator,
 			targetCRatioDen: targetCRatioDenominator,
+			ethmx: ethmx.address,
 		});
-
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
 
 		const ethmxMinter = await new ETHmxMinter__factory(deployerSigner).deploy(
 			deployer,

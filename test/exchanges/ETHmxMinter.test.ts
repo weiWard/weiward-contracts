@@ -148,6 +148,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			deployer,
 		);
 
+		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
+
 		const ethtxAMM = await new ETHtxAMM__factory(deployerSigner).deploy(
 			deployer,
 		);
@@ -157,10 +159,9 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			weth: weth.address,
 			targetCRatioNum: cTargetNum,
 			targetCRatioDen: cTargetDen,
+			ethmx: ethmx.address,
 		});
 		await feeLogic.setExempt(ethtxAMM.address, true);
-
-		const ethmx = await new ETHmx__factory(deployerSigner).deploy(deployer);
 
 		const {
 			factory: sushiFactory,

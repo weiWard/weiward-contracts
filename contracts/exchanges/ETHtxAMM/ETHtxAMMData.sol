@@ -24,6 +24,8 @@ abstract contract ETHtxAMMData {
 	uint128 internal _targetCRatioDen;
 	address internal _ethtx;
 	address internal _weth;
+	address internal _ethmx;
+	uint256 internal _geth;
 
-	uint256[46] private __gap;
+	uint256[44] private __gap;
 }
