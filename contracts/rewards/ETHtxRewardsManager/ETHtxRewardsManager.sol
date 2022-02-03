@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021 weiWard LLC
+ * Copyright 2021-2022 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,9 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
 import "./ETHtxRewardsManagerData.sol";
-import "../../exchanges/interfaces/IETHtxAMM.sol";
+import {
+	IETHtxAMMv1 as IETHtxAMM
+} from "../../exchanges/interfaces/IETHtxAMMv1.sol";
 import "../interfaces/IETHtxRewardsManager.sol";
 import "../interfaces/IETHmxRewards.sol";
 import "../interfaces/ILPRewards.sol";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021 weiWard LLC
+ * Copyright 2021-2022 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import "./ETHmxMinterData.sol";
 import "../../tokens/interfaces/IETHmx.sol";
 import "../interfaces/IETHmxMinter.sol";
 import "../../tokens/interfaces/IETHtx.sol";
-import "../interfaces/IETHtxAMM.sol";
+import { IETHtxAMMv1 as IETHtxAMM } from "../interfaces/IETHtxAMMv1.sol";
 import "../../tokens/interfaces/IWETH.sol";
 import "../../access/OwnableUpgradeable.sol";
 import "../../libraries/UintLog.sol";

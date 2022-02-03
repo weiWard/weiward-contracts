@@ -106,7 +106,7 @@ const config: HardhatUserConfig = {
 			saveDeployments: false,
 			forking: {
 				url: ALCHEMY_URI,
-				blockNumber: 13580460,
+				blockNumber: 14132596,
 				enabled: false,
 			},
 		},

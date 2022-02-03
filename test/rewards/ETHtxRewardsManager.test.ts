@@ -5,8 +5,8 @@ import { MaxUint256 } from '@ethersproject/constants';
 import { parseEther } from '@ethersproject/units';
 
 import {
-	ETHtxAMM,
-	ETHtxAMM__factory,
+	ETHtxAMMv1 as ETHtxAMM,
+	ETHtxAMMv1__factory as ETHtxAMM__factory,
 	ETHmx__factory,
 	ETHmxMinter__factory,
 	FeeLogic__factory,
