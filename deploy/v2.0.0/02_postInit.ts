@@ -3,7 +3,6 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import fs from 'fs';
 import path from 'path';
-import { Contract } from '@ethersproject/contracts';
 
 import { getDeployedWETH } from '../../utils/weth';
 import { parseGwei } from '../../test/helpers/conversions';
@@ -20,7 +19,7 @@ import {
 import { solidityKeccak256 } from 'ethers/lib/utils';
 import { zeroAddress } from '../../test/helpers/address';
 
-const version = 'v1.2.0';
+const version = 'v2.0.0';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// Skip this if already done
@@ -117,31 +116,34 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const gasOracleRole = solidityKeccak256(['string'], ['ORACLE_ROLE']);
 	const ethtxRebasers = [policy.address, gasOracleService];
-	const minterRole = solidityKeccak256(['string'], ['MINTER_ROLE']);
+	// const minterRole = solidityKeccak256(['string'], ['MINTER_ROLE']);
 
-	async function migrateToV120(): Promise<void> {
-		await ethtxAmm.setEthmx(ethmx.address);
-		await ethtx.grantRole(minterRole, ethtxAmm.address);
-		console.log('Completed migration to v1.2.0.');
+	async function migrateToV200(): Promise<void> {
+		await ethtxAmm.postUpgrade(defaultRewardsRecipient);
+		console.log('Completed migration to v2.0.0');
 	}
 
-	if (migrations['postInitv1.1.0']) {
+	if (migrations['postInitv1.2.0']) {
+		console.log('Migrating from v1.2.0...');
+		await migrateToV200();
+		return true;
+	} else if (migrations['postInitv1.1.0']) {
 		console.log('Migrating from v1.1.0...');
-		await migrateToV120();
+		await migrateToV200();
 		return true;
 	} else if (migrations['postInitv1.0.0']) {
 		console.log('Migrating from v1.0.0...');
 		await ethtx.postUpgrade(feeLogic.address, ethtxRebasers);
 		await gasOracle.grantRole(gasOracleRole, policy.address);
 		console.log('Completed migration to v1.1.0.');
-		await migrateToV120();
+		await migrateToV200();
 		return true;
 	} else if (migrations['postInitv0.3.0']) {
 		console.log('Migrating from v0.3.0...');
 		await ethtx.postUpgrade(feeLogic.address, ethtxRebasers);
 		await ethmxMinter.postInit(ethmxMinterArgs);
 		console.log('Completed migration to v1.1.0.');
-		await migrateToV120();
+		await migrateToV200();
 		return true;
 	}
 
@@ -155,12 +157,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethmx.setMinter(ethmxMinter.address);
 
-	await (ethtxAmm as Contract).postInit({
-		ethtx: ethtx.address,
-		gasOracle: gasOracle.address,
+	await ethtxAmm.postInit({
 		weth: wethAddr,
-		targetCRatioNum: 2,
-		targetCRatioDen: 1,
 		ethmx: ethmx.address,
 	});
 
@@ -210,7 +208,7 @@ func.dependencies = [
 	'GasPricev0.3.0',
 	'ETHtxv1.1.0',
 	'ETHmxv0.3.0',
-	'ETHtxAMMv1.2.0',
+	'ETHtxAMMv2.0.0',
 	'ETHmxMinterv1.0.0',
 	'ETHmxRewardsv1.0.0',
 	'ETHtxRewardsManagerv0.3.0',

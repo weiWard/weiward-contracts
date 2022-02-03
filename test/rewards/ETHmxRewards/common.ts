@@ -18,7 +18,7 @@ import {
 	SimpleGasPrice__factory,
 	WETH9,
 	FeeLogic,
-	ETHtxAMM__factory,
+	ETHtxAMMv1__factory as ETHtxAMM__factory,
 } from '../../../build/types/ethers-v5';
 
 export const defaultGasPrice = parseGwei('200');

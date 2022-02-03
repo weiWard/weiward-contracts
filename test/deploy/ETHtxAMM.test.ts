@@ -51,7 +51,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 	},
 );
 
-describe('ETHtxAMM Deployment', function () {
+describe.skip('ETHtxAMM Deployment', function () {
 	let fixture: Fixture;
 
 	beforeEach(async function () {

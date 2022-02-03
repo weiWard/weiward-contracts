@@ -18,34 +18,14 @@
 
 pragma solidity 0.7.6;
 
-interface IETHtxAMM {
-	/* Views */
+abstract contract ETHtxAMMv1Data {
+	address internal _gasOracle;
+	uint128 internal _targetCRatioNum;
+	uint128 internal _targetCRatioDen;
+	address internal _ethtx;
+	address internal _weth;
+	address internal _ethmx;
+	uint256 internal _geth;
 
-	function ethmx() external view returns (address);
-
-	function weth() external view returns (address);
-
-	/* Mutators */
-
-	function burnETHmx(uint256 amountIn, bool asWETH) external;
-
-	function pause() external;
-
-	function recoverUnsupportedERC20(
-		address token,
-		address to,
-		uint256 amount
-	) external;
-
-	function unpause() external;
-
-	/* Events */
-
-	event BurnedETHmx(address indexed author, uint256 amount);
-	event RecoveredUnsupported(
-		address indexed author,
-		address indexed token,
-		address indexed to,
-		uint256 amount
-	);
+	uint256[44] private __gap;
 }
