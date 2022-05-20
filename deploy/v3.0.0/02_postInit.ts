@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import fs from 'fs';
 import path from 'path';
+import { Contract } from '@ethersproject/contracts';
 
 import { getDeployedWETH } from '../../utils/weth';
 import { parseGwei } from '../../test/helpers/conversions';
@@ -175,14 +176,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		ethmx: ethmx.address,
 	});
 
-	await ethmxMinter.postInit(ethmxMinterArgs);
+	await (ethmxMinter as Contract).postInit(ethmxMinterArgs);
 
 	await ethmxRewards.postInit({
 		ethmx: ethmx.address,
 		weth: wethAddr,
 	});
 
-	await ethtxRewardsMgr.ethtxRewardsManagerPostInit({
+	await (ethtxRewardsMgr as Contract).ethtxRewardsManagerPostInit({
 		defaultRecipient: defaultRewardsRecipient,
 		rewardsToken: wethAddr,
 		ethmxRewards: ethmxRewards.address,

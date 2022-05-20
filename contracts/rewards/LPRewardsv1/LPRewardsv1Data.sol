@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021-2022 weiWard LLC
+ * Copyright 2021 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
 import "../../libraries/EnumerableMap.sol";
 
-abstract contract LPRewardsData {
+abstract contract LPRewardsv1Data {
 	/* Structs */
 
 	struct TokenData {

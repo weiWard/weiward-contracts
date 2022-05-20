@@ -43,7 +43,7 @@ import {
 import { Contract } from 'ethers';
 import { mineBlock as mineBlockWithProvider } from '../helpers/timeTravel';
 
-const contractName = 'ETHmxMinter';
+const contractName = 'ETHmxMinterv1';
 
 const defaultGasPrice = parseGwei('200');
 const ethmxMintParams: IETHmxMintParams = {

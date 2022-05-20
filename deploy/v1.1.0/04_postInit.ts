@@ -175,7 +175,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		targetCRatioDen: 1,
 	});
 
-	await ethmxMinter.postInit(ethmxMinterArgs);
+	await (ethmxMinter as Contract).postInit(ethmxMinterArgs);
 
 	await (ethmxRewards as Contract).postInit({
 		ethmx: ethmx.address,
@@ -183,10 +183,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		accrualUpdateInterval: 43200, // 12 hours
 	});
 
-	await lpRewards.setRewardsToken(wethAddr);
-	await lpRewards.addToken(sushiPairAddr, valuePerSushi.address);
+	await (lpRewards as Contract).setRewardsToken(wethAddr);
+	await (lpRewards as Contract).addToken(sushiPairAddr, valuePerSushi.address);
 
-	await ethtxRewardsMgr.ethtxRewardsManagerPostInit({
+	await (ethtxRewardsMgr as Contract).ethtxRewardsManagerPostInit({
 		defaultRecipient: defaultRewardsRecipient,
 		rewardsToken: wethAddr,
 		ethmxRewards: ethmxRewards.address,

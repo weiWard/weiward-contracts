@@ -30,7 +30,7 @@ import "../interfaces/IETHtxRewardsManagerv1.sol";
 import {
 	IETHmxRewardsv1 as IETHmxRewards
 } from "../interfaces/IETHmxRewardsv1.sol";
-import "../interfaces/ILPRewards.sol";
+import { ILPRewardsv1 as ILPRewards } from "../interfaces/ILPRewardsv1.sol";
 import "../../access/OwnableUpgradeable.sol";
 import "../RewardsManager/RewardsManager.sol";
 

@@ -33,7 +33,7 @@ import {
 	WETH9,
 } from '../../build/types/ethers-v5';
 
-const contractName = 'ETHtxAMM';
+const contractName = 'ETHtxAMMv1';
 
 const ethtxMintParams = {
 	minMintPrice: parseGwei('50'),

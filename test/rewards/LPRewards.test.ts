@@ -3,17 +3,17 @@ import { deployments } from 'hardhat';
 import { JsonRpcSigner } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 
-import {
-	ETHtxRewardsManager,
-	ETHtxRewardsManager__factory,
-	ETHtxRewardsManagerv1__factory,
-	WETH9,
-	WETH9__factory,
-} from '../../build/types/ethers-v5';
 import { zeroAddress, zeroPadAddress } from '../helpers/address';
 import { sendWETH } from '../helpers/conversions';
+import {
+	LPRewards,
+	LPRewards__factory,
+	LPRewardsv1__factory,
+	WETH9__factory,
+	WETH9,
+} from '../../build/types/ethers-v5';
 
-const contractName = 'ETHtxRewardsManager';
+const contractName = 'LPRewards';
 
 const oneAddress = zeroPadAddress('0x1');
 
@@ -22,10 +22,10 @@ interface Fixture {
 	deployerSigner: JsonRpcSigner;
 	tester: string;
 	testerSigner: JsonRpcSigner;
-	contract: ETHtxRewardsManager;
-	contractImpl: ETHtxRewardsManager;
-	contractUpgraded: ETHtxRewardsManager;
-	testerContract: ETHtxRewardsManager;
+	contract: LPRewards;
+	contractImpl: LPRewards;
+	contractUpgraded: LPRewards;
+	testerContract: LPRewards;
 	weth: WETH9;
 }
 
@@ -38,7 +38,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 
 		const weth = await new WETH9__factory(deployerSigner).deploy();
 
-		const result = await deploy('ETHtxRewardsManager', {
+		const result = await deploy('LPRewards', {
 			from: deployer,
 			log: true,
 			proxy: {
@@ -49,18 +49,18 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			},
 			args: [deployer],
 		});
-		const contract = ETHtxRewardsManager__factory.connect(
+		const contract = LPRewards__factory.connect(
 			result.address,
 			deployerSigner,
 		);
 		await contract.postInit(weth.address);
 
-		const contractImpl = ETHtxRewardsManager__factory.connect(
-			(await deployments.get('ETHtxRewardsManager_Implementation')).address,
+		const contractImpl = LPRewards__factory.connect(
+			(await deployments.get('LPRewards_Implementation')).address,
 			deployerSigner,
 		);
 
-		const ucResult = await deploy('ETHtxRewardsManagerv1', {
+		const ucResult = await deploy('LPRewardsv1', {
 			from: deployer,
 			log: true,
 			proxy: {
@@ -71,23 +71,15 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			},
 			args: [deployer],
 		});
-		const contractOld = ETHtxRewardsManagerv1__factory.connect(
+		const contractOld = LPRewardsv1__factory.connect(
 			ucResult.address,
 			deployerSigner,
 		);
-		await contractOld.ethtxRewardsManagerPostInit({
-			defaultRecipient: oneAddress,
-			rewardsToken: weth.address,
-			ethmxRewards: zeroAddress,
-			ethtx: zeroAddress,
-			ethtxAMM: zeroAddress,
-			lpRewards: zeroAddress,
-			shares: [],
-		});
+		await contractOld.setRewardsToken(weth.address);
 		const pa = await deployments.get('ProxyAdmin');
 		const proxyAdmin = new Contract(pa.address, pa.abi, deployerSigner);
 		await proxyAdmin.upgrade(ucResult.address, contractImpl.address);
-		const contractUpgraded = ETHtxRewardsManager__factory.connect(
+		const contractUpgraded = LPRewards__factory.connect(
 			ucResult.address,
 			deployerSigner,
 		);

@@ -124,11 +124,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		accrualUpdateInterval: 43200, // 12 hours
 	});
 
-	await lpRewards.setRewardsToken(wethAddr);
-	await lpRewards.addToken(sushiPairAddr, valuePerSushi.address);
+	await (lpRewards as Contract).setRewardsToken(wethAddr);
+	await (lpRewards as Contract).addToken(sushiPairAddr, valuePerSushi.address);
 
 	const defaultRecipient = deployer;
-	await ethtxRewardsMgr.ethtxRewardsManagerPostInit({
+	await (ethtxRewardsMgr as Contract).ethtxRewardsManagerPostInit({
 		defaultRecipient,
 		rewardsToken: wethAddr,
 		ethmxRewards: ethmxRewards.address,

@@ -15,6 +15,7 @@ import {
 	ETHtxRewardsManager__factory,
 	FeeLogic__factory,
 	GasPrice__factory,
+	LPRewards__factory,
 } from '../../build/types/ethers-v5';
 import { solidityKeccak256 } from 'ethers/lib/utils';
 import { zeroAddress } from '../../test/helpers/address';
@@ -89,6 +90,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		(await deployments.get('ETHtxRewardsManager')).address,
 		deployerSigner,
 	);
+	const lpRewards = LPRewards__factory.connect(
+		(await deployments.get('LPRewards')).address,
+		deployerSigner,
+	);
 
 	const ethmxMinterArgs = {
 		ethmx: ethmx.address,
@@ -131,6 +136,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	async function migrateToV310(): Promise<void> {
 		await ethtxAmm.postUpgrade(defaultRewardsRecipient);
 		await ethtxRewardsMgr.postUpgrade(defaultRewardsRecipient);
+		await lpRewards.postUpgrade(defaultRewardsRecipient);
 		console.log('Completed migration to v3.1.0');
 	}
 
@@ -239,6 +245,7 @@ func.dependencies = [
 	'ETHmxMinterv3.1.0',
 	'ETHmxRewardsv3.0.0',
 	'ETHtxRewardsManagerv3.1.0',
+	'LPRewardsv3.1.0',
 	'FeeLogicv1.1.0',
 	'Policyv1.1.0',
 ];

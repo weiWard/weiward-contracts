@@ -18,10 +18,10 @@
 
 pragma solidity 0.7.6;
 
-import "../LPRewards/LPRewards.sol";
+import "../LPRewardsv1/LPRewardsv1.sol";
 
-contract MockLPRewards is LPRewards {
-	constructor(address owner_) LPRewards(owner_) {
+contract MockLPRewardsv1 is LPRewardsv1 {
+	constructor(address owner_) LPRewardsv1(owner_) {
 		return;
 	}
 
