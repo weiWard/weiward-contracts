@@ -28,6 +28,12 @@
   "postInitv2.0.0": 1643896353,
   "migratev2.0.0": 1643896353,
   "ETHmxRewardsv3.0.0": 1653006033,
-	"postInitv3.0.0": 1653006033,
-	"migratev3.0.0": 1653006033
+  "postInitv3.0.0": 1653006033,
+  "migratev3.0.0": 1653006033,
+  "ETHtxAMMv3.1.0": 1653029823,
+  "ETHmxMinterv3.1.0": 1653029889,
+  "ETHtxRewardsManagerv3.1.0": 1653031118,
+  "LPRewardsv3.1.0": 1653032201,
+	"postInitv3.1.0": 1653032201,
+  "migratev3.1.0": 1653032201
 }
