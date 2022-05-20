@@ -2,15 +2,9 @@ import { expect } from 'chai';
 import { deployments } from 'hardhat';
 import { parseEther } from 'ethers/lib/utils';
 import { JsonRpcSigner } from '@ethersproject/providers';
+import { Contract } from 'ethers';
 
-import { zeroAddress } from '../helpers/address';
-import { parseETHmx } from '../helpers/conversions';
-import {
-	ETHmx,
-	ETHmx__factory,
-	MockERC20,
-	MockERC20__factory,
-} from '../../build/types/ethers-v5';
+import { ETHmx, ETHmx__factory } from '../../build/types/ethers-v5';
 
 const contractName = 'ETHmx';
 
@@ -21,8 +15,8 @@ interface Fixture {
 	testerSigner: JsonRpcSigner;
 	contract: ETHmx;
 	contractImpl: ETHmx;
+	contractUpgraded: ETHmx;
 	testerContract: ETHmx;
-	testToken: MockERC20;
 }
 
 const loadFixture = deployments.createFixture<Fixture, unknown>(
@@ -44,21 +38,32 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			args: [deployer],
 		});
 		const contract = ETHmx__factory.connect(result.address, deployerSigner);
-		await contract.setMinter(deployer);
 
 		const contractImpl = ETHmx__factory.connect(
 			(await deployments.get('ETHmxTest_Implementation')).address,
 			deployerSigner,
 		);
 
-		const testerContract = contract.connect(testerSigner);
-
-		const testToken = await new MockERC20__factory(deployerSigner).deploy(
-			'Test Token',
-			'TEST',
-			18,
-			0,
+		const ucResult = await deploy('ETHmxv1', {
+			from: deployer,
+			log: true,
+			proxy: {
+				owner: deployer,
+				methodName: 'init',
+				proxyContract: 'OpenZeppelinTransparentProxy',
+				viaAdminContract: 'ProxyAdmin',
+			},
+			args: [deployer],
+		});
+		const pa = await deployments.get('ProxyAdmin');
+		const proxyAdmin = new Contract(pa.address, pa.abi, deployerSigner);
+		await proxyAdmin.upgrade(ucResult.address, contractImpl.address);
+		const contractUpgraded = ETHmx__factory.connect(
+			ucResult.address,
+			deployerSigner,
 		);
+
+		const testerContract = contract.connect(testerSigner);
 
 		return {
 			deployer,
@@ -67,8 +72,8 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 			testerSigner,
 			contract,
 			contractImpl,
+			contractUpgraded,
 			testerContract,
-			testToken,
 		};
 	},
 );
@@ -89,10 +94,6 @@ describe(contractName, function () {
 				await contractImpl.owner(),
 				'implemenation owner address mismatch',
 			).to.eq(deployer);
-
-			expect(await contract.minter(), 'minter address mismatch').to.eq(
-				deployer,
-			);
 		});
 	});
 
@@ -126,160 +127,24 @@ describe(contractName, function () {
 		});
 	});
 
-	describe('burn', function () {
-		it('should burn correct amount from sender', async function () {
-			const { contract, deployer } = fixture;
-			const minted = parseETHmx('10');
-
-			await contract.mintTo(deployer, minted);
-
-			const burnt = parseETHmx('5');
-			await contract.burn(burnt);
-
-			const balanceAfter = await contract.balanceOf(deployer);
-			expect(balanceAfter).to.eq(minted.sub(burnt));
-		});
-	});
-
-	describe('mintTo', function () {
-		it('can only be called by minter', async function () {
-			const { testerContract, tester } = fixture;
-
-			await expect(testerContract.mintTo(tester, 1)).to.be.revertedWith(
-				'caller is not the minter',
-			);
-		});
-
-		it('reverts when paused', async function () {
-			const { contract, tester } = fixture;
-
-			await contract.pause();
-
-			await expect(contract.mintTo(tester, 1)).to.be.revertedWith('paused');
-		});
-
-		it('mints correct amount to account', async function () {
-			const { contract, tester } = fixture;
-			const amount = parseETHmx('10');
-
-			await expect(contract.mintTo(tester, amount))
-				.to.emit(contract, 'Transfer')
-				.withArgs(zeroAddress, tester, amount);
-
-			expect(await contract.balanceOf(tester)).to.eq(amount);
-		});
-	});
-
-	describe('pause', function () {
-		it('should update paused', async function () {
-			const { contract } = fixture;
-			expect(await contract.paused(), 'mismatch before call').to.be.false;
-			await contract.pause();
-			expect(await contract.paused(), 'failed to update paused').to.be.true;
-		});
-
-		it('should revert when paused', async function () {
-			const { contract } = fixture;
-			await contract.pause();
-			await expect(contract.pause()).to.be.revertedWith('paused');
-		});
-
+	describe('destroy', function () {
 		it('can only be called by owner', async function () {
 			const { testerContract } = fixture;
-			await expect(testerContract.pause()).to.be.revertedWith(
-				'caller is not the owner',
-			);
-		});
-	});
-
-	describe('recoverERC20', function () {
-		it('can only be called by owner', async function () {
-			const { testerContract, tester, testToken } = fixture;
-
-			await expect(
-				testerContract.recoverERC20(testToken.address, tester, 1),
-			).to.be.revertedWith('caller is not the owner');
-		});
-
-		it('should fail to recover nonexistent token', async function () {
-			const { contract, tester, testToken } = fixture;
-			await expect(
-				contract.recoverERC20(testToken.address, tester, 1),
-			).to.be.revertedWith('amount exceeds balance');
-		});
-
-		it('should transfer amount', async function () {
-			const { contract, tester, testToken } = fixture;
-			const amount = parseEther('10');
-
-			await testToken.mint(contract.address, amount);
-			await contract.recoverERC20(testToken.address, tester, amount);
-
-			expect(
-				await testToken.balanceOf(contract.address),
-				'contract balance mismatch',
-			).to.eq(0);
-			expect(
-				await testToken.balanceOf(tester),
-				'target balance mismatch',
-			).to.eq(amount);
-		});
-
-		it('should emit Recovered event', async function () {
-			const { contract, deployer, tester, testToken } = fixture;
-			const amount = parseEther('10');
-
-			await testToken.mint(contract.address, amount);
-
-			await expect(contract.recoverERC20(testToken.address, tester, amount))
-				.to.emit(contract, 'Recovered')
-				.withArgs(deployer, testToken.address, tester, amount);
-		});
-	});
-
-	describe('setMinter', function () {
-		const newMinter = zeroAddress;
-
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			await expect(testerContract.setMinter(newMinter)).to.be.revertedWith(
+			await expect(testerContract.destroy()).to.be.revertedWith(
 				'caller is not the owner',
 			);
 		});
 
-		it('should set minter address', async function () {
-			const { contract } = fixture;
-			await contract.setMinter(newMinter);
-			expect(await contract.minter()).to.eq(newMinter);
-		});
+		it('should selfdestruct proxy and implementation', async function () {
+			const { contract, contractImpl, deployer } = fixture;
 
-		it('should emit MinterSet event', async function () {
-			const { contract, deployer } = fixture;
-			await expect(contract.setMinter(newMinter))
-				.to.emit(contract, 'MinterSet')
-				.withArgs(deployer, newMinter);
-		});
-	});
+			await expect(contract.destroy(), 'proxy failed to destroy')
+				.to.emit(contract, 'Destroyed')
+				.withArgs(deployer);
 
-	describe('unpause', function () {
-		it('should update paused', async function () {
-			const { contract } = fixture;
-			await contract.pause();
-			expect(await contract.paused(), 'pause failed').to.be.true;
-			await contract.unpause();
-			expect(await contract.paused(), 'unpause failed').to.be.false;
-		});
-
-		it('should revert when unpaused', async function () {
-			const { contract } = fixture;
-			await expect(contract.unpause()).to.be.revertedWith('not paused');
-		});
-
-		it('can only be called by owner', async function () {
-			const { testerContract } = fixture;
-			await expect(testerContract.unpause()).to.be.revertedWith(
-				'caller is not the owner',
-			);
+			await expect(contractImpl.destroy(), 'implementation failed to destroy')
+				.to.emit(contractImpl, 'Destroyed')
+				.withArgs(deployer);
 		});
 	});
 });

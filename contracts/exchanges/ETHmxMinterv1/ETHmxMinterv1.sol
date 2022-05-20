@@ -28,7 +28,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./ETHmxMinterv1Data.sol";
-import "../../tokens/interfaces/IETHmx.sol";
+import { IETHmxv1 as IETHmx } from "../../tokens/interfaces/IETHmxv1.sol";
 import "../interfaces/IETHmxMinterv1.sol";
 import "../../tokens/interfaces/IETHtx.sol";
 import { IETHtxAMMv1 as IETHtxAMM } from "../interfaces/IETHtxAMMv1.sol";

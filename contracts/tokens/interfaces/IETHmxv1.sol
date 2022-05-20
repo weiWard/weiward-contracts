@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021-2022 weiWard LLC
+ * Copyright 2021 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,36 @@
 
 pragma solidity 0.7.6;
 
-interface IETHmx {
+interface IETHmxv1 {
+	/* Views */
+
+	function minter() external view returns (address);
+
 	/* Mutators */
 
 	function burn(uint256 amount) external;
 
-	function destroy() external;
+	function mintTo(address account, uint256 amount) external;
+
+	function pause() external;
+
+	function recoverERC20(
+		address token,
+		address to,
+		uint256 amount
+	) external;
+
+	function setMinter(address account) external;
+
+	function unpause() external;
 
 	/* Events */
 
-	event Destroyed(address indexed author);
+	event MinterSet(address indexed author, address indexed account);
+	event Recovered(
+		address indexed author,
+		address indexed token,
+		address indexed to,
+		uint256 amount
+	);
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021-2022 weiWard LLC
+ * Copyright 2021 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,19 +24,19 @@ import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./ETHmxData.sol";
+import "./ETHmxv1Data.sol";
 import "../ERC20/ERC20Upgradeable.sol";
-import "../interfaces/IETHmx.sol";
+import "../interfaces/IETHmxv1.sol";
 import "../../access/OwnableUpgradeable.sol";
 
-contract ETHmx is
+contract ETHmxv1 is
 	Initializable,
 	ContextUpgradeable,
 	OwnableUpgradeable,
 	PausableUpgradeable,
 	ERC20Upgradeable,
-	ETHmxData,
-	IETHmx
+	ETHmxv1Data,
+	IETHmxv1
 {
 	using SafeERC20 for IERC20;
 
@@ -55,22 +55,55 @@ contract ETHmx is
 		__ERC20_init_unchained();
 	}
 
+	/* Modifiers */
+
+	modifier onlyMinter {
+		require(_msgSender() == minter(), "ETHmx: caller is not the minter");
+		_;
+	}
+
 	/* External Mutators */
 
 	function burn(uint256 amount) external virtual override {
 		_burn(_msgSender(), amount);
 	}
 
-	function destroy() external override onlyOwner {
-		address payable sender = _msgSender();
-		emit Destroyed(sender);
-		selfdestruct(sender);
+	function mintTo(address account, uint256 amount)
+		external
+		virtual
+		override
+		onlyMinter
+		whenNotPaused
+	{
+		_mint(account, amount);
+	}
+
+	function pause() external virtual override onlyOwner {
+		_pause();
+	}
+
+	function recoverERC20(
+		address token,
+		address to,
+		uint256 amount
+	) external virtual override onlyOwner {
+		IERC20(token).safeTransfer(to, amount);
+		emit Recovered(_msgSender(), token, to, amount);
+	}
+
+	function setMinter(address account) public virtual override onlyOwner {
+		_minter = account;
+		emit MinterSet(_msgSender(), account);
+	}
+
+	function unpause() external virtual override onlyOwner {
+		_unpause();
 	}
 
 	/* Public Views */
 
-	function balanceOf(address) public view virtual override returns (uint256) {
-		return 0;
+	function minter() public view virtual override returns (address) {
+		return _minter;
 	}
 
 	function name() public view virtual override returns (string memory) {
