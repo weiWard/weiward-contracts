@@ -17,8 +17,6 @@ const { getNamedAccounts, ethers } = hre;
 	const signer = ethers.provider.getSigner(deployer);
 
 	const txHash = '';
-	const nonce = 75;
-	const gasLimit = 1125355;
 
 	const gasPrice = await getGasPrice();
 	if (!gasPrice) {
@@ -35,11 +33,11 @@ const { getNamedAccounts, ethers } = hre;
 	const tx = await signer.provider.getTransaction(txHash);
 
 	await signer.sendTransaction({
-		nonce,
+		nonce: tx.nonce,
 		type: 2,
 		maxPriorityFeePerGas,
 		maxFeePerGas,
-		gasLimit,
+		gasLimit: tx.gasLimit,
 		data: tx.data,
 		from: tx.from,
 		to: tx.to,
