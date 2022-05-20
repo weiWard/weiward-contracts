@@ -115,7 +115,7 @@ const loadFixture = deployments.createFixture<Fixture, unknown>(
 	},
 );
 
-describe.only(contractName, function () {
+describe(contractName, function () {
 	let fixture: Fixture;
 
 	beforeEach(async function () {

@@ -19,33 +19,11 @@
 pragma solidity 0.7.6;
 
 interface IETHtxAMM {
-	/* Views */
-
-	function ethmx() external view returns (address);
-
-	function weth() external view returns (address);
-
 	/* Mutators */
 
-	function burnETHmx(uint256 amountIn, bool asWETH) external;
-
-	function pause() external;
-
-	function recoverUnsupportedERC20(
-		address token,
-		address to,
-		uint256 amount
-	) external;
-
-	function unpause() external;
+	function destroy() external;
 
 	/* Events */
 
-	event BurnedETHmx(address indexed author, uint256 amount);
-	event RecoveredUnsupported(
-		address indexed author,
-		address indexed token,
-		address indexed to,
-		uint256 amount
-	);
+	event Destroyed(address indexed author);
 }

@@ -74,100 +74,15 @@ contract ETHtxAMM is
 	}
 
 	function postUpgrade(address secureVault) external virtual onlyOwner {
-		// Can only be called once
-		require(
-			_targetCRatioDenDeprecated != 0,
-			"ETHtxAMM::postUpgrade: already executed"
-		);
-
-		// Move platform funds to vault.
+		// Deprecate contract and move funds to vault.
 		IERC20 wethHandle = IERC20(_weth);
 		uint256 ethSupply = wethHandle.balanceOf(address(this));
-		// Calculate platform ETH after accounting for past withdrawals.
-		uint256 platformEth = ethSupply.sub(_gethDeprecated).mul(4).div(10);
-		platformEth += _gethDeprecated;
-		// Move to vault.
-		wethHandle.safeTransfer(secureVault, platformEth);
-
-		// Clear deprecated state
-		_gasOracleDeprecated = address(0);
-		_targetCRatioNumDeprecated = 0;
-		_targetCRatioDenDeprecated = 0;
-		_ethtxDeprecated = address(0);
-		_gethDeprecated = 0;
+		wethHandle.safeTransfer(secureVault, ethSupply);
 	}
 
-	/* Fallbacks */
-
-	receive() external payable {
-		// Only accept ETH via fallback from the WETH contract
-		address weth_ = weth();
-		if (msg.sender != weth_) {
-			// Otherwise try to convert it to WETH
-			IWETH(weth_).deposit{ value: msg.value }();
-		}
-	}
-
-	/* External Mutators */
-
-	function burnETHmx(uint256 amount, bool asWETH)
-		external
-		virtual
-		override
-		whenNotPaused
-	{
-		address account = _msgSender();
-		uint256 ethmxSupply = IERC20(ethmx()).totalSupply();
-		require(ethmxSupply != 0, "ETHtxAMM: no ETHmx supply");
-		require(amount != 0, "ETHtxAMM: zero amount");
-
-		IERC20 wethHandle = IERC20(weth());
-
-		// Calculate proportional ETH due
-		uint256 ethSupply = wethHandle.balanceOf(address(this));
-		uint256 amountETH = ethSupply.mul(amount).div(ethmxSupply);
-
-		// Burn ETHmx (ETHmx doesn't have a burnFrom function)
-		IERC20(ethmx()).transferFrom(account, address(this), amount);
-		IETHmx(ethmx()).burn(amount);
-
-		// Send ETH
-		if (asWETH) {
-			wethHandle.safeTransfer(account, amountETH);
-		} else {
-			IWETH(weth()).withdraw(amountETH);
-			payable(account).sendValue(amountETH);
-		}
-
-		emit BurnedETHmx(account, amount);
-	}
-
-	function pause() external virtual override onlyOwner whenNotPaused {
-		_pause();
-	}
-
-	function recoverUnsupportedERC20(
-		address token,
-		address to,
-		uint256 amount
-	) external virtual override onlyOwner {
-		require(token != weth(), "ETHtxAMM: cannot recover WETH");
-
-		IERC20(token).safeTransfer(to, amount);
-		emit RecoveredUnsupported(_msgSender(), token, to, amount);
-	}
-
-	function unpause() external virtual override onlyOwner whenPaused {
-		_unpause();
-	}
-
-	/* Public Views */
-
-	function ethmx() public view virtual override returns (address) {
-		return _ethmx;
-	}
-
-	function weth() public view virtual override returns (address) {
-		return _weth;
+	function destroy() external override onlyOwner {
+		address payable sender = _msgSender();
+		emit Destroyed(sender);
+		selfdestruct(sender);
 	}
 }
