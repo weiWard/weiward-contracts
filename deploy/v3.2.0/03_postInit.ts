@@ -243,7 +243,7 @@ func.dependencies = [
 	'ProxyAdminv0.3.0',
 	'WETHv1.0.0',
 	'GasPricev0.3.0',
-	'ETHtxv1.1.0',
+	'ETHtxv3.2.0',
 	'ETHmxv3.2.0',
 	'ETHtxAMMv3.1.0',
 	'ETHmxMinterv3.1.0',

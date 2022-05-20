@@ -5,13 +5,13 @@ import { parseEther } from 'ethers/lib/utils';
 import { Contract } from '@ethersproject/contracts';
 
 import {
-	ETHtx,
-	ETHtx__factory,
+	ETHtxv1 as ETHtx,
+	ETHtxv1__factory as ETHtx__factory,
 	WETH9,
 	WETH9__factory,
 } from '../../build/types/ethers-v5';
 import weth9Abi from '../../build/abi/WETH9.json';
-import ethtxAbi from '../../build/abi/ETHtx.json';
+import ethtxAbi from '../../build/abi/ETHtxv1.json';
 import { getVersionTag } from '../../utils/deploy';
 
 const version = getVersionTag();

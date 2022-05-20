@@ -73,6 +73,10 @@ contract ETHmx is
 		return 0;
 	}
 
+	function totalSupply() public view virtual override returns (uint256) {
+		return 0;
+	}
+
 	function name() public view virtual override returns (string memory) {
 		return "ETHtx Minter Token";
 	}

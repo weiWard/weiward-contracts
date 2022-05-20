@@ -19,12 +19,12 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../ETHtx/ETHtx.sol";
+import "../ETHtxv1/ETHtxv1.sol";
 
-contract MockETHtx is ETHtx {
+contract MockETHtxv1 is ETHtxv1 {
 	using SafeMath for uint256;
 
-	constructor(address owner_) ETHtx(owner_) {
+	constructor(address owner_) ETHtxv1(owner_) {
 		return;
 	}
 

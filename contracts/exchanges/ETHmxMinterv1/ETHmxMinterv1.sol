@@ -30,7 +30,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ETHmxMinterv1Data.sol";
 import { IETHmxv1 as IETHmx } from "../../tokens/interfaces/IETHmxv1.sol";
 import "../interfaces/IETHmxMinterv1.sol";
-import "../../tokens/interfaces/IETHtx.sol";
+import { IETHtxv1 as IETHtx } from "../../tokens/interfaces/IETHtxv1.sol";
 import { IETHtxAMMv1 as IETHtxAMM } from "../interfaces/IETHtxAMMv1.sol";
 import "../../tokens/interfaces/IWETH.sol";
 import "../../access/OwnableUpgradeable.sol";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021 weiWard LLC
+ * Copyright 2021-2022 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,12 +51,6 @@ contract ETHtx is
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
-	struct ETHtxArgs {
-		address feeLogic;
-		address[] minters;
-		address[] rebasers;
-	}
-
 	bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 	bytes32 public constant REBASER_ROLE = keccak256("REBASER_ROLE");
 
@@ -76,58 +70,13 @@ contract ETHtx is
 		_setupRole(DEFAULT_ADMIN_ROLE, owner_);
 	}
 
-	function postInit(ETHtxArgs memory _args)
-		external
-		virtual
-		onlyRole(DEFAULT_ADMIN_ROLE)
-	{
-		address sender = _msgSender();
-
-		_feeLogic = _args.feeLogic;
-		emit FeeLogicSet(sender, _args.feeLogic);
-
-		for (uint256 i = 0; i < _args.minters.length; i++) {
-			_setupRole(MINTER_ROLE, _args.minters[i]);
-		}
-
-		for (uint256 i = 0; i < _args.rebasers.length; i++) {
-			_setupRole(REBASER_ROLE, _args.rebasers[i]);
-		}
-
-		_sharesPerToken = _SHARES_MULT;
-	}
-
-	function postUpgrade(address feeLogic_, address[] memory rebasers)
-		external
-		virtual
-	{
-		address sender = _msgSender();
-		// Can only be called once
-		require(
-			_ownerDeprecated == sender,
-			"ETHtx::postUpgrade: caller is not the owner"
-		);
-
-		_feeLogic = feeLogic_;
-		emit FeeLogicSet(sender, feeLogic_);
-
-		// Set sharesPerToken to 1:1
-		_totalShares = _totalSupply;
-		_sharesPerToken = _SHARES_MULT;
-
-		// Setup RBAC
-		_setupRole(DEFAULT_ADMIN_ROLE, sender);
-		_setupRole(MINTER_ROLE, _minterDeprecated);
-		for (uint256 i = 0; i < rebasers.length; i++) {
-			_setupRole(REBASER_ROLE, rebasers[i]);
-		}
-
-		// Clear deprecated state
-		_minterDeprecated = address(0);
-		_ownerDeprecated = address(0);
-	}
-
 	/* External Mutators */
+
+	function destroy() external override onlyRole(DEFAULT_ADMIN_ROLE) {
+		address payable sender = _msgSender();
+		emit Destroyed(sender);
+		selfdestruct(sender);
+	}
 
 	function transfer(address recipient, uint256 amount)
 		public
@@ -195,120 +144,20 @@ contract ETHtx is
 		return true;
 	}
 
-	function burn(address account, uint256 amount)
-		external
-		virtual
-		override
-		onlyRole(MINTER_ROLE)
-		whenNotPaused
-	{
-		_burn(account, amount);
-	}
-
-	function mint(address account, uint256 amount)
-		external
-		virtual
-		override
-		onlyRole(MINTER_ROLE)
-		whenNotPaused
-	{
-		_mint(account, amount);
+	function burn(uint256 amount) external virtual override whenNotPaused {
+		_burn(_msgSender(), amount);
 	}
 
 	function pause()
 		external
 		virtual
-		override
 		onlyRole(DEFAULT_ADMIN_ROLE)
 		whenNotPaused
 	{
 		_pause();
 	}
 
-	function rebase()
-		external
-		virtual
-		override
-		onlyRole(REBASER_ROLE)
-		whenNotPaused
-	{
-		// Limit calls
-		uint256 timePassed =
-			block.timestamp.sub(
-				_lastRebaseTime,
-				"ETHtx::rebase: block is older than last rebase"
-			);
-		IFeeLogic feeHandle = IFeeLogic(_feeLogic);
-		require(
-			timePassed >= feeHandle.rebaseInterval(),
-			"ETHtx::rebase: too soon"
-		);
-
-		uint256 initTotalShares = _totalShares;
-		if (initTotalShares == 0) {
-			return;
-		}
-
-		(uint128 rebaseNum, uint128 rebaseDen) = feeHandle.rebaseFeeRate();
-
-		// WARN This will eventually overflow
-		uint256 ts = initTotalShares.mul(rebaseDen) / (rebaseDen - rebaseNum);
-		uint256 newShares = ts - initTotalShares;
-
-		// Send to exemptions to return them to their initial percentage
-		for (uint256 i = 0; i < feeHandle.rebaseExemptsLength(); i++) {
-			address exempt = feeHandle.rebaseExemptsAt(i);
-			uint256 balance = _balances[exempt];
-			if (balance != 0) {
-				uint256 newBalance = balance.mul(rebaseDen) / (rebaseDen - rebaseNum);
-				uint256 addedShares = newBalance - balance;
-				_balances[exempt] = newBalance;
-				newShares -= addedShares;
-			}
-		}
-		assert(newShares < ts);
-
-		// Send the remainder to rewards
-		address rewardsRecipient = feeHandle.recipient();
-		_balances[rewardsRecipient] = _balances[rewardsRecipient].add(newShares);
-
-		// Mint shares, reducing every holder's percentage
-		_totalShares = ts;
-		// WARN This will eventually overflow
-		_sharesPerToken = ts.mul(_SHARES_MULT).div(_totalSupply);
-
-		_lastRebaseTime = block.timestamp;
-
-		emit Rebased(_msgSender(), ts);
-	}
-
-	function recoverERC20(
-		address token,
-		address to,
-		uint256 amount
-	) external virtual override onlyRole(DEFAULT_ADMIN_ROLE) {
-		IERC20(token).safeTransfer(to, amount);
-		emit Recovered(_msgSender(), token, to, amount);
-	}
-
-	function setFeeLogic(address account)
-		external
-		virtual
-		override
-		onlyRole(DEFAULT_ADMIN_ROLE)
-	{
-		require(account != address(0), "ETHtx::setFeeLogic: zero address");
-		_feeLogic = account;
-		emit FeeLogicSet(_msgSender(), account);
-	}
-
-	function unpause()
-		external
-		virtual
-		override
-		onlyRole(DEFAULT_ADMIN_ROLE)
-		whenPaused
-	{
+	function unpause() external virtual onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
 		_unpause();
 	}
 
@@ -324,24 +173,8 @@ contract ETHtx is
 		return _allowances[owner][spender];
 	}
 
-	function balanceOf(address account)
-		public
-		view
-		virtual
-		override
-		returns (uint256)
-	{
-		return _balances[account].mul(_SHARES_MULT).div(_sharesPerToken);
-	}
-
-	function sharesBalanceOf(address account)
-		public
-		view
-		virtual
-		override
-		returns (uint256)
-	{
-		return _balances[account];
+	function balanceOf(address) public view virtual override returns (uint256) {
+		return 0;
 	}
 
 	function name() public view virtual override returns (string memory) {
@@ -356,30 +189,8 @@ contract ETHtx is
 		return 18;
 	}
 
-	function feeLogic() public view virtual override returns (address) {
-		return _feeLogic;
-	}
-
-	function lastRebaseTime() public view virtual override returns (uint256) {
-		return _lastRebaseTime;
-	}
-
-	function sharesPerTokenX18()
-		external
-		view
-		virtual
-		override
-		returns (uint256)
-	{
-		return _sharesPerToken;
-	}
-
-	function totalShares() public view virtual override returns (uint256) {
-		return _totalShares;
-	}
-
 	function totalSupply() public view virtual override returns (uint256) {
-		return _totalSupply;
+		return 0;
 	}
 
 	/* Internal Mutators */
@@ -413,59 +224,29 @@ contract ETHtx is
 		address recipient,
 		uint256 amount
 	) internal virtual {
-		require(sender != address(0), "ETHtx::_transfer: from the zero address");
-		require(recipient != address(0), "ETHtx::_transfer: to the zero address");
-
-		uint256 spt = _sharesPerToken;
-		require(spt != 0, "ETHtx::_transfer: zero sharesPerToken");
-
-		// Could round small values to zero
-		uint256 shares = amount.mul(spt).div(_SHARES_MULT);
+		require(sender != address(0), "ERC20: transfer from the zero address");
+		require(recipient != address(0), "ERC20: transfer to the zero address");
 
 		_balances[sender] = _balances[sender].sub(
-			shares,
-			"ETHtx::_transfer: amount exceeds balance"
+			amount,
+			"ERC20: transfer amount exceeds balance"
 		);
 
-		IFeeLogic feeHandler = IFeeLogic(_feeLogic);
-		uint256 fee = feeHandler.getFee(sender, recipient, shares);
-		uint256 sharesSubFee = shares.sub(fee);
+		_balances[recipient] = _balances[recipient].add(amount);
 
-		_balances[recipient] = _balances[recipient].add(sharesSubFee);
-		emit Transfer(sender, recipient, (sharesSubFee * _SHARES_MULT) / spt);
-
-		if (fee != 0) {
-			address feeRecipient = feeHandler.recipient();
-			_balances[feeRecipient] = _balances[feeRecipient].add(fee);
-
-			uint256 feeInTokens = (fee * _SHARES_MULT) / spt;
-			emit Transfer(sender, feeRecipient, feeInTokens);
-			feeHandler.notify(feeInTokens);
-		}
+		emit Transfer(sender, recipient, amount);
 	}
 
 	function _burn(address account, uint256 amount) internal {
-		// Burn shares proportionately for constant _sharesPerToken
-		uint256 shares = amount.mul(_sharesPerToken) / _SHARES_MULT;
+		require(account != address(0), "ERC20: burn from the zero address");
+
 		_balances[account] = _balances[account].sub(
-			shares,
-			"ETHtx::_burn: amount exceeds balance"
+			amount,
+			"ERC20: burn amount exceeds balance"
 		);
-		_totalShares = _totalShares.sub(shares);
-		// Burn tokens
+
 		_totalSupply = _totalSupply.sub(amount);
 
 		emit Transfer(account, address(0), amount);
-	}
-
-	function _mint(address account, uint256 amount) internal {
-		// Mint shares proportionately for constant _sharesPerToken
-		uint256 shares = amount.mul(_sharesPerToken) / _SHARES_MULT;
-		_totalShares = _totalShares.add(shares);
-		_balances[account] = _balances[account].add(shares);
-		// Mint tokens
-		_totalSupply = _totalSupply.add(amount);
-
-		emit Transfer(address(0), account, amount);
 	}
 }

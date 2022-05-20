@@ -7,8 +7,8 @@ import { solidityKeccak256 } from 'ethers/lib/utils';
 import { zeroPadAddress } from '../helpers/address';
 import { parseETHtx, parseGwei } from '../helpers/conversions';
 import {
-	MockETHtx,
-	MockETHtx__factory,
+	MockETHtxv1 as MockETHtx,
+	MockETHtxv1__factory as MockETHtx__factory,
 	MockFeeLogic,
 	MockFeeLogic__factory,
 	MockGasPrice,
