@@ -19,10 +19,10 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../ETHmxMinter/ETHmxMinter.sol";
+import "../ETHmxMinterv1/ETHmxMinterv1.sol";
 
-contract MockETHmxMinter is ETHmxMinter {
-	constructor(address owner_) ETHmxMinter(owner_) {
+contract MockETHmxMinterv1 is ETHmxMinterv1 {
+	constructor(address owner_) ETHmxMinterv1(owner_) {
 		return;
 	}
 

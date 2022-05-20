@@ -8,7 +8,7 @@ import {
 	ETHtxAMMv1 as ETHtxAMM,
 	ETHtxAMMv1__factory as ETHtxAMM__factory,
 	ETHmx__factory,
-	ETHmxMinter__factory,
+	ETHmxMinterv1__factory as ETHmxMinter__factory,
 	FeeLogic__factory,
 	MockETHmxRewardsv1 as MockETHmxRewards,
 	MockETHmxRewardsv1__factory as MockETHmxRewards__factory,

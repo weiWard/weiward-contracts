@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021-2022 weiWard LLC
+ * Copyright 2021 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
-import "../interfaces/IETHmxMinter.sol";
+import {
+	IETHmxMinterv1 as IETHmxMinter
+} from "../interfaces/IETHmxMinterv1.sol";
 
-abstract contract ETHmxMinterData {
+abstract contract ETHmxMinterv1Data {
 	address internal _ethmx;
 	address internal _ethtx;
 	address internal _ethtxAMM;
