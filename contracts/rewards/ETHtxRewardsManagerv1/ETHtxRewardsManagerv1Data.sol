@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021-2022 weiWard LLC
+ * Copyright 2021 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.6;
 
-abstract contract ETHtxRewardsManagerData {
+abstract contract ETHtxRewardsManagerv1Data {
 	address internal _ethmxRewards;
 	address internal _ethtx;
 	address internal _ethtxAMM;

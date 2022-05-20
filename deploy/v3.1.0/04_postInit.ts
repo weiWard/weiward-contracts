@@ -130,6 +130,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	async function migrateToV310(): Promise<void> {
 		await ethtxAmm.postUpgrade(defaultRewardsRecipient);
+		await ethtxRewardsMgr.postUpgrade(defaultRewardsRecipient);
 		console.log('Completed migration to v3.1.0');
 	}
 
@@ -237,7 +238,7 @@ func.dependencies = [
 	'ETHtxAMMv3.1.0',
 	'ETHmxMinterv3.1.0',
 	'ETHmxRewardsv3.0.0',
-	'ETHtxRewardsManagerv0.3.0',
+	'ETHtxRewardsManagerv3.1.0',
 	'FeeLogicv1.1.0',
 	'Policyv1.1.0',
 ];

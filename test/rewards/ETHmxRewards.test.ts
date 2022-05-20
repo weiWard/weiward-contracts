@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
 import { JsonRpcSigner } from '@ethersproject/providers';
+import { Contract } from 'ethers';
 
 import { zeroAddress, zeroPadAddress } from '../helpers/address';
 import { sendWETH } from '../helpers/conversions';
@@ -13,7 +14,6 @@ import {
 	WETH9__factory,
 	WETH9,
 } from '../../build/types/ethers-v5';
-import { Contract } from 'ethers';
 
 const contractName = 'ETHmxRewards';
 
@@ -129,7 +129,7 @@ describe(contractName, function () {
 			expect(await contract.owner(), 'owner address mismatch').to.eq(deployer);
 			expect(
 				await contractImpl.owner(),
-				'implemenation owner address mismatch',
+				'implementation owner address mismatch',
 			).to.eq(deployer);
 		});
 	});
