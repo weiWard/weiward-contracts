@@ -27,7 +27,9 @@ import {
 	IETHtxAMMv1 as IETHtxAMM
 } from "../../exchanges/interfaces/IETHtxAMMv1.sol";
 import "../interfaces/IETHtxRewardsManager.sol";
-import "../interfaces/IETHmxRewards.sol";
+import {
+	IETHmxRewardsv1 as IETHmxRewards
+} from "../interfaces/IETHmxRewardsv1.sol";
 import "../interfaces/ILPRewards.sol";
 import "../../access/OwnableUpgradeable.sol";
 import "../RewardsManager/RewardsManager.sol";

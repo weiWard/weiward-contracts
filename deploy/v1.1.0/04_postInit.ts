@@ -177,7 +177,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethmxMinter.postInit(ethmxMinterArgs);
 
-	await ethmxRewards.postInit({
+	await (ethmxRewards as Contract).postInit({
 		ethmx: ethmx.address,
 		weth: wethAddr,
 		accrualUpdateInterval: 43200, // 12 hours

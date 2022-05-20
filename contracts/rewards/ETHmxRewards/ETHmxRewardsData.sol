@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021 weiWard LLC
+ * Copyright 2021-2022 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,18 +22,18 @@ abstract contract ETHmxRewardsData {
 	address internal _ethmx;
 	address internal _weth;
 
-	uint256[] internal _arptSnapshots;
+	uint256[] internal _arptSnapshotsDeprecated;
 	mapping(address => uint256) internal _arptLastIdx;
 
-	uint256 internal _lastAccrualUpdate;
-	uint256 internal _accrualUpdateInterval;
+	uint256 internal _lastAccrualUpdateDeprecated;
+	uint256 internal _accrualUpdateIntervalDeprecated;
 
 	mapping(address => uint256) internal _rewardsFor;
-	uint256 internal _lastTotalRewardsAccrued;
-	uint256 internal _totalRewardsRedeemed;
+	uint256 internal _lastTotalRewardsAccruedDeprecated;
+	uint256 internal _totalRewardsRedeemedDeprecated;
 
 	mapping(address => uint256) internal _stakedFor;
-	uint256 internal _totalStaked;
+	uint256 internal _totalStakedDeprecated;
 
 	uint256[39] private __gap;
 }

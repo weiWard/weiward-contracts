@@ -1,6 +1,6 @@
 import * as modules from './modules';
 
-describe('ETHmxRewards', function () {
+describe('ETHmxRewardsv1', function () {
 	const addTest = (name: string, fn: () => void): void => {
 		describe(name, fn.bind(this));
 	};

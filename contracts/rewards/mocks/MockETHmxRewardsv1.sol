@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021 weiWard LLC
+ * Copyright 2021-2022 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../ETHmxRewards/ETHmxRewards.sol";
+import "../ETHmxRewardsv1/ETHmxRewardsv1.sol";
 
-contract MockETHmxRewards is ETHmxRewards {
-	constructor(address owner_) ETHmxRewards(owner_) {
+contract MockETHmxRewardsv1 is ETHmxRewardsv1 {
+	constructor(address owner_) ETHmxRewardsv1(owner_) {
 		return;
 	}
 

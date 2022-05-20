@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Copyright 2021-2022 weiWard LLC
+ * Copyright 2021 weiWard LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,22 @@
 
 pragma solidity 0.7.6;
 
-interface IETHmxRewards {
-	/* Mutators */
+abstract contract ETHmxRewardsv1Data {
+	address internal _ethmx;
+	address internal _weth;
 
-	function destroy() external;
+	uint256[] internal _arptSnapshots;
+	mapping(address => uint256) internal _arptLastIdx;
 
-	/* Events */
+	uint256 internal _lastAccrualUpdate;
+	uint256 internal _accrualUpdateInterval;
 
-	event Destroyed(address indexed author);
+	mapping(address => uint256) internal _rewardsFor;
+	uint256 internal _lastTotalRewardsAccrued;
+	uint256 internal _totalRewardsRedeemed;
+
+	mapping(address => uint256) internal _stakedFor;
+	uint256 internal _totalStaked;
+
+	uint256[39] private __gap;
 }

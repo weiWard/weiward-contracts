@@ -1,0 +1,433 @@
+{
+  "address": "0xbcf5fEdEBAfe2ac20d93c61A4A2928693c31caA2",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "policyMaker",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "gasOracle_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ethtx_",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "previousAdminRole",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "newAdminRole",
+          "type": "bytes32"
+        }
+      ],
+      "name": "RoleAdminChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        }
+      ],
+      "name": "RoleGranted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        }
+      ],
+      "name": "RoleRevoked",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "DEFAULT_ADMIN_ROLE",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "POLICY_ROLE",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ethtx",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gasOracle",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getRoleAdmin",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "grantRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "hasRole",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "renounceRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "revokeRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "gasPrice",
+          "type": "uint256"
+        }
+      ],
+      "name": "update",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x5181d300d1f01ccf40510e3bef842397e18a4dee36a0852a6c0823743d6f27e1",
+  "receipt": {
+    "to": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    "from": "0x8e1b28FAa8C3A79BE31b5B6982221F18f4A0FA29",
+    "contractAddress": null,
+    "transactionIndex": 5,
+    "gasUsed": "615497",
+    "logsBloom": "0x00000004000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060000000200000000000000000000000000000020000000000000000000800000000000000000000000000000000000000000000000000008000000000000000000000001000000000000000000000000200000001000000000000000000000040000000000000001000000000000000000000000000000000000000000000000000000000000100000000000022000000000000000000000000000000000080000000004000000000000000000000",
+    "blockHash": "0xd013f7d501f32900274b24e1aa6429dc0f653490cdfa46f18d756c0b6a043015",
+    "transactionHash": "0x5181d300d1f01ccf40510e3bef842397e18a4dee36a0852a6c0823743d6f27e1",
+    "logs": [
+      {
+        "transactionIndex": 5,
+        "blockNumber": 8692431,
+        "transactionHash": "0x5181d300d1f01ccf40510e3bef842397e18a4dee36a0852a6c0823743d6f27e1",
+        "address": "0xbcf5fEdEBAfe2ac20d93c61A4A2928693c31caA2",
+        "topics": [
+          "0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000008e1b28faa8c3a79be31b5b6982221f18f4a0fa29",
+          "0x0000000000000000000000004e59b44847b379578588920ca78fbf26c0b4956c"
+        ],
+        "data": "0x",
+        "logIndex": 9,
+        "blockHash": "0xd013f7d501f32900274b24e1aa6429dc0f653490cdfa46f18d756c0b6a043015"
+      },
+      {
+        "transactionIndex": 5,
+        "blockNumber": 8692431,
+        "transactionHash": "0x5181d300d1f01ccf40510e3bef842397e18a4dee36a0852a6c0823743d6f27e1",
+        "address": "0xbcf5fEdEBAfe2ac20d93c61A4A2928693c31caA2",
+        "topics": [
+          "0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d",
+          "0xfb5864e8ff833c3cb2d2d08505e82ff02a43554c74a35d4f5a64e85261278311",
+          "0x0000000000000000000000008e1b28faa8c3a79be31b5b6982221f18f4a0fa29",
+          "0x0000000000000000000000004e59b44847b379578588920ca78fbf26c0b4956c"
+        ],
+        "data": "0x",
+        "logIndex": 10,
+        "blockHash": "0xd013f7d501f32900274b24e1aa6429dc0f653490cdfa46f18d756c0b6a043015"
+      }
+    ],
+    "blockNumber": 8692431,
+    "cumulativeGasUsed": "5992786",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x8e1b28FAa8C3A79BE31b5B6982221F18f4A0FA29",
+    "0x8e1b28FAa8C3A79BE31b5B6982221F18f4A0FA29",
+    "0x0768E3E8B18035F67F1eC24f9A556c5DBB2b4e27",
+    "0x719b26A4Bf5e11fd84FC810cf5104D23A58eB3a8"
+  ],
+  "solcInputHash": "b64ed1bd0442f95fc842a0027542327b",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"policyMaker\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"gasOracle_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"ethtx_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"POLICY_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ethtx\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasOracle\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"}],\"name\":\"update\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"getRoleAdmin(bytes32)\":{\"details\":\"Returns the admin role that controls `role`. See {grantRole} and {revokeRole}. To change a role's admin, use {_setRoleAdmin}.\"},\"grantRole(bytes32,address)\":{\"details\":\"Grants `role` to `account`. If `account` had not been already granted `role`, emits a {RoleGranted} event. Requirements: - the caller must have ``role``'s admin role.\"},\"hasRole(bytes32,address)\":{\"details\":\"Returns `true` if `account` has been granted `role`.\"},\"renounceRole(bytes32,address)\":{\"details\":\"Revokes `role` from the calling account. Roles are often managed via {grantRole} and {revokeRole}: this function's purpose is to provide a mechanism for accounts to lose their privileges if they are compromised (such as when a trusted device is misplaced). If the calling account had been granted `role`, emits a {RoleRevoked} event. Requirements: - the caller must be `account`.\"},\"revokeRole(bytes32,address)\":{\"details\":\"Revokes `role` from `account`. If `account` had been granted `role`, emits a {RoleRevoked} event. Requirements: - the caller must have ``role``'s admin role.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/oracles/Policy.sol\":\"Policy\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999999},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/utils/Context.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\n/*\\n * @dev Provides information about the current execution context, including the\\n * sender of the transaction and its data. While these are generally available\\n * via msg.sender and msg.data, they should not be accessed in such a direct\\n * manner, since when dealing with GSN meta-transactions the account sending and\\n * paying for execution may not be the actual sender (as far as an application\\n * is concerned).\\n *\\n * This contract is only required for intermediate, library-like contracts.\\n */\\nabstract contract Context {\\n    function _msgSender() internal view virtual returns (address payable) {\\n        return msg.sender;\\n    }\\n\\n    function _msgData() internal view virtual returns (bytes memory) {\\n        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691\\n        return msg.data;\\n    }\\n}\\n\",\"keccak256\":\"0x8d3cb350f04ff49cfb10aef08d87f19dcbaecc8027b0bed12f3275cd12f38cf0\",\"license\":\"MIT\"},\"contracts/access/AccessControl/AccessControl.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\n/**\\n * From https://github.com/OpenZeppelin/openzeppelin-contracts/blob/1488d4f6782f76f74f3652e44da9b9e241146ccb/contracts/access/AccessControl.sol\\n *\\n * Changes:\\n * - Compiled for 0.7.6\\n * - Removed ERC165 Introspection\\n * - Removed _checkRole\\n * - Reformatted styling in line with this repository.\\n */\\n\\n/*\\nThe MIT License (MIT)\\n\\nCopyright (c) 2016-2020 zOS Global Limited\\n\\nPermission is hereby granted, free of charge, to any person obtaining\\na copy of this software and associated documentation files (the\\n\\\"Software\\\"), to deal in the Software without restriction, including\\nwithout limitation the rights to use, copy, modify, merge, publish,\\ndistribute, sublicense, and/or sell copies of the Software, and to\\npermit persons to whom the Software is furnished to do so, subject to\\nthe following conditions:\\n\\nThe above copyright notice and this permission notice shall be included\\nin all copies or substantial portions of the Software.\\n\\nTHE SOFTWARE IS PROVIDED \\\"AS IS\\\", WITHOUT WARRANTY OF ANY KIND, EXPRESS\\nOR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\\nIN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\\nTORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\\nSOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\\n*/\\n\\npragma solidity ^0.7.6;\\n\\nimport \\\"@openzeppelin/contracts/utils/Context.sol\\\";\\n\\nimport \\\"../interfaces/IAccessControl.sol\\\";\\n\\nabstract contract AccessControl is Context, IAccessControl {\\n\\tstruct RoleData {\\n\\t\\tmapping(address => bool) members;\\n\\t\\tbytes32 adminRole;\\n\\t}\\n\\n\\tmapping(bytes32 => RoleData) private _roles;\\n\\n\\tbytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;\\n\\n\\t/* Modifiers */\\n\\n\\tmodifier onlyRole(bytes32 role) {\\n\\t\\trequire(hasRole(role, _msgSender()), \\\"AccessControl: access denied\\\");\\n\\t\\t_;\\n\\t}\\n\\n\\t/* External Views */\\n\\n\\t/**\\n\\t * @dev Returns `true` if `account` has been granted `role`.\\n\\t */\\n\\tfunction hasRole(bytes32 role, address account)\\n\\t\\tpublic\\n\\t\\tview\\n\\t\\toverride\\n\\t\\treturns (bool)\\n\\t{\\n\\t\\treturn _roles[role].members[account];\\n\\t}\\n\\n\\t/**\\n\\t * @dev Returns the admin role that controls `role`. See {grantRole} and\\n\\t * {revokeRole}.\\n\\t *\\n\\t * To change a role's admin, use {_setRoleAdmin}.\\n\\t */\\n\\tfunction getRoleAdmin(bytes32 role) public view override returns (bytes32) {\\n\\t\\treturn _roles[role].adminRole;\\n\\t}\\n\\n\\t/* External Mutators */\\n\\n\\t/**\\n\\t * @dev Grants `role` to `account`.\\n\\t *\\n\\t * If `account` had not been already granted `role`, emits a {RoleGranted}\\n\\t * event.\\n\\t *\\n\\t * Requirements:\\n\\t *\\n\\t * - the caller must have ``role``'s admin role.\\n\\t */\\n\\tfunction grantRole(bytes32 role, address account)\\n\\t\\tpublic\\n\\t\\tvirtual\\n\\t\\toverride\\n\\t\\tonlyRole(getRoleAdmin(role))\\n\\t{\\n\\t\\t_grantRole(role, account);\\n\\t}\\n\\n\\t/**\\n\\t * @dev Revokes `role` from `account`.\\n\\t *\\n\\t * If `account` had been granted `role`, emits a {RoleRevoked} event.\\n\\t *\\n\\t * Requirements:\\n\\t *\\n\\t * - the caller must have ``role``'s admin role.\\n\\t */\\n\\tfunction revokeRole(bytes32 role, address account)\\n\\t\\tpublic\\n\\t\\tvirtual\\n\\t\\toverride\\n\\t\\tonlyRole(getRoleAdmin(role))\\n\\t{\\n\\t\\t_revokeRole(role, account);\\n\\t}\\n\\n\\t/**\\n\\t * @dev Revokes `role` from the calling account.\\n\\t *\\n\\t * Roles are often managed via {grantRole} and {revokeRole}: this function's\\n\\t * purpose is to provide a mechanism for accounts to lose their privileges\\n\\t * if they are compromised (such as when a trusted device is misplaced).\\n\\t *\\n\\t * If the calling account had been granted `role`, emits a {RoleRevoked}\\n\\t * event.\\n\\t *\\n\\t * Requirements:\\n\\t *\\n\\t * - the caller must be `account`.\\n\\t */\\n\\tfunction renounceRole(bytes32 role, address account)\\n\\t\\tpublic\\n\\t\\tvirtual\\n\\t\\toverride\\n\\t{\\n\\t\\trequire(\\n\\t\\t\\taccount == _msgSender(),\\n\\t\\t\\t\\\"AccessControl: can only renounce roles for self\\\"\\n\\t\\t);\\n\\n\\t\\t_revokeRole(role, account);\\n\\t}\\n\\n\\t/* Internal Mutators */\\n\\n\\t/**\\n\\t * @dev Grants `role` to `account`.\\n\\t *\\n\\t * If `account` had not been already granted `role`, emits a {RoleGranted}\\n\\t * event. Note that unlike {grantRole}, this function doesn't perform any\\n\\t * checks on the calling account.\\n\\t *\\n\\t * [WARNING]\\n\\t * ====\\n\\t * This function should only be called from the constructor when setting\\n\\t * up the initial roles for the system.\\n\\t *\\n\\t * Using this function in any other way is effectively circumventing the admin\\n\\t * system imposed by {AccessControl}.\\n\\t * ====\\n\\t */\\n\\tfunction _setupRole(bytes32 role, address account) internal virtual {\\n\\t\\t_grantRole(role, account);\\n\\t}\\n\\n\\t/**\\n\\t * @dev Sets `adminRole` as ``role``'s admin role.\\n\\t *\\n\\t * Emits a {RoleAdminChanged} event.\\n\\t */\\n\\tfunction _setRoleAdmin(bytes32 role, bytes32 adminRole) internal virtual {\\n\\t\\temit RoleAdminChanged(role, getRoleAdmin(role), adminRole);\\n\\t\\t_roles[role].adminRole = adminRole;\\n\\t}\\n\\n\\tfunction _grantRole(bytes32 role, address account) private {\\n\\t\\tif (!hasRole(role, account)) {\\n\\t\\t\\t_roles[role].members[account] = true;\\n\\t\\t\\temit RoleGranted(role, account, _msgSender());\\n\\t\\t}\\n\\t}\\n\\n\\tfunction _revokeRole(bytes32 role, address account) private {\\n\\t\\tif (hasRole(role, account)) {\\n\\t\\t\\t_roles[role].members[account] = false;\\n\\t\\t\\temit RoleRevoked(role, account, _msgSender());\\n\\t\\t}\\n\\t}\\n}\\n\",\"keccak256\":\"0x591d0a3a818e1e9ac51ff1cb851be3bc0f9da7390fabd14ed561fe9e32e00f74\",\"license\":\"MIT\"},\"contracts/access/interfaces/IAccessControl.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\n/**\\n * Copyright 2021 weiWard LLC\\n *\\n * Licensed under the Apache License, Version 2.0 (the \\\"License\\\");\\n * you may not use this file except in compliance with the License.\\n * You may obtain a copy of the License at\\n *\\n *   http://www.apache.org/licenses/LICENSE-2.0\\n *\\n * Unless required by applicable law or agreed to in writing, software\\n * distributed under the License is distributed on an \\\"AS IS\\\" BASIS,\\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\\n * See the License for the specific language governing permissions and\\n * limitations under the License.\\n */\\n\\npragma solidity 0.7.6;\\n\\ninterface IAccessControl {\\n\\t/* Views */\\n\\n\\tfunction getRoleAdmin(bytes32 role) external view returns (bytes32);\\n\\n\\tfunction hasRole(bytes32 role, address account) external view returns (bool);\\n\\n\\t/* Mutators */\\n\\n\\tfunction grantRole(bytes32 role, address account) external;\\n\\n\\tfunction revokeRole(bytes32 role, address account) external;\\n\\n\\tfunction renounceRole(bytes32 role, address account) external;\\n\\n\\t/* Events */\\n\\tevent RoleAdminChanged(\\n\\t\\tbytes32 indexed role,\\n\\t\\tbytes32 indexed previousAdminRole,\\n\\t\\tbytes32 indexed newAdminRole\\n\\t);\\n\\tevent RoleGranted(\\n\\t\\tbytes32 indexed role,\\n\\t\\taddress indexed account,\\n\\t\\taddress indexed sender\\n\\t);\\n\\tevent RoleRevoked(\\n\\t\\tbytes32 indexed role,\\n\\t\\taddress indexed account,\\n\\t\\taddress indexed sender\\n\\t);\\n}\\n\",\"keccak256\":\"0xb5531d7eba3d71e80994a619a6c5bbe601a34e52aa199ef780f921c823334b1c\",\"license\":\"Apache-2.0\"},\"contracts/oracles/Policy.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\n/**\\n * Copyright 2021 weiWard LLC\\n *\\n * Licensed under the Apache License, Version 2.0 (the \\\"License\\\");\\n * you may not use this file except in compliance with the License.\\n * You may obtain a copy of the License at\\n *\\n *   http://www.apache.org/licenses/LICENSE-2.0\\n *\\n * Unless required by applicable law or agreed to in writing, software\\n * distributed under the License is distributed on an \\\"AS IS\\\" BASIS,\\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\\n * See the License for the specific language governing permissions and\\n * limitations under the License.\\n */\\n\\npragma solidity 0.7.6;\\n\\nimport \\\"../access/AccessControl/AccessControl.sol\\\";\\n\\ninterface IGasPrice {\\n\\tfunction setGasPrice(uint256) external;\\n}\\n\\ninterface IETHtx {\\n\\tfunction rebase() external;\\n}\\n\\ncontract Policy is AccessControl {\\n\\tbytes32 public constant POLICY_ROLE = keccak256(\\\"POLICY_ROLE\\\");\\n\\n\\taddress public ethtx;\\n\\taddress public gasOracle;\\n\\n\\tconstructor(\\n\\t\\taddress admin,\\n\\t\\taddress policyMaker,\\n\\t\\taddress gasOracle_,\\n\\t\\taddress ethtx_\\n\\t) {\\n\\t\\t_setupRole(DEFAULT_ADMIN_ROLE, admin);\\n\\t\\t_setupRole(POLICY_ROLE, policyMaker);\\n\\t\\tethtx = ethtx_;\\n\\t\\tgasOracle = gasOracle_;\\n\\t}\\n\\n\\tfunction update(uint256 gasPrice) external onlyRole(POLICY_ROLE) {\\n\\t\\tIGasPrice(gasOracle).setGasPrice(gasPrice);\\n\\t\\tIETHtx(ethtx).rebase();\\n\\t}\\n}\\n\",\"keccak256\":\"0x2c970cc683d5ccff9c8d89388e6732100cfac74c7ad3c9b527112a2b76070529\",\"license\":\"Apache-2.0\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506040516109de3803806109de8339818101604052608081101561003357600080fd5b50805160208201516040830151606090930151919290916100556000856100b6565b61007f7ffb5864e8ff833c3cb2d2d08505e82ff02a43554c74a35d4f5a64e85261278311846100b6565b600180546001600160a01b039283166001600160a01b03199182161790915560028054939092169216919091179055506101769050565b6100c082826100c4565b5050565b6100ce8282610149565b6100c0576000828152602081815260408083206001600160a01b03851684529091529020805460ff19166001179055610105610172565b6001600160a01b0316816001600160a01b0316837f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a45050565b6000918252602082815260408084206001600160a01b0393909316845291905290205460ff1690565b3390565b610859806101856000396000f3fe608060405234801561001057600080fd5b50600436106100be5760003560e01c806382ab890a1161007657806391d148541161005b57806391d14854146101c4578063a217fddf14610211578063d547741f14610219576100be565b806382ab890a1461019f578063902dd186146101bc576100be565b80632f2ff15d116100a75780632f2ff15d146100fa57806336568abe146101355780635d62a8dd1461016e576100be565b806322985246146100c3578063248a9ca3146100dd575b600080fd5b6100cb610252565b60408051918252519081900360200190f35b6100cb600480360360208110156100f357600080fd5b5035610276565b6101336004803603604081101561011057600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff1661028b565b005b6101336004803603604081101561014b57600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff1661031f565b6101766103b8565b6040805173ffffffffffffffffffffffffffffffffffffffff9092168252519081900360200190f35b610133600480360360208110156101b557600080fd5b50356103d4565b61017661057d565b6101fd600480360360408110156101da57600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff16610599565b604080519115158252519081900360200190f35b6100cb6105cf565b6101336004803603604081101561022f57600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff166105d4565b7ffb5864e8ff833c3cb2d2d08505e82ff02a43554c74a35d4f5a64e8526127831181565b60009081526020819052604090206001015490565b61029482610276565b6102a5816102a061065e565b610599565b61031057604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f416363657373436f6e74726f6c3a206163636573732064656e69656400000000604482015290519081900360640190fd5b61031a8383610662565b505050565b61032761065e565b73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16146103aa576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602f8152602001806107f5602f913960400191505060405180910390fd5b6103b4828261072c565b5050565b60025473ffffffffffffffffffffffffffffffffffffffff1681565b7ffb5864e8ff833c3cb2d2d08505e82ff02a43554c74a35d4f5a64e85261278311610401816102a061065e565b61046c57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f416363657373436f6e74726f6c3a206163636573732064656e69656400000000604482015290519081900360640190fd5b600254604080517fbf1fe42000000000000000000000000000000000000000000000000000000000815260048101859052905173ffffffffffffffffffffffffffffffffffffffff9092169163bf1fe4209160248082019260009290919082900301818387803b1580156104df57600080fd5b505af11580156104f3573d6000803e3d6000fd5b50505050600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663af14052c6040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561056157600080fd5b505af1158015610575573d6000803e3d6000fd5b505050505050565b60015473ffffffffffffffffffffffffffffffffffffffff1681565b60009182526020828152604080842073ffffffffffffffffffffffffffffffffffffffff93909316845291905290205460ff1690565b600081565b6105dd82610276565b6105e9816102a061065e565b61065457604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f416363657373436f6e74726f6c3a206163636573732064656e69656400000000604482015290519081900360640190fd5b61031a838361072c565b3390565b61066c8282610599565b6103b45760008281526020818152604080832073ffffffffffffffffffffffffffffffffffffffff85168452909152902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff001660011790556106ce61065e565b73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16837f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a45050565b6107368282610599565b156103b45760008281526020818152604080832073ffffffffffffffffffffffffffffffffffffffff85168452909152902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0016905561079661065e565b73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16837ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b60405160405180910390a4505056fe416363657373436f6e74726f6c3a2063616e206f6e6c792072656e6f756e636520726f6c657320666f722073656c66a2646970667358221220d000dd2c57ea3b65ae2edcf214f7e015ed3a4f230352aaed938610bf366dbe1264736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100be5760003560e01c806382ab890a1161007657806391d148541161005b57806391d14854146101c4578063a217fddf14610211578063d547741f14610219576100be565b806382ab890a1461019f578063902dd186146101bc576100be565b80632f2ff15d116100a75780632f2ff15d146100fa57806336568abe146101355780635d62a8dd1461016e576100be565b806322985246146100c3578063248a9ca3146100dd575b600080fd5b6100cb610252565b60408051918252519081900360200190f35b6100cb600480360360208110156100f357600080fd5b5035610276565b6101336004803603604081101561011057600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff1661028b565b005b6101336004803603604081101561014b57600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff1661031f565b6101766103b8565b6040805173ffffffffffffffffffffffffffffffffffffffff9092168252519081900360200190f35b610133600480360360208110156101b557600080fd5b50356103d4565b61017661057d565b6101fd600480360360408110156101da57600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff16610599565b604080519115158252519081900360200190f35b6100cb6105cf565b6101336004803603604081101561022f57600080fd5b508035906020013573ffffffffffffffffffffffffffffffffffffffff166105d4565b7ffb5864e8ff833c3cb2d2d08505e82ff02a43554c74a35d4f5a64e8526127831181565b60009081526020819052604090206001015490565b61029482610276565b6102a5816102a061065e565b610599565b61031057604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f416363657373436f6e74726f6c3a206163636573732064656e69656400000000604482015290519081900360640190fd5b61031a8383610662565b505050565b61032761065e565b73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16146103aa576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602f8152602001806107f5602f913960400191505060405180910390fd5b6103b4828261072c565b5050565b60025473ffffffffffffffffffffffffffffffffffffffff1681565b7ffb5864e8ff833c3cb2d2d08505e82ff02a43554c74a35d4f5a64e85261278311610401816102a061065e565b61046c57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f416363657373436f6e74726f6c3a206163636573732064656e69656400000000604482015290519081900360640190fd5b600254604080517fbf1fe42000000000000000000000000000000000000000000000000000000000815260048101859052905173ffffffffffffffffffffffffffffffffffffffff9092169163bf1fe4209160248082019260009290919082900301818387803b1580156104df57600080fd5b505af11580156104f3573d6000803e3d6000fd5b50505050600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663af14052c6040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561056157600080fd5b505af1158015610575573d6000803e3d6000fd5b505050505050565b60015473ffffffffffffffffffffffffffffffffffffffff1681565b60009182526020828152604080842073ffffffffffffffffffffffffffffffffffffffff93909316845291905290205460ff1690565b600081565b6105dd82610276565b6105e9816102a061065e565b61065457604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f416363657373436f6e74726f6c3a206163636573732064656e69656400000000604482015290519081900360640190fd5b61031a838361072c565b3390565b61066c8282610599565b6103b45760008281526020818152604080832073ffffffffffffffffffffffffffffffffffffffff85168452909152902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff001660011790556106ce61065e565b73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16837f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a45050565b6107368282610599565b156103b45760008281526020818152604080832073ffffffffffffffffffffffffffffffffffffffff85168452909152902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0016905561079661065e565b73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16837ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b60405160405180910390a4505056fe416363657373436f6e74726f6c3a2063616e206f6e6c792072656e6f756e636520726f6c657320666f722073656c66a2646970667358221220d000dd2c57ea3b65ae2edcf214f7e015ed3a4f230352aaed938610bf366dbe1264736f6c63430007060033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "getRoleAdmin(bytes32)": {
+        "details": "Returns the admin role that controls `role`. See {grantRole} and {revokeRole}. To change a role's admin, use {_setRoleAdmin}."
+      },
+      "grantRole(bytes32,address)": {
+        "details": "Grants `role` to `account`. If `account` had not been already granted `role`, emits a {RoleGranted} event. Requirements: - the caller must have ``role``'s admin role."
+      },
+      "hasRole(bytes32,address)": {
+        "details": "Returns `true` if `account` has been granted `role`."
+      },
+      "renounceRole(bytes32,address)": {
+        "details": "Revokes `role` from the calling account. Roles are often managed via {grantRole} and {revokeRole}: this function's purpose is to provide a mechanism for accounts to lose their privileges if they are compromised (such as when a trusted device is misplaced). If the calling account had been granted `role`, emits a {RoleRevoked} event. Requirements: - the caller must be `account`."
+      },
+      "revokeRole(bytes32,address)": {
+        "details": "Revokes `role` from `account`. If `account` had been granted `role`, emits a {RoleRevoked} event. Requirements: - the caller must have ``role``'s admin role."
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 3360,
+        "contract": "contracts/oracles/Policy.sol:Policy",
+        "label": "_roles",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_bytes32,t_struct(RoleData)3356_storage)"
+      },
+      {
+        "astId": 9369,
+        "contract": "contracts/oracles/Policy.sol:Policy",
+        "label": "ethtx",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_address"
+      },
+      {
+        "astId": 9371,
+        "contract": "contracts/oracles/Policy.sol:Policy",
+        "label": "gasOracle",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_address"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_bytes32,t_struct(RoleData)3356_storage)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => struct AccessControl.RoleData)",
+        "numberOfBytes": "32",
+        "value": "t_struct(RoleData)3356_storage"
+      },
+      "t_struct(RoleData)3356_storage": {
+        "encoding": "inplace",
+        "label": "struct AccessControl.RoleData",
+        "members": [
+          {
+            "astId": 3353,
+            "contract": "contracts/oracles/Policy.sol:Policy",
+            "label": "members",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_bool)"
+          },
+          {
+            "astId": 3355,
+            "contract": "contracts/oracles/Policy.sol:Policy",
+            "label": "adminRole",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_bytes32"
+          }
+        ],
+        "numberOfBytes": "64"
+      }
+    }
+  }
+}

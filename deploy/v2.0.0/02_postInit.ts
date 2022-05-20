@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import fs from 'fs';
 import path from 'path';
+import { Contract } from '@ethersproject/contracts';
 
 import { getDeployedWETH } from '../../utils/weth';
 import { parseGwei } from '../../test/helpers/conversions';
@@ -164,7 +165,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await ethmxMinter.postInit(ethmxMinterArgs);
 
-	await ethmxRewards.postInit({
+	await (ethmxRewards as Contract).postInit({
 		ethmx: ethmx.address,
 		weth: wethAddr,
 		accrualUpdateInterval: 43200, // 12 hours

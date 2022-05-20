@@ -23,6 +23,7 @@ specifiers:
   '@types/chai': ^4.2.17
   '@types/mocha': ^8.2.2
   '@types/node': '15'
+  '@types/node-schedule': ^1.3.2
   '@types/sinonjs__fake-timers': ^6.0.2
   '@typescript-eslint/eslint-plugin': ^4.22.1
   '@typescript-eslint/parser': ^4.22.1
@@ -44,6 +45,7 @@ specifiers:
   husky: ^6.0.0
   lint-staged: ^10.5.4
   mocha: ^8.3.2
+  node-schedule: ^2.1.0
   npm-run-all: ^4.1.5
   prettier: ^2.2.1
   prettier-plugin-solidity: ^1.0.0-beta.10
@@ -80,6 +82,7 @@ devDependencies:
   '@types/chai': 4.2.17
   '@types/mocha': 8.2.2
   '@types/node': 15.0.2
+  '@types/node-schedule': 1.3.2
   '@types/sinonjs__fake-timers': 6.0.2
   '@typescript-eslint/eslint-plugin': 4.22.1_f2cf9a191be19a59b06aad4f4e4a9af1
   '@typescript-eslint/parser': 4.22.1_eslint@7.25.0+typescript@4.2.4
@@ -101,6 +104,7 @@ devDependencies:
   husky: 6.0.0
   lint-staged: 10.5.4
   mocha: 8.3.2
+  node-schedule: 2.1.0
   npm-run-all: 4.1.5
   prettier: 2.2.1
   prettier-plugin-solidity: 1.0.0-beta.10
@@ -1031,13 +1035,13 @@ packages:
   /@types/bn.js/4.11.6:
     resolution: {integrity: sha512-pqr857jrp2kPuO9uRjZ3PwnJTjoQy+fcdxvBTvHm6dkmEL9q+hDD/2j/0ELOBPtPnS8LjCX0gI9nbl8lVkadpg==}
     dependencies:
-      '@types/node': 15.0.2
+      '@types/node': 15.14.9
     dev: true
 
   /@types/bn.js/5.1.0:
     resolution: {integrity: sha512-QSSVYj7pYFN49kW77o2s9xTCwZ8F2xLbjLLSEVh8D2F4JUhZtPAGOFLTD+ffqksBx/u4cE/KImFjyhqCjn/LIA==}
     dependencies:
-      '@types/node': 14.14.44
+      '@types/node': 15.14.9
     dev: true
 
   /@types/chai/4.2.17:
@@ -1081,6 +1085,12 @@ packages:
       form-data: 3.0.1
     dev: true
 
+  /@types/node-schedule/1.3.2:
+    resolution: {integrity: sha512-Y0CqdAr+lCpArT8CJJjJq4U2v8Bb5e7ru2nV/NhDdaptCMCRdOL3Y7tAhen39HluQMaIKWvPbDuiFBUQpg7Srw==}
+    dependencies:
+      '@types/node': 15.14.9
+    dev: true
+
   /@types/node/12.20.12:
     resolution: {integrity: sha512-KQZ1al2hKOONAs2MFv+yTQP1LkDWMrRJ9YCVRalXltOfXsBmH5IownLxQaiq0lnAHwAViLnh2aTYqrPcRGEbgg==}
     dev: true
@@ -1104,7 +1114,7 @@ packages:
   /@types/pbkdf2/3.1.0:
     resolution: {integrity: sha512-Cf63Rv7jCQ0LaL8tNXmEyqTHuIJxRdlS5vMh1mj5voN4+QFhVZnlZruezqpWYDiJ8UTzhP0VmeLXCmBk66YrMQ==}
     dependencies:
-      '@types/node': 14.14.44
+      '@types/node': 15.14.9
     dev: true
 
   /@types/prettier/2.2.3:
@@ -1118,13 +1128,13 @@ packages:
   /@types/resolve/0.0.8:
     resolution: {integrity: sha512-auApPaJf3NPfe18hSoJkp8EbZzer2ISk7o8mCC3M9he/a04+gbMF97NkpD2S8riMGvm4BMRI59/SZQSaLTKpsQ==}
     dependencies:
-      '@types/node': 14.14.44
+      '@types/node': 15.14.9
     dev: true
 
   /@types/secp256k1/4.0.2:
     resolution: {integrity: sha512-QMg+9v0bbNJ2peLuHRWxzmy0HRJIG6gFZNhaRSp7S3ggSbCCxiqQB2/ybvhXyhHOCequpNkrx7OavNhrWOsW0A==}
     dependencies:
-      '@types/node': 14.14.44
+      '@types/node': 15.14.9
     dev: true
 
   /@types/sinon-chai/3.2.5:
@@ -2953,6 +2963,14 @@ packages:
 
   /create-require/1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
+    dev: true
+
+  /cron-parser/3.5.0:
+    resolution: {integrity: sha512-wyVZtbRs6qDfFd8ap457w3XVntdvqcwBGxBoTvJQH9KGVKL/fB+h2k3C8AqiVxvUQKN1Ps/Ns46CNViOpVDhfQ==}
+    engines: {node: '>=0.8'}
+    dependencies:
+      is-nan: 1.3.2
+      luxon: 1.28.0
     dev: true
 
   /cross-fetch/2.2.3:
@@ -5525,6 +5543,14 @@ packages:
     engines: {node: '>=6.5.0', npm: '>=3'}
     dev: true
 
+  /is-nan/1.3.2:
+    resolution: {integrity: sha512-E+zBKpQ2t6MEo1VsonYmluk9NxGrbzpeeLC2xIViuO2EjU2xsXsBPwTr3Ykv9l08UYEVEdWeRZNouaZqF6RN0w==}
+    engines: {node: '>= 0.4'}
+    dependencies:
+      call-bind: 1.0.2
+      define-properties: 1.1.3
+    dev: true
+
   /is-negative-zero/2.0.1:
     resolution: {integrity: sha512-2z6JzQvZRa9A2Y7xC6dQQm4FSTSTNWjKIYYTt4246eMTJmIo0Q+ZyOsU66X8lxK1AbB92dFeglPLrhwpeRKO6w==}
     engines: {node: '>= 0.4'}
@@ -6266,6 +6292,10 @@ packages:
       wrap-ansi: 6.2.0
     dev: true
 
+  /long-timeout/0.1.1:
+    resolution: {integrity: sha1-lyHXiLR+C8taJMLivuGg2lXatRQ=}
+    dev: true
+
   /looper/2.0.0:
     resolution: {integrity: sha1-Zs0Md0rz1P7axTeU90LbVtqPCew=}
     dev: true
@@ -6320,6 +6350,10 @@ packages:
 
   /ltgt/2.2.1:
     resolution: {integrity: sha1-81ypHEk/e3PaDgdJUwTxezH4fuU=}
+    dev: true
+
+  /luxon/1.28.0:
+    resolution: {integrity: sha512-TfTiyvZhwBYM/7QdAVDh+7dBTBA29v4ik0Ce9zda3Mnf8on1S5KJI8P2jKFZ8+5C0jhmr0KwJEO/Wdpm0VeWJQ==}
     dev: true
 
   /make-error/1.3.6:
@@ -6867,6 +6901,15 @@ packages:
       prebuild-install: 6.1.2
     dev: true
     optional: true
+
+  /node-schedule/2.1.0:
+    resolution: {integrity: sha512-nl4JTiZ7ZQDc97MmpTq9BQjYhq7gOtoh7SiPH069gBFBj0PzD8HI7zyFs6rzqL8Y5tTiEEYLxgtbx034YPrbyQ==}
+    engines: {node: '>=6'}
+    dependencies:
+      cron-parser: 3.5.0
+      long-timeout: 0.1.1
+      sorted-array-functions: 1.3.0
+    dev: true
 
   /nofilter/1.0.4:
     resolution: {integrity: sha512-N8lidFp+fCz+TD51+haYdbDGrcBWwuHX40F5+z0qkUjMJ5Tp+rdSuAkMJ9N9eoolDlEVTf6u5icM+cNKkKW2mA==}
@@ -8486,6 +8529,10 @@ packages:
 
   /solidity-comments-extractor/0.0.7:
     resolution: {integrity: sha512-wciNMLg/Irp8OKGrh3S2tfvZiZ0NEyILfcRCXCD4mp7SgK/i9gzLfhY2hY7VMCQJ3kH9UB9BzNdibIVMchzyYw==}
+    dev: true
+
+  /sorted-array-functions/1.3.0:
+    resolution: {integrity: sha512-2sqgzeFlid6N4Z2fUQ1cvFmTOLRi/sEDzSQ0OKYchqgoPmQBVyM3959qYx3fpS6Esef80KjmpgPeEr028dP3OA==}
     dev: true
 
   /source-map-resolve/0.5.3:

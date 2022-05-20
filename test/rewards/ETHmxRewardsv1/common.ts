@@ -5,8 +5,8 @@ import { JsonRpcSigner } from '@ethersproject/providers';
 import { zeroAddress, zeroPadAddress } from '../../helpers/address';
 import { parseGwei } from '../../helpers/conversions';
 import {
-	MockETHmxRewards,
-	MockETHmxRewards__factory,
+	MockETHmxRewardsv1 as MockETHmxRewards,
+	MockETHmxRewardsv1__factory as MockETHmxRewards__factory,
 	MockETHmx,
 	MockETHmx__factory,
 	ETHmxMinter,
